@@ -377,11 +377,7 @@ class TelegramClient:
         return caption
 
     async def close(self) -> None:
-        """Close the Telegram client and cleanup resources.
-
-        Should be called during application shutdown to properly
-        close the bot connection.
-        """
+        """Close the Telegram client and cleanup resources."""
         if self._bot:
             await self._bot.shutdown()
             logger.info("TelegramClient closed")
