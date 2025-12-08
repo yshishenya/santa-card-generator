@@ -21,14 +21,7 @@ employee_repo = EmployeeRepository()
 
 @router.get("/employees", response_model=List[Employee], status_code=status.HTTP_200_OK)
 async def get_employees() -> List[Employee]:
-    """Get list of all employees.
-
-    Returns:
-        List of all employees in the system.
-
-    Raises:
-        HTTPException: If employee data cannot be loaded.
-    """
+    """Get list of all employees."""
     correlation_id = str(uuid4())
     try:
         logger.info(f"[{correlation_id}] GET /employees - Fetching all employees")

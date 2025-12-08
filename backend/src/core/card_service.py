@@ -154,22 +154,22 @@ class CardService:
 
     def get_session(self, session_id: str) -> "GenerationSession | None":
         """Get session by ID.
-
+        
         Args:
             session_id: Session ID to retrieve.
-
+        
         Returns:
             GenerationSession if found and not expired, None otherwise.
         """
         return self._session_manager.get_session(session_id)
 
     def get_image_data(self, session_id: str, image_url: str) -> bytes | None:
-        """Get image data from session.
-
+        """Get image data from the session manager.
+        
         Args:
             session_id: Session ID containing the image.
             image_url: Image URL identifier.
-
+        
         Returns:
             Image bytes if found, None otherwise.
         """
@@ -275,18 +275,18 @@ class CardService:
         self, generation_id: str, original_request: CardGenerationRequest
     ) -> Tuple[TextVariant, int]:
         """Regenerate a text variant and return the new variant with remaining count.
-
+        
+        This function handles the regeneration of a text variant based on a given
+        session ID and an original card generation request. It first retrieves the
+        session associated with the provided generation_id and checks for its validity,
+        including expiration and regeneration limits. If valid, it generates a new text
+        variant using the specified parameters from the original_request and updates
+        the session with the new variant, returning both the new variant and the
+        remaining regeneration count.
+        
         Args:
             generation_id: Session ID from initial generation.
             original_request: Original card generation request.
-
-        Returns:
-            Tuple of (new TextVariant, remaining regenerations count).
-
-        Raises:
-            SessionNotFoundError: If session ID is not found.
-            SessionExpiredError: If the session has expired.
-            RegenerationLimitExceededError: If regeneration limit exceeded.
         """
         correlation_id = str(uuid.uuid4())
         logger.info(
@@ -413,20 +413,16 @@ class CardService:
 
     async def send_card(self, request: SendCardRequest) -> SendCardResponse:
         """Send selected card to Telegram.
-
-        This method retrieves the selected text and image from the session
-        and sends them as a greeting card message to Telegram.
-
+        
+        This method retrieves the selected text and image from the session and sends
+        them as a greeting card message to Telegram. It first validates the session and
+        checks for the existence of the selected text and image variants. If all
+        validations pass, it retrieves the image data and sends the card using the
+        Telegram client, logging the process and handling any exceptions that may
+        occur.
+        
         Args:
             request: Request containing session ID and selected variant indices.
-
-        Returns:
-            SendCardResponse with success status and Telegram message ID.
-
-        Raises:
-            SessionNotFoundError: If session ID is not found.
-            SessionExpiredError: If the session has expired.
-            VariantNotFoundError: If selected variant index is invalid.
         """
         correlation_id = str(uuid.uuid4())
         logger.info(

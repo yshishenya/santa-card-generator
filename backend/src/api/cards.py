@@ -104,23 +104,18 @@ async def regenerate_variant(
     request: RegenerateRequest,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> APIResponse[RegenerateResponse]:
-    """Regenerate a text or image variant.
-
-    This endpoint regenerates a specific variant within an existing session.
-    The regeneration count is tracked per element type (text/image) separately.
-
+    """Regenerates a text or image variant within an existing session.
+    
+    This function handles the regeneration of a specific variant based on the
+    provided session ID and element type (text or image). It retrieves the
+    original request from the session to ensure the correct styles are applied
+    during regeneration. The function also tracks the remaining regeneration  count
+    for each element type and handles various exceptions related to  session
+    validity and regeneration limits.
+    
     Args:
         request: Regeneration request with session ID and element details.
         service: Injected CardService instance.
-
-    Returns:
-        APIResponse containing RegenerateResponse with new variant and remaining count.
-
-    Raises:
-        HTTPException 404: If session or variant is not found.
-        HTTPException 400: If session has expired.
-        HTTPException 429: If regeneration limit has been exceeded.
-        HTTPException 500: If regeneration fails due to internal error.
     """
     correlation_id = str(uuid4())
     logger.info(
