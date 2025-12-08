@@ -105,6 +105,9 @@ class CardGenerationResponse(BaseModel):
     image_variants: List[ImageVariant] = Field(
         ..., description="List of generated image variants", min_length=1
     )
+    remaining_regenerations: int = Field(
+        ..., description="Number of regenerations remaining for this session"
+    )
 
 
 

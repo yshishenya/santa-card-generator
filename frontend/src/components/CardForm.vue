@@ -48,13 +48,18 @@ const imageStyleOptions = [
 onMounted(async () => {
   try {
     employees.value = await apiClient.getEmployees()
-  } catch (error) {
-    console.error('Failed to load employees:', error)
+  } catch {
+    // Employee loading failed, autocomplete won't work but form is still usable
   }
 })
 
+// Autocomplete search event type
+interface AutoCompleteSearchEvent {
+  query: string
+}
+
 // Autocomplete search
-const searchEmployees = (event: any) => {
+const searchEmployees = (event: AutoCompleteSearchEvent): void => {
   const query = event.query.toLowerCase()
   filteredEmployees.value = employees.value.filter(emp =>
     emp.name.toLowerCase().includes(query)
@@ -62,7 +67,7 @@ const searchEmployees = (event: any) => {
 }
 
 // Submit form
-const handleSubmit = async () => {
+const handleSubmit = async (): Promise<void> => {
   if (!recipientName.value) {
     return
   }
@@ -77,9 +82,8 @@ const handleSubmit = async () => {
       text_style: enhanceText.value ? textStyle.value : undefined,
       image_style: imageStyle.value
     })
-  } catch (error) {
-    console.error('Generation failed:', error)
-    alert('Не удалось создать открытку. Попробуйте ещё раз.')
+  } catch {
+    // Error is handled by the store and displayed in the UI
   }
 }
 </script>
@@ -203,6 +207,15 @@ const handleSubmit = async () => {
           />
         </label>
       </div>
+    </div>
+
+    <!-- Error message -->
+    <div v-if="cardStore.error" class="alert alert-error">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>{{ cardStore.error }}</span>
+      <button type="button" class="btn btn-sm btn-ghost" @click="cardStore.clearError()">
+        <i class="pi pi-times"></i>
+      </button>
     </div>
 
     <!-- Submit button -->

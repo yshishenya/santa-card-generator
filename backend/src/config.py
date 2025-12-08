@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     max_regenerations: int = 3
     employees_file_path: str = "/app/data/employees.json"
 
+    # CORS configuration
+    cors_origins: str = "http://localhost:3000,http://localhost:5173"
+
     class Config:
         """Pydantic configuration."""
 

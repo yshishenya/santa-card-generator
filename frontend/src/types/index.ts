@@ -68,6 +68,7 @@ export interface RegenerateResponse {
 // Send card request
 export interface SendCardRequest {
   generation_id: string
+  recipient: string
   text_variant_id: string
   image_variant_id: string
 }

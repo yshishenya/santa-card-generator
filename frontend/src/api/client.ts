@@ -6,7 +6,9 @@ import type {
   RegenerateResponse,
   SendCardRequest,
   SendCardResponse,
-  Employee
+  Employee,
+  TextStyle,
+  ImageStyle
 } from '@/types'
 
 // Backend API response wrapper
@@ -19,12 +21,12 @@ interface APIResponse<T> {
 // Backend response types (different from frontend types)
 interface BackendTextVariant {
   text: string
-  style: string
+  style: TextStyle
 }
 
 interface BackendImageVariant {
   url: string
-  style: string
+  style: ImageStyle
   prompt: string
 }
 
@@ -33,6 +35,7 @@ interface BackendCardGenerationResponse {
   recipient: string
   text_variants: BackendTextVariant[]
   image_variants: BackendImageVariant[]
+  remaining_regenerations: number
 }
 
 interface BackendRegenerateResponse {
@@ -80,7 +83,7 @@ class APIClient {
         id: `image-${index}`,
         url: this.transformImageUrl(backendData.session_id, iv.url)
       })),
-      remaining_regenerations: 3 // Default value, backend tracks this per session
+      remaining_regenerations: backendData.remaining_regenerations
     }
   }
 
@@ -143,7 +146,7 @@ class APIClient {
 
     const backendRequest = {
       session_id: request.generation_id,
-      employee_name: '', // Will be filled from session
+      employee_name: request.recipient,
       selected_text_index: textIndex,
       selected_image_index: imageIndex
     }

@@ -145,11 +145,35 @@ class CardService:
             session_ttl_minutes=session_ttl_minutes,
         )
         self._max_regenerations = max_regenerations
+        self._session_ttl_minutes = session_ttl_minutes
 
         logger.info(
             f"Initialized CardService with max_regenerations={max_regenerations}, "
             f"session_ttl={session_ttl_minutes}min"
         )
+
+    def get_session(self, session_id: str) -> "GenerationSession | None":
+        """Get session by ID.
+
+        Args:
+            session_id: Session ID to retrieve.
+
+        Returns:
+            GenerationSession if found and not expired, None otherwise.
+        """
+        return self._session_manager.get_session(session_id)
+
+    def get_image_data(self, session_id: str, image_url: str) -> bytes | None:
+        """Get image data from session.
+
+        Args:
+            session_id: Session ID containing the image.
+            image_url: Image URL identifier.
+
+        Returns:
+            Image bytes if found, None otherwise.
+        """
+        return self._session_manager.get_image_data(session_id, image_url)
 
     async def generate_card(
         self, request: CardGenerationRequest
@@ -244,6 +268,7 @@ class CardService:
             recipient=request.recipient,
             text_variants=text_variants,
             image_variants=image_variants,
+            remaining_regenerations=self._max_regenerations,
         )
 
     async def regenerate_text(
@@ -274,7 +299,7 @@ class CardService:
             logger.error(f"[{correlation_id}] Session not found: {generation_id}")
             raise SessionNotFoundError(generation_id)
 
-        if session.is_expired(30):  # Using default TTL
+        if session.is_expired(self._session_ttl_minutes):
             logger.error(f"[{correlation_id}] Session expired: {generation_id}")
             raise SessionExpiredError(generation_id)
 
@@ -341,7 +366,7 @@ class CardService:
             logger.error(f"[{correlation_id}] Session not found: {generation_id}")
             raise SessionNotFoundError(generation_id)
 
-        if session.is_expired(30):  # Using default TTL
+        if session.is_expired(self._session_ttl_minutes):
             logger.error(f"[{correlation_id}] Session expired: {generation_id}")
             raise SessionExpiredError(generation_id)
 
@@ -414,7 +439,7 @@ class CardService:
             logger.error(f"[{correlation_id}] Session not found: {request.session_id}")
             raise SessionNotFoundError(request.session_id)
 
-        if session.is_expired(30):  # Using default TTL
+        if session.is_expired(self._session_ttl_minutes):
             logger.error(f"[{correlation_id}] Session expired: {request.session_id}")
             raise SessionExpiredError(request.session_id)
 

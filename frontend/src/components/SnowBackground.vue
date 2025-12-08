@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { loadSlim } from 'tsparticles-slim'
+import type { Engine, Container } from 'tsparticles-engine'
 import { useParticlesConfig } from '@/composables/useParticles'
 
 const particlesConfig = useParticlesConfig()
 
-const particlesInit = async (engine: any) => {
+const particlesInit = async (engine: Engine): Promise<void> => {
   await loadSlim(engine)
 }
 
-const particlesLoaded = async (container: any) => {
-  console.log('Particles loaded:', container)
+const particlesLoaded = async (_container: Container): Promise<void> => {
+  // Particles loaded successfully
 }
 </script>
 

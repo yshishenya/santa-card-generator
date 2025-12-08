@@ -14,6 +14,7 @@ import type {
 export const useCardStore = defineStore('card', () => {
   // State
   const generationId = ref<string | null>(null)
+  const recipient = ref<string | null>(null)
   const textVariants = ref<TextVariant[]>([])
   const imageVariants = ref<ImageVariant[]>([])
   const selectedTextId = ref<string | null>(null)
@@ -24,6 +25,9 @@ export const useCardStore = defineStore('card', () => {
   const isGenerating = ref(false)
   const isRegenerating = ref(false)
   const isSending = ref(false)
+
+  // Error state
+  const error = ref<string | null>(null)
 
   // Computed
   const hasGeneration = computed(() => generationId.value !== null)
@@ -46,9 +50,11 @@ export const useCardStore = defineStore('card', () => {
   async function generate(request: CardGenerationRequest): Promise<void> {
     try {
       isGenerating.value = true
+      error.value = null
       const response = await apiClient.generateCard(request)
 
       generationId.value = response.generation_id
+      recipient.value = request.recipient
       textVariants.value = response.text_variants
       imageVariants.value = response.image_variants
       remainingRegenerations.value = response.remaining_regenerations
@@ -60,6 +66,9 @@ export const useCardStore = defineStore('card', () => {
       if (imageVariants.value.length > 0) {
         selectedImageId.value = imageVariants.value[0].id
       }
+    } catch (err) {
+      error.value = 'Не удалось создать открытку. Попробуйте ещё раз.'
+      throw err
     } finally {
       isGenerating.value = false
     }
@@ -73,6 +82,7 @@ export const useCardStore = defineStore('card', () => {
 
     try {
       isRegenerating.value = true
+      error.value = null
       const request: RegenerateRequest = {
         generation_id: generationId.value,
         type: 'text',
@@ -89,6 +99,9 @@ export const useCardStore = defineStore('card', () => {
       selectedTextId.value = newVariant.id
 
       remainingRegenerations.value = response.remaining_regenerations
+    } catch (err) {
+      error.value = 'Не удалось перегенерировать текст. Попробуйте ещё раз.'
+      throw err
     } finally {
       isRegenerating.value = false
     }
@@ -102,6 +115,7 @@ export const useCardStore = defineStore('card', () => {
 
     try {
       isRegenerating.value = true
+      error.value = null
       const request: RegenerateRequest = {
         generation_id: generationId.value,
         type: 'image',
@@ -118,6 +132,9 @@ export const useCardStore = defineStore('card', () => {
       selectedImageId.value = newVariant.id
 
       remainingRegenerations.value = response.remaining_regenerations
+    } catch (err) {
+      error.value = 'Не удалось перегенерировать изображение. Попробуйте ещё раз.'
+      throw err
     } finally {
       isRegenerating.value = false
     }
@@ -127,17 +144,22 @@ export const useCardStore = defineStore('card', () => {
    * Send selected card to Telegram
    */
   async function send(): Promise<void> {
-    if (!generationId.value || !canSend.value) return
+    if (!generationId.value || !canSend.value || !recipient.value) return
 
     try {
       isSending.value = true
+      error.value = null
       const request: SendCardRequest = {
         generation_id: generationId.value,
+        recipient: recipient.value,
         text_variant_id: selectedTextId.value!,
         image_variant_id: selectedImageId.value!
       }
 
       await apiClient.sendCard(request)
+    } catch (err) {
+      error.value = 'Не удалось отправить открытку. Попробуйте ещё раз.'
+      throw err
     } finally {
       isSending.value = false
     }
@@ -148,6 +170,7 @@ export const useCardStore = defineStore('card', () => {
    */
   function reset(): void {
     generationId.value = null
+    recipient.value = null
     textVariants.value = []
     imageVariants.value = []
     selectedTextId.value = null
@@ -156,11 +179,17 @@ export const useCardStore = defineStore('card', () => {
     isGenerating.value = false
     isRegenerating.value = false
     isSending.value = false
+    error.value = null
+  }
+
+  function clearError(): void {
+    error.value = null
   }
 
   return {
     // State
     generationId,
+    recipient,
     textVariants,
     imageVariants,
     selectedTextId,
@@ -169,6 +198,7 @@ export const useCardStore = defineStore('card', () => {
     isGenerating,
     isRegenerating,
     isSending,
+    error,
 
     // Computed
     hasGeneration,
@@ -182,6 +212,7 @@ export const useCardStore = defineStore('card', () => {
     regenerateText,
     regenerateImage,
     send,
-    reset
+    reset,
+    clearError
   }
 })

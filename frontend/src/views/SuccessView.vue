@@ -1,20 +1,32 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCardStore } from '@/stores/card'
 
 const router = useRouter()
 const cardStore = useCardStore()
 
+let redirectTimeout: ReturnType<typeof setTimeout> | null = null
+
 onMounted(() => {
   // Auto redirect to home after 5 seconds
-  setTimeout(() => {
+  redirectTimeout = setTimeout(() => {
     cardStore.reset()
     router.push('/')
   }, 5000)
 })
 
-const createAnother = () => {
+onUnmounted(() => {
+  // Clear timeout to prevent memory leak
+  if (redirectTimeout) {
+    clearTimeout(redirectTimeout)
+  }
+})
+
+const createAnother = (): void => {
+  if (redirectTimeout) {
+    clearTimeout(redirectTimeout)
+  }
   cardStore.reset()
   router.push('/')
 }

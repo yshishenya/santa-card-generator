@@ -131,16 +131,12 @@ async def regenerate_variant(
     try:
         # Get the original request from session to use for regeneration
         # We need to retrieve it first to know the styles
-        session_manager = service._session_manager
-        session = session_manager.get_session(request.session_id)
+        # Note: get_session() returns None for expired sessions (handled internally)
+        session = service.get_session(request.session_id)
 
         if session is None:
-            logger.error(f"[{correlation_id}] Session not found: {request.session_id}")
+            logger.error(f"[{correlation_id}] Session not found or expired: {request.session_id}")
             raise SessionNotFoundError(request.session_id)
-
-        if session.is_expired(30):
-            logger.error(f"[{correlation_id}] Session expired: {request.session_id}")
-            raise SessionExpiredError(request.session_id)
 
         # Regenerate based on element type
         if request.element_type == "text":
@@ -326,24 +322,17 @@ async def get_image(
         # Construct image URL as stored in session
         image_url = f"generated://{image_id}"
 
-        # Get image data from session manager
-        image_data = service._session_manager.get_image_data(session_id, image_url)
+        # Get image data using public method
+        image_data = service.get_image_data(session_id, image_url)
 
         if image_data is None:
-            # Check if session exists
-            session = service._session_manager.get_session(session_id)
+            # Check if session exists (get_session returns None for expired sessions)
+            session = service.get_session(session_id)
             if session is None:
-                logger.error(f"[{correlation_id}] Session not found: {session_id}")
+                logger.error(f"[{correlation_id}] Session not found or expired: {session_id}")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Session not found: {session_id}",
-                )
-
-            if session.is_expired(30):
-                logger.error(f"[{correlation_id}] Session expired: {session_id}")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Session expired: {session_id}",
+                    detail=f"Session not found or expired: {session_id}",
                 )
 
             # Session exists but image not found

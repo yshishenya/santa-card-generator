@@ -27,8 +27,8 @@
 
 ### AI/ML Integration
 - **Provider**: Google Gemini API via LiteLLM Proxy
-- **Text Generation**: `gemini/gemini-2.5-flash-image-preview` (для стилизации текста)
-- **Image Generation**: `gemini/gemini-3-pro-image-preview` (для генерации изображений)
+- **Text Generation**: `gemini-2.5-flash` (для стилизации текста)
+- **Image Generation**: `gemini/gemini-2.5-flash-image-preview` (для генерации изображений)
 - **Client**: `httpx` с OpenAI-совместимым API форматом
 - **Proxy URL**: Конфигурируется через `GEMINI_BASE_URL`
 
@@ -381,8 +381,8 @@ santa/
 # ===================
 GEMINI_API_KEY=your_litellm_api_key_here
 GEMINI_BASE_URL=https://litellm.pro-4.ru/v1
-GEMINI_TEXT_MODEL=gemini/gemini-2.5-flash-image-preview
-GEMINI_IMAGE_MODEL=gemini/gemini-3-pro-image-preview
+GEMINI_TEXT_MODEL=gemini-2.5-flash
+GEMINI_IMAGE_MODEL=gemini/gemini-2.5-flash-image-preview
 
 # ===================
 # Telegram
@@ -442,7 +442,7 @@ async def generate_text(
         response = await client.post(
             "/chat/completions",
             json={
-                "model": "gemini/gemini-2.5-flash-image-preview",
+                "model": "gemini-2.5-flash",
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": 2000,
                 "temperature": 0.8,
@@ -563,7 +563,7 @@ strict = true
 
 ---
 
-**Last Updated**: 2023-11-26
+**Last Updated**: 2025-12-09
 **Python Version**: 3.11+
 **Framework**: FastAPI + Vue.js 3
 **Deployment**: Docker Compose

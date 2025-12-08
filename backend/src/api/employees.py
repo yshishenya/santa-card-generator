@@ -5,6 +5,7 @@ Handles employee-related endpoints.
 
 import logging
 from typing import List
+from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -28,19 +29,20 @@ async def get_employees() -> List[Employee]:
     Raises:
         HTTPException: If employee data cannot be loaded.
     """
+    correlation_id = str(uuid4())
     try:
-        logger.info("Fetching all employees")
+        logger.info(f"[{correlation_id}] GET /employees - Fetching all employees")
         employees = await employee_repo.get_all()
-        logger.info(f"Successfully fetched {len(employees)} employees")
+        logger.info(f"[{correlation_id}] Successfully fetched {len(employees)} employees")
         return employees
     except FileNotFoundError as e:
-        logger.error(f"Employee file not found: {e}")
+        logger.error(f"[{correlation_id}] Employee file not found: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Employee data file not found",
         )
     except Exception as e:
-        logger.exception(f"Error fetching employees: {e}")
+        logger.exception(f"[{correlation_id}] Error fetching employees: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch employees",
