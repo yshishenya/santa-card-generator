@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+.gitattributes
+.github
+
+# Documentation
+*.md
+!README.md
+LICENSE
+docs/
+
+# Development tools
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# CI/CD
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Memory Bank (not needed in containers)
+.memory_bank/
+.claude/
+
+# Scripts (use only what's needed)
+scripts/
+hooks/
+
+# Environment files (use .env instead)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore

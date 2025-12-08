@@ -1,0 +1,47 @@
+"""Employees API router.
+
+Handles employee-related endpoints.
+"""
+
+import logging
+from typing import List
+
+from fastapi import APIRouter, HTTPException, status
+
+from src.models.employee import Employee
+from src.repositories.employee_repo import EmployeeRepository
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# Initialize repository
+employee_repo = EmployeeRepository()
+
+
+@router.get("/employees", response_model=List[Employee], status_code=status.HTTP_200_OK)
+async def get_employees() -> List[Employee]:
+    """Get list of all employees.
+
+    Returns:
+        List of all employees in the system.
+
+    Raises:
+        HTTPException: If employee data cannot be loaded.
+    """
+    try:
+        logger.info("Fetching all employees")
+        employees = await employee_repo.get_all()
+        logger.info(f"Successfully fetched {len(employees)} employees")
+        return employees
+    except FileNotFoundError as e:
+        logger.error(f"Employee file not found: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Employee data file not found",
+        )
+    except Exception as e:
+        logger.exception(f"Error fetching employees: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch employees",
+        )

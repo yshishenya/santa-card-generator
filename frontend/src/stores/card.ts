@@ -1,0 +1,187 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { apiClient } from '@/api/client'
+import type {
+  CardGenerationRequest,
+  TextVariant,
+  ImageVariant,
+  RegenerateRequest,
+  SendCardRequest,
+  TextStyle,
+  ImageStyle
+} from '@/types'
+
+export const useCardStore = defineStore('card', () => {
+  // State
+  const generationId = ref<string | null>(null)
+  const textVariants = ref<TextVariant[]>([])
+  const imageVariants = ref<ImageVariant[]>([])
+  const selectedTextId = ref<string | null>(null)
+  const selectedImageId = ref<string | null>(null)
+  const remainingRegenerations = ref<number>(3)
+
+  // Loading states
+  const isGenerating = ref(false)
+  const isRegenerating = ref(false)
+  const isSending = ref(false)
+
+  // Computed
+  const hasGeneration = computed(() => generationId.value !== null)
+  const canRegenerate = computed(() => remainingRegenerations.value > 0)
+  const canSend = computed(() => selectedTextId.value !== null && selectedImageId.value !== null)
+
+  const selectedText = computed(() =>
+    textVariants.value.find(v => v.id === selectedTextId.value)
+  )
+
+  const selectedImage = computed(() =>
+    imageVariants.value.find(v => v.id === selectedImageId.value)
+  )
+
+  // Actions
+
+  /**
+   * Generate new card with text and image variants
+   */
+  async function generate(request: CardGenerationRequest): Promise<void> {
+    try {
+      isGenerating.value = true
+      const response = await apiClient.generateCard(request)
+
+      generationId.value = response.generation_id
+      textVariants.value = response.text_variants
+      imageVariants.value = response.image_variants
+      remainingRegenerations.value = response.remaining_regenerations
+
+      // Auto-select first variants
+      if (textVariants.value.length > 0) {
+        selectedTextId.value = textVariants.value[0].id
+      }
+      if (imageVariants.value.length > 0) {
+        selectedImageId.value = imageVariants.value[0].id
+      }
+    } finally {
+      isGenerating.value = false
+    }
+  }
+
+  /**
+   * Regenerate text variant with new style
+   */
+  async function regenerateText(style?: TextStyle): Promise<void> {
+    if (!generationId.value || !canRegenerate.value) return
+
+    try {
+      isRegenerating.value = true
+      const request: RegenerateRequest = {
+        generation_id: generationId.value,
+        type: 'text',
+        style
+      }
+
+      const response = await apiClient.regenerate(request)
+
+      // Add new variant to the list
+      const newVariant = response.variant as TextVariant
+      textVariants.value.push(newVariant)
+
+      // Auto-select the new variant
+      selectedTextId.value = newVariant.id
+
+      remainingRegenerations.value = response.remaining_regenerations
+    } finally {
+      isRegenerating.value = false
+    }
+  }
+
+  /**
+   * Regenerate image variant with new style
+   */
+  async function regenerateImage(style?: ImageStyle): Promise<void> {
+    if (!generationId.value || !canRegenerate.value) return
+
+    try {
+      isRegenerating.value = true
+      const request: RegenerateRequest = {
+        generation_id: generationId.value,
+        type: 'image',
+        style
+      }
+
+      const response = await apiClient.regenerate(request)
+
+      // Add new variant to the list
+      const newVariant = response.variant as ImageVariant
+      imageVariants.value.push(newVariant)
+
+      // Auto-select the new variant
+      selectedImageId.value = newVariant.id
+
+      remainingRegenerations.value = response.remaining_regenerations
+    } finally {
+      isRegenerating.value = false
+    }
+  }
+
+  /**
+   * Send selected card to Telegram
+   */
+  async function send(): Promise<void> {
+    if (!generationId.value || !canSend.value) return
+
+    try {
+      isSending.value = true
+      const request: SendCardRequest = {
+        generation_id: generationId.value,
+        text_variant_id: selectedTextId.value!,
+        image_variant_id: selectedImageId.value!
+      }
+
+      await apiClient.sendCard(request)
+    } finally {
+      isSending.value = false
+    }
+  }
+
+  /**
+   * Reset store to initial state
+   */
+  function reset(): void {
+    generationId.value = null
+    textVariants.value = []
+    imageVariants.value = []
+    selectedTextId.value = null
+    selectedImageId.value = null
+    remainingRegenerations.value = 3
+    isGenerating.value = false
+    isRegenerating.value = false
+    isSending.value = false
+  }
+
+  return {
+    // State
+    generationId,
+    textVariants,
+    imageVariants,
+    selectedTextId,
+    selectedImageId,
+    remainingRegenerations,
+    isGenerating,
+    isRegenerating,
+    isSending,
+
+    // Computed
+    hasGeneration,
+    canRegenerate,
+    canSend,
+    selectedText,
+    selectedImage,
+
+    // Actions
+    generate,
+    regenerateText,
+    regenerateImage,
+    send,
+    reset
+  }
+})
