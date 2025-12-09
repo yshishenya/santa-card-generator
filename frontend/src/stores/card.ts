@@ -1,11 +1,24 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { apiClient } from '@/api/client'
+import { apiClient, APIError } from '@/api/client'
 import type {
   CardGenerationRequest,
   TextVariant,
   ImageVariant
 } from '@/types'
+
+/**
+ * Extract user-friendly error message from error
+ */
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof APIError) {
+    return err.getUserMessage()
+  }
+  if (err instanceof Error) {
+    return err.message
+  }
+  return fallback
+}
 
 export const useCardStore = defineStore('card', () => {
   // State
@@ -85,7 +98,7 @@ export const useCardStore = defineStore('card', () => {
       useOriginalText.value = false
       includeOriginalText.value = false
     } catch (err) {
-      error.value = 'Не удалось создать открытку. Попробуйте ещё раз.'
+      error.value = getErrorMessage(err, 'Не удалось создать открытку. Попробуйте ещё раз.')
       throw err
     } finally {
       isGenerating.value = false
@@ -116,7 +129,7 @@ export const useCardStore = defineStore('card', () => {
 
       remainingTextRegenerations.value = response.remaining_regenerations
     } catch (err) {
-      error.value = 'Не удалось перегенерировать текст. Попробуйте ещё раз.'
+      error.value = getErrorMessage(err, 'Не удалось перегенерировать текст. Попробуйте ещё раз.')
       throw err
     } finally {
       isRegeneratingText.value = false
@@ -147,7 +160,7 @@ export const useCardStore = defineStore('card', () => {
 
       remainingImageRegenerations.value = response.remaining_regenerations
     } catch (err) {
-      error.value = 'Не удалось перегенерировать изображения. Попробуйте ещё раз.'
+      error.value = getErrorMessage(err, 'Не удалось перегенерировать изображения. Попробуйте ещё раз.')
       throw err
     } finally {
       isRegeneratingImages.value = false
@@ -173,7 +186,7 @@ export const useCardStore = defineStore('card', () => {
         include_original_text: includeOriginalText.value
       })
     } catch (err) {
-      error.value = 'Не удалось отправить открытку. Попробуйте ещё раз.'
+      error.value = getErrorMessage(err, 'Не удалось отправить открытку. Попробуйте ещё раз.')
       throw err
     } finally {
       isSending.value = false

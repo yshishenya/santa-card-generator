@@ -375,11 +375,10 @@ class GeminiClient:
             message=message or "Спасибо за работу!",
         )
 
-        logger.info(
-            f"Generating text with style '{style}' for recipient '{recipient}'",
+        logger.debug(
+            f"Generating text with style '{style}' for recipient",
             extra={
                 "style": style,
-                "recipient": recipient,
                 "has_reason": bool(reason),
                 "has_message": bool(message),
             },
@@ -508,11 +507,10 @@ class GeminiClient:
             reason=reason or "outstanding contributions",
         )
 
-        logger.info(
-            f"Generating image with style '{style}' for recipient '{recipient}'",
+        logger.debug(
+            f"Generating image with style '{style}' for recipient",
             extra={
                 "style": style,
-                "recipient": recipient,
                 "has_reason": bool(reason),
             },
         )

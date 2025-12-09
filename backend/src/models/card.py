@@ -1,7 +1,7 @@
 """Card-related Pydantic models."""
 
 from enum import Enum
-from typing import List, Optional
+from typing import List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -144,27 +144,9 @@ class RegenerateRequest(BaseModel):
     """
 
     session_id: str = Field(..., description="Session ID from initial generation")
-    element_type: str = Field(
+    element_type: Literal["text", "image"] = Field(
         ..., description="Type of element to regenerate: 'text' or 'image'"
     )
-
-    @field_validator("element_type")
-    @classmethod
-    def validate_element_type(cls, v: str) -> str:
-        """Validate element type is either 'text' or 'image'.
-
-        Args:
-            v: Element type to validate.
-
-        Returns:
-            Validated element type.
-
-        Raises:
-            ValueError: If element type is not 'text' or 'image'.
-        """
-        if v not in ["text", "image"]:
-            raise ValueError("element_type must be either 'text' or 'image'")
-        return v
 
 
 class SendCardRequest(BaseModel):

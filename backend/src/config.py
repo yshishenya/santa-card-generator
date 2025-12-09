@@ -25,10 +25,14 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
     max_regenerations: int = 3
+    session_ttl_minutes: int = 30
     employees_file_path: str = "/app/data/employees.json"
 
     # CORS configuration
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
+
+    # Rate limiting
+    rate_limit_per_minute: int = 10  # Max requests per minute per IP
 
     class Config:
         """Pydantic configuration."""

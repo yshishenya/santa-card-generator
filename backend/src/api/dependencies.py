@@ -122,7 +122,7 @@ def get_card_service() -> CardService:
             telegram_client=get_telegram_client(),
             employee_repo=get_employee_repo(),
             max_regenerations=settings.max_regenerations,
-            session_ttl_minutes=30,  # Default 30 minutes
+            session_ttl_minutes=settings.session_ttl_minutes,
         )
     return _card_service
 

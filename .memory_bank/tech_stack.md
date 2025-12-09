@@ -20,7 +20,7 @@
 - **Animations**:
   - **tsParticles (vue3-particles)** — снежинки, конфетти, фейерверки
   - **@vueuse/motion** — плавные анимации компонентов
-  - **vue3-carousel** — карусели для выбора вариантов
+  - **Pure CSS scroll-snap** — карусели для выбора вариантов (замена vue3-carousel)
 - **Effects**:
   - **Glass UI** (glassmorphism) — эффект матового стекла
   - CSS градиенты в новогодних цветах
@@ -223,6 +223,7 @@ python-telegram-bot = "^20.7"
 aiofiles = "^23.2"
 python-multipart = "^0.0.6"
 tenacity = "^8.2"            # Retry logic for transient errors
+slowapi = "^0.1.9"           # Rate limiting for API endpoints
 ```
 
 ### Development Dependencies
@@ -260,8 +261,6 @@ mypy = "^1.8"
 
     "@vueuse/core": "^10.7",
     "@vueuse/motion": "^2.1",
-
-    "vue3-carousel": "^0.3",
 
     "axios": "^1.6"
   },

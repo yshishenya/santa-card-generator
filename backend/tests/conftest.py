@@ -15,6 +15,31 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+
+# ============================================================================
+# Rate Limiter Configuration for Tests
+# ============================================================================
+
+
+@pytest.fixture(scope="session", autouse=True)
+def configure_rate_limit_for_tests():
+    """Configure high rate limit for tests to prevent test interference.
+
+    This fixture runs once at the start of the test session and sets
+    a very high rate limit to effectively disable rate limiting.
+    """
+    from src.config import settings
+
+    # Store original value and set high limit for tests
+    original_limit = settings.rate_limit_per_minute
+    # Use object.__setattr__ to bypass Pydantic's frozen model
+    object.__setattr__(settings, "rate_limit_per_minute", 10000)
+
+    yield
+
+    # Restore original value
+    object.__setattr__(settings, "rate_limit_per_minute", original_limit)
+
 from src.models.card import (
     AI_TEXT_STYLES,
     ALL_IMAGE_STYLES,

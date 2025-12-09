@@ -11,8 +11,11 @@ import logging
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
+from src.config import settings
 from src.core import CardService
 from src.core.exceptions import (
     CardServiceError,
@@ -34,13 +37,26 @@ from src.models import (
 
 from .dependencies import get_card_service
 
+# Rate limiter for card endpoints
+limiter = Limiter(key_func=get_remote_address)
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def get_rate_limit() -> str:
+    """Get rate limit from settings dynamically.
+
+    Using a callable allows tests to modify the rate limit.
+    """
+    return f"{settings.rate_limit_per_minute}/minute"
+
+
 @router.post("/cards/generate", response_model=APIResponse[CardGenerationResponse])
+@limiter.limit(get_rate_limit)
 async def generate_card(
-    request: CardGenerationRequest,
+    request: Request,
+    body: CardGenerationRequest,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> APIResponse[CardGenerationResponse]:
     """Generate a new greeting card with text and image variants.
@@ -52,7 +68,8 @@ async def generate_card(
     The session ID returned can be used for regeneration and sending operations.
 
     Args:
-        request: Card generation request with recipient name.
+        request: Starlette Request object (required for rate limiting).
+        body: Card generation request with recipient name.
         service: Injected CardService instance.
 
     Returns:
@@ -64,11 +81,11 @@ async def generate_card(
     """
     correlation_id = str(uuid4())
     logger.info(
-        f"[{correlation_id}] POST /cards/generate - recipient: {request.recipient}"
+        f"[{correlation_id}] POST /cards/generate - recipient: {body.recipient}"
     )
 
     try:
-        response = await service.generate_card(request)
+        response = await service.generate_card(body)
         logger.info(
             f"[{correlation_id}] Card generated successfully, session: {response.session_id}, "
             f"text_variants: {len(response.text_variants)}, "
@@ -99,8 +116,10 @@ async def generate_card(
 
 
 @router.post("/cards/regenerate", response_model=APIResponse[RegenerateResponse])
+@limiter.limit(get_rate_limit)
 async def regenerate_variant(
-    request: RegenerateRequest,
+    request: Request,
+    body: RegenerateRequest,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> APIResponse[RegenerateResponse]:
     """Regenerate all text or image variants.
@@ -110,7 +129,8 @@ async def regenerate_variant(
     - 'image': Regenerates all 4 image variants (one per style)
 
     Args:
-        request: Regeneration request with session ID and element type.
+        request: Starlette Request object (required for rate limiting).
+        body: Regeneration request with session ID and element type.
         service: Injected CardService instance.
 
     Returns:
@@ -124,27 +144,27 @@ async def regenerate_variant(
     """
     correlation_id = str(uuid4())
     logger.info(
-        f"[{correlation_id}] POST /cards/regenerate - session: {request.session_id}, "
-        f"element: {request.element_type}"
+        f"[{correlation_id}] POST /cards/regenerate - session: {body.session_id}, "
+        f"element: {body.element_type}"
     )
 
     try:
         # Regenerate based on element type
-        if request.element_type == "text":
-            response = await service.regenerate_text(session_id=request.session_id)
+        if body.element_type == "text":
+            response = await service.regenerate_text(session_id=body.session_id)
             variant_count = len(response.text_variants) if response.text_variants else 0
-        elif request.element_type == "image":
-            response = await service.regenerate_image(session_id=request.session_id)
+        elif body.element_type == "image":
+            response = await service.regenerate_image(session_id=body.session_id)
             variant_count = len(response.image_variants) if response.image_variants else 0
         else:
-            logger.error(f"[{correlation_id}] Invalid element type: {request.element_type}")
+            logger.error(f"[{correlation_id}] Invalid element type: {body.element_type}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid element type: {request.element_type}",
+                detail=f"Invalid element type: {body.element_type}",
             )
 
         logger.info(
-            f"[{correlation_id}] Regenerated {variant_count} {request.element_type} variants, "
+            f"[{correlation_id}] Regenerated {variant_count} {body.element_type} variants, "
             f"remaining: {response.remaining_regenerations}"
         )
 
@@ -190,8 +210,10 @@ async def regenerate_variant(
 
 
 @router.post("/cards/send", response_model=APIResponse[SendCardResponse])
+@limiter.limit(get_rate_limit)
 async def send_card(
-    request: SendCardRequest,
+    request: Request,
+    body: SendCardRequest,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> APIResponse[SendCardResponse]:
     """Send selected card to Telegram.
@@ -201,7 +223,8 @@ async def send_card(
     greeting text as caption.
 
     Args:
-        request: Send request with session ID and selected variant indices.
+        request: Starlette Request object (required for rate limiting).
+        body: Send request with session ID and selected variant indices.
         service: Injected CardService instance.
 
     Returns:
@@ -214,14 +237,14 @@ async def send_card(
     """
     correlation_id = str(uuid4())
     logger.info(
-        f"[{correlation_id}] POST /cards/send - session: {request.session_id}, "
-        f"employee: {request.employee_name}, text_idx: {request.selected_text_index}, "
-        f"image_idx: {request.selected_image_index}, "
-        f"use_original: {request.use_original_text}, include_original: {request.include_original_text}"
+        f"[{correlation_id}] POST /cards/send - session: {body.session_id}, "
+        f"employee: {body.employee_name}, text_idx: {body.selected_text_index}, "
+        f"image_idx: {body.selected_image_index}, "
+        f"use_original: {body.use_original_text}, include_original: {body.include_original_text}"
     )
 
     try:
-        send_response = await service.send_card(request)
+        send_response = await service.send_card(body)
 
         if send_response.success:
             logger.info(

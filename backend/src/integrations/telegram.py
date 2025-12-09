@@ -57,6 +57,11 @@ logger = logging.getLogger(__name__)
 # Telegram caption length limit
 MAX_CAPTION_LENGTH = 1024
 
+# Retry configuration
+MAX_RETRY_ATTEMPTS = 3
+RETRY_MIN_WAIT_SECONDS = 2
+RETRY_MAX_WAIT_SECONDS = 10
+
 
 class TelegramClient:
     """Client for sending greeting cards to Telegram.
@@ -267,8 +272,8 @@ class TelegramClient:
 
     @retry(
         retry=retry_if_exception_type((NetworkError, TimedOut)),
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
+        stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
+        wait=wait_exponential(multiplier=1, min=RETRY_MIN_WAIT_SECONDS, max=RETRY_MAX_WAIT_SECONDS),
     )
     async def _send_photo_with_retry(
         self,

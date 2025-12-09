@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance } from 'axios'
+import axios, { type AxiosInstance, type AxiosError } from 'axios'
 import type {
   CardGenerationRequest,
   CardGenerationResponse,
@@ -13,6 +13,37 @@ import type {
 
 // API timeout for generation requests (5 minutes for 9 parallel AI generations)
 const GENERATION_TIMEOUT_MS = 300000
+
+/**
+ * Custom API error with detailed message from backend
+ */
+export class APIError extends Error {
+  public readonly statusCode: number
+  public readonly detail: string
+
+  constructor(message: string, statusCode: number, detail: string) {
+    super(message)
+    this.name = 'APIError'
+    this.statusCode = statusCode
+    this.detail = detail
+  }
+
+  /**
+   * Get user-friendly error message
+   */
+  getUserMessage(): string {
+    if (this.statusCode === 429) {
+      return 'Слишком много запросов. Пожалуйста, подождите минуту.'
+    }
+    if (this.statusCode === 404) {
+      return this.detail || 'Ресурс не найден.'
+    }
+    if (this.statusCode >= 500) {
+      return this.detail || 'Ошибка сервера. Попробуйте позже.'
+    }
+    return this.detail || this.message
+  }
+}
 
 // Backend API response wrapper
 interface APIResponse<T> {
@@ -68,6 +99,24 @@ class APIClient {
       },
       timeout: GENERATION_TIMEOUT_MS
     })
+
+    // Add response interceptor for error handling
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error: AxiosError<{ detail?: string; error?: string }>) => {
+        const statusCode = error.response?.status || 0
+        const detail = error.response?.data?.detail
+          || error.response?.data?.error
+          || error.message
+          || 'Неизвестная ошибка'
+
+        throw new APIError(
+          `API Error: ${statusCode}`,
+          statusCode,
+          detail
+        )
+      }
+    )
   }
 
   /**
