@@ -337,29 +337,26 @@ class GeminiClient:
         message: Optional[str] = None,
     ) -> str:
         """Generate stylized greeting text using Gemini.
-
+        
+        This function constructs a greeting message based on the provided style and
+        recipient. It validates the style against available templates, builds a full
+        prompt, and sends a request to the Gemini API for text generation. The function
+        handles various exceptions, including rate limits and HTTP errors, ensuring
+        robust error reporting.
+        
         Args:
-            prompt: Base prompt (usually empty, style template is used)
-            style: Text style code (ode, future, haiku, newspaper, standup)
-            recipient: Name of the person receiving the greeting
-            reason: Reason for gratitude (optional)
-            message: Additional message from sender (optional)
-
+            prompt (str): Base prompt (usually empty, style template is used).
+            style (str): Text style code (ode, future, haiku, newspaper, standup).
+            recipient (str): Name of the person receiving the greeting.
+            reason (Optional[str]): Reason for gratitude (optional).
+            message (Optional[str]): Additional message from sender (optional).
+        
         Returns:
-            Generated text content
-
+            str: Generated text content.
+        
         Raises:
-            GeminiTextGenerationError: If generation fails
-            GeminiRateLimitError: If rate limit is exceeded
-
-        Example:
-            >>> text = await client.generate_text(
-            ...     prompt="",
-            ...     style="haiku",
-            ...     recipient="Анна Смирнова",
-            ...     reason="успешный запуск нового продукта",
-            ...     message="С Новым Годом!"
-            ... )
+            GeminiTextGenerationError: If generation fails.
+            GeminiRateLimitError: If rate limit is exceeded.
         """
         if style not in TEXT_STYLE_PROMPTS:
             raise GeminiTextGenerationError(
@@ -473,26 +470,25 @@ class GeminiClient:
         reason: Optional[str],
         style: str,
     ) -> Tuple[bytes, str]:
-        """Generate festive image using Gemini image model.
-
+        """Generate a festive image using the Gemini image model.
+        
+        This function generates an image based on the provided recipient's name, a
+        reason for gratitude, and a specified style. It constructs a prompt using a
+        template corresponding to the selected style and sends a request to the Gemini
+        image model for image generation. The function handles various exceptions,
+        including rate limits and HTTP errors, ensuring robust error management.
+        
         Args:
-            recipient: Name of the person receiving the greeting
-            reason: Reason for gratitude (used in prompt context)
-            style: Image style code (digital_art, pixel_art, space, movie)
-
+            recipient (str): Name of the person receiving the greeting.
+            reason (Optional[str]): Reason for gratitude (used in prompt context).
+            style (str): Image style code (digital_art, pixel_art, space, movie).
+        
         Returns:
-            Tuple of (image_bytes, prompt_used) where image_bytes is PNG format
-
+            Tuple[bytes, str]: A tuple containing image_bytes in PNG format and the prompt used.
+        
         Raises:
-            GeminiImageGenerationError: If generation fails
-            GeminiRateLimitError: If rate limit is exceeded
-
-        Example:
-            >>> image_bytes, prompt = await client.generate_image(
-            ...     recipient="Петр Иванов",
-            ...     reason="инновационные идеи",
-            ...     style="space"
-            ... )
+            GeminiImageGenerationError: If generation fails.
+            GeminiRateLimitError: If rate limit is exceeded.
         """
         if style not in IMAGE_STYLE_PROMPTS:
             raise GeminiImageGenerationError(

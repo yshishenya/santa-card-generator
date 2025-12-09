@@ -106,14 +106,7 @@ def get_employee_repo() -> EmployeeRepository:
 
 
 def get_card_service() -> CardService:
-    """Get singleton CardService instance.
-
-    This is the main dependency used by API endpoints. It orchestrates
-    all other services (Gemini, Telegram, Employee repository, Session manager).
-
-    Returns:
-        Singleton CardService instance with all dependencies injected.
-    """
+    """Get singleton CardService instance."""
     global _card_service
     if _card_service is None:
         logger.info("Initializing CardService singleton")
