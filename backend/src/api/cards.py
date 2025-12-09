@@ -59,26 +59,7 @@ async def generate_card(
     body: CardGenerationRequest,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> APIResponse[CardGenerationResponse]:
-    """Generate a new greeting card with text and image variants.
-
-    This endpoint creates a new card generation session and produces:
-    - 5 text variants (one per AI style: ode, haiku, future, standup, newspaper)
-    - 4 image variants (one per style: digital_art, space, pixel_art, movie)
-
-    The session ID returned can be used for regeneration and sending operations.
-
-    Args:
-        request: Starlette Request object (required for rate limiting).
-        body: Card generation request with recipient name.
-        service: Injected CardService instance.
-
-    Returns:
-        APIResponse containing CardGenerationResponse with session ID and all variants.
-
-    Raises:
-        HTTPException 404: If employee is not found in the system.
-        HTTPException 500: If generation fails due to internal error.
-    """
+    """Generate a new greeting card with text and image variants."""
     correlation_id = str(uuid4())
     logger.info(
         f"[{correlation_id}] POST /cards/generate - recipient: {body.recipient}"
@@ -122,20 +103,24 @@ async def regenerate_variant(
     body: RegenerateRequest,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> APIResponse[RegenerateResponse]:
-    """Regenerate all text or image variants.
-
-    This endpoint regenerates ALL variants of the specified type:
-    - 'text': Regenerates all 5 text variants (one per AI style)
-    - 'image': Regenerates all 4 image variants (one per style)
-
+    """Regenerate all text or image variants based on the specified type.
+    
+    This function handles the regeneration of variants for either text or image
+    elements. It first logs the request details, then checks the element type to
+    call the appropriate regeneration method from the CardService. If the element
+    type is invalid, it raises an HTTPException. The function also manages various
+    exceptions related to session validity and regeneration limits, ensuring proper
+    error handling and logging throughout the process.
+    
     Args:
-        request: Starlette Request object (required for rate limiting).
-        body: Regeneration request with session ID and element type.
-        service: Injected CardService instance.
-
+        request (Request): Starlette Request object (required for rate limiting).
+        body (RegenerateRequest): Regeneration request containing session ID and element type.
+        service (CardService): Injected CardService instance.
+    
     Returns:
-        APIResponse containing RegenerateResponse with new variants and remaining count.
-
+        APIResponse[RegenerateResponse]: APIResponse containing RegenerateResponse with new variants and remaining
+            count.
+    
     Raises:
         HTTPException 404: If session is not found.
         HTTPException 400: If session has expired or invalid element type.
@@ -217,23 +202,17 @@ async def send_card(
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> APIResponse[SendCardResponse]:
     """Send selected card to Telegram.
-
-    This endpoint sends the selected text and image variant to the configured
-    Telegram chat/topic. The card is formatted as a photo message with the
-    greeting text as caption.
-
+    
+    This endpoint processes a request to send a card, which includes a text and an
+    image variant, to a configured Telegram chat/topic. It logs the request details
+    and utilizes the CardService to send the card. The function handles various
+    exceptions related to session and variant validation, ensuring appropriate
+    error responses are returned in case of failures.
+    
     Args:
         request: Starlette Request object (required for rate limiting).
         body: Send request with session ID and selected variant indices.
         service: Injected CardService instance.
-
-    Returns:
-        APIResponse containing SendCardResponse with success status and message ID.
-
-    Raises:
-        HTTPException 404: If session or variant is not found.
-        HTTPException 400: If session has expired.
-        HTTPException 500: If sending fails due to internal error.
     """
     correlation_id = str(uuid4())
     logger.info(
