@@ -230,7 +230,7 @@ class APIClient {
   }
 
   /**
-   * Verify application password
+   * Verify application password.
    */
   async verifyPassword(password: string): Promise<boolean> {
     const response = await this.client.post<BackendAuthResponse>('/auth/verify', { password })
