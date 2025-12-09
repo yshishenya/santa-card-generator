@@ -77,18 +77,7 @@ class SessionManager:
         image_variants: List[ImageVariant],
         image_data: Dict[str, bytes],
     ) -> str:
-        """Create new session and return session ID.
-
-        Args:
-            request: Original card generation request.
-            original_text: User's original message text.
-            text_variants: List of generated text variants.
-            image_variants: List of generated image variants.
-            image_data: Dictionary mapping image variant IDs to image bytes.
-
-        Returns:
-            Unique session ID (UUID).
-        """
+        """Create a new session and return the session ID."""
         session_id = str(uuid.uuid4())
 
         session = GenerationSession(
@@ -138,15 +127,12 @@ class SessionManager:
     def replace_text_variants(
         self, session_id: str, variants: List[TextVariant]
     ) -> int:
-        """Replace all text variants in session and decrement regeneration counter.
-
+        """Replace text variants in a session and decrement the regeneration counter.
+        
         Args:
             session_id: Session ID to update.
             variants: New text variants to replace existing ones.
-
-        Returns:
-            Number of regenerations remaining.
-
+        
         Raises:
             ValueError: If session not found or regeneration limit exceeded.
         """
@@ -175,19 +161,7 @@ class SessionManager:
         variants: List[ImageVariant],
         image_data: Dict[str, bytes],
     ) -> int:
-        """Replace all image variants in session and decrement regeneration counter.
-
-        Args:
-            session_id: Session ID to update.
-            variants: New image variants to replace existing ones.
-            image_data: New image data dictionary.
-
-        Returns:
-            Number of regenerations remaining.
-
-        Raises:
-            ValueError: If session not found or regeneration limit exceeded.
-        """
+        """Replace image variants in a session and decrement the regeneration counter."""
         session = self.get_session(session_id)
         if session is None:
             raise ValueError(f"Session not found: {session_id}")
