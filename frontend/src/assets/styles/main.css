@@ -2,24 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Christmas color variables */
+/* 2025 Christmas Magic color variables */
 :root {
   /* Primary - Christmas Red */
   --color-primary: #DC2626;
   --color-primary-dark: #991B1B;
+  --color-primary-glow: #FF4444;
 
   /* Secondary - Christmas Green */
   --color-secondary: #16A34A;
   --color-secondary-dark: #166534;
+  --color-secondary-glow: #22D955;
 
   /* Accent - Gold */
   --color-accent: #F59E0B;
   --color-accent-light: #FCD34D;
+  --color-accent-glow: #FFD700;
 
-  /* Background - Winter */
-  --color-bg-primary: #0F172A;
-  --color-bg-secondary: #1E293B;
-  --color-bg-glass: rgba(255, 255, 255, 0.1);
+  /* Background - Deep Winter */
+  --color-bg-primary: #0A0E1A;
+  --color-bg-secondary: #141B2D;
+  --color-bg-glass: rgba(255, 255, 255, 0.08);
+
+  /* Aurora Colors */
+  --color-aurora-purple: #A855F7;
+  --color-aurora-cyan: #22D3EE;
+  --color-aurora-pink: #EC4899;
+  --color-aurora-blue: #3B82F6;
 
   /* Snow White */
   --color-snow: #F8FAFC;
@@ -33,85 +42,322 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--color-bg-primary);
 }
 
-/* Glass card utility class */
+/* Glass card utility classes - 2025 enhanced */
 @layer utilities {
   .glass-card {
-    background: var(--color-bg-glass);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .glass-card-hover {
-    @apply glass-card transition-all duration-300;
+    @apply glass-card transition-all duration-500;
   }
 
   .glass-card-hover:hover {
-    background: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.08) 100%
+    );
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow:
+      0 16px 48px rgba(0, 0, 0, 0.5),
+      0 0 40px rgba(168, 85, 247, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+  }
+
+  /* Aurora glow card */
+  .glass-card-aurora {
+    @apply glass-card;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .glass-card-aurora::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(
+      135deg,
+      rgba(168, 85, 247, 0.3) 0%,
+      rgba(34, 211, 238, 0.3) 50%,
+      rgba(236, 72, 153, 0.3) 100%
+    );
+    border-radius: 26px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .glass-card-aurora:hover::before {
+    opacity: 1;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: linear-gradient(135deg, #A855F7 0%, #22D3EE 50%, #EC4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-christmas {
+    background: linear-gradient(135deg, #DC2626 0%, #F59E0B 50%, #16A34A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #F59E0B 0%, #FCD34D 50%, #F59E0B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Magic button styles */
+  .btn-magic {
+    position: relative;
+    background: linear-gradient(135deg, #A855F7 0%, #EC4899 100%);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .btn-magic::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #EC4899 0%, #A855F7 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .btn-magic:hover::before {
+    opacity: 1;
+  }
+
+  .btn-magic:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 40px rgba(168, 85, 247, 0.4);
+  }
+
+  .btn-magic span {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Christmas gradient button */
+  .btn-christmas {
+    background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .btn-christmas:hover {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 40px rgba(220, 38, 38, 0.4);
+  }
+
+  /* Aurora background */
+  .bg-aurora {
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(34, 211, 238, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 40% 60%, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
+      linear-gradient(180deg, #0A0E1A 0%, #141B2D 100%);
+    background-size: 200% 200%;
+    animation: aurora 15s ease-in-out infinite;
+  }
+
+  /* Sparkle effect */
+  .sparkle {
+    position: relative;
+  }
+
+  .sparkle::after {
+    content: '✨';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 16px;
+    animation: sparkle 1.5s ease-in-out infinite;
+  }
+
+  /* Glow effects */
+  .glow-red {
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.5), 0 0 40px rgba(220, 38, 38, 0.3);
+  }
+
+  .glow-green {
+    box-shadow: 0 0 20px rgba(22, 163, 74, 0.5), 0 0 40px rgba(22, 163, 74, 0.3);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.5), 0 0 40px rgba(245, 158, 11, 0.3);
+  }
+
+  .glow-aurora {
+    box-shadow:
+      0 0 30px rgba(168, 85, 247, 0.4),
+      0 0 60px rgba(34, 211, 238, 0.3),
+      0 0 90px rgba(236, 72, 153, 0.2);
+  }
+
+  /* Input styles - 2025 */
+  .input-magic {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: var(--color-snow);
+    transition: all 0.3s ease;
+  }
+
+  .input-magic:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(168, 85, 247, 0.5);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+    outline: none;
+  }
+
+  .input-magic::placeholder {
+    color: rgba(248, 250, 252, 0.4);
+  }
+
+  /* Shimmer effect for loading states */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
   }
 }
 
-/* Custom scrollbar for dark theme */
+/* Custom scrollbar for dark theme - 2025 style */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(10, 14, 26, 0.8);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(168, 85, 247, 0.4) 0%, rgba(34, 211, 238, 0.4) 100%);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, rgba(168, 85, 247, 0.6) 0%, rgba(34, 211, 238, 0.6) 100%);
 }
 
-/* PrimeVue customizations */
+/* PrimeVue customizations - 2025 */
 .p-autocomplete-panel {
-  background: rgba(30, 41, 59, 0.95);
-  backdrop-filter: blur(10px);
+  background: rgba(20, 27, 45, 0.95);
+  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 .p-autocomplete-item {
   color: var(--color-snow);
+  border-radius: 8px;
+  margin: 4px;
+  transition: all 0.2s ease;
 }
 
 .p-autocomplete-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(34, 211, 238, 0.2) 100%);
+}
+
+.p-autocomplete-item.p-highlight {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3) 0%, rgba(34, 211, 238, 0.3) 100%);
 }
 
 /* Animations */
-@keyframes snowfall {
-  0% {
-    transform: translateY(-100vh);
+@keyframes aurora {
+  0%, 100% {
+    background-position: 0% 50%;
   }
-  100% {
-    transform: translateY(100vh);
+  50% {
+    background-position: 100% 50%;
   }
 }
 
-@keyframes twinkle {
+@keyframes sparkle {
   0%, 100% {
-    opacity: 1;
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
   }
   50% {
-    opacity: 0.3;
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(34, 211, 238, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.6), 0 0 60px rgba(34, 211, 238, 0.4);
   }
 }
 
 /* Loading animation customization */
 .loading-spinner {
-  border-color: rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border-color: rgba(168, 85, 247, 0.3);
+  border-top-color: var(--color-aurora-purple);
+}
+
+/* Selection ring with aurora glow */
+.ring-aurora {
+  --tw-ring-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
 }

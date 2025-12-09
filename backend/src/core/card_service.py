@@ -54,6 +54,7 @@ class GeminiClient(Protocol):
         recipient: str,
         reason: str | None = None,
         message: str | None = None,
+        sender: str | None = None,
     ) -> str:
         """Generate greeting text for a recipient.
 
@@ -63,6 +64,7 @@ class GeminiClient(Protocol):
             recipient: Name of the card recipient.
             reason: Optional reason for gratitude.
             message: Optional custom message.
+            sender: Optional name of the sender.
 
         Returns:
             Generated greeting text.
@@ -570,6 +572,7 @@ class CardService:
                 recipient=request.recipient,
                 reason=request.reason,
                 message=request.message,
+                sender=request.sender,
             )
             for style in AI_TEXT_STYLES
         ]

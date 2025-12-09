@@ -46,209 +46,145 @@ logger = logging.getLogger(__name__)
 
 # Text style prompts in Russian for corporate greeting cards
 TEXT_STYLE_PROMPTS = {
-    "ode": """Ты — великий придворный поэт, мастер торжественной оды.
+    "ode": """Перепиши это поздравление в стиле торжественной оды.
 
-Задача: Напиши торжественную оду в честь сотрудника {recipient}.
+Кому: {recipient}
+От кого: {sender}
+За что: {reason}
+Послание: {message}
 
-Контекст:
-- За что благодарим: {reason}
-- Дополнительное сообщение: {message}
+Стиль: возвышенный слог, поэтические обороты, лёгкая ирония. Как придворный поэт, но с юмором.
 
-Требования:
-1. Стиль: возвышенный, торжественный, но с легким юмором
-2. Длина: 500-800 символов
-3. Используй поэтические обороты, но без излишнего пафоса
-4. Обязательно упомяни имя получателя {recipient} в тексте
-5. Новогодняя/рождественская тематика приветствуется
-6. Избегай клише типа "незаменимый сотрудник"
-7. Пиши от первого лица (я/мы благодарим)
+Пример трансформации:
+Было: "Спасибо за помощь с отчётом"
+Стало: "О, {recipient}! Когда тьма квартальных отчётов сгущалась над нами, ты явился как луч света! Благодаря твоей помощи, цифры сложились в симфонию, а дедлайн был повержен!"
 
-Пример стиля (не копируй дословно):
-"О, {recipient}, светило наших офисных просторов! В этот предновогодний час спешим воздать тебе хвалу за труды твои ратные..."
+Теперь перепиши в этом стиле. 400-600 символов. Упомяни {recipient}. Только текст, без комментариев.""",
 
-Создай ОДНУ оду, без вариантов и дополнительных комментариев.""",
-    "future": """Ты — журналист из будущего, пишущий ретроспективный отчет о достижениях.
+    "future": """Перепиши это поздравление как статью из 2030 года — будто оглядываешься на исторический момент.
 
-Задача: Напиши отчет из 2025 года о том, как {recipient} изменил(а) компанию.
+Кому: {recipient}
+От кого: {sender}
+За что: {reason}
+Послание: {message}
 
-Контекст:
-- За что благодарим: {reason}
-- Дополнительное сообщение: {message}
+Стиль: ретроспектива, восхищение, "мы тогда ещё не знали, что это изменит всё".
 
-Требования:
-1. Стиль: как будто пишешь из будущего, оглядываясь назад на 2024 год
-2. Длина: 400-600 символов
-3. Используй конструкции "благодаря {recipient}, мы смогли...", "именно в конце 2024 года..."
-4. Упомяни конкретные достижения (даже если в шутливой форме)
-5. Новогодняя тематика: как новогодние праздники стали поворотным моментом
-6. Оптимистичный тон, вера в светлое будущее
-7. Пиши от лица компании (мы/наша команда)
+Пример трансформации:
+Было: "Спасибо за новую систему учёта"
+Стало: "2030 год. Оглядываясь назад, мы понимаем: когда {recipient} в декабре 2025-го внедрил систему учёта, это казалось рутиной. Но именно с этого началась новая эра. Мы ещё не знали, что этот шаг приведёт к..."
 
-Пример стиля (не копируй дословно):
-"2025 год. Оглядываясь назад, мы понимаем: именно зимой 2024, когда {recipient} {reason}, началась новая эра в истории нашей компании..."
+Теперь перепиши в этом стиле. 350-500 символов. Только текст.""",
 
-Создай ОДИН отчет, без вариантов и комментариев.""",
-    "haiku": """Ты — мастер хайку, поэт минималист.
+    "haiku": """Вырази суть этого поздравления в 2-3 хайку.
 
-Задача: Напиши хайку (или несколько связанных хайку) для {recipient}.
+Кому: {recipient}
+От кого: {sender}
+За что: {reason}
+Послание: {message}
 
-Контекст:
-- За что благодарим: {reason}
-- Дополнительное сообщение: {message}
+Правила: зимние образы, имя {recipient} хотя бы раз, между хайку пустая строка.
 
-Требования:
-1. Стиль: лаконичный, образный, философский
-2. Длина: 2-4 хайку (всего 200-400 символов)
-3. Классическая структура хайку: 5-7-5 слогов (допускается небольшое отклонение в русском языке)
-4. Упомяни имя {recipient} хотя бы один раз
-5. Зимняя/новогодняя образность (снег, звезды, огни)
-6. Избегай прямолинейности, используй метафоры
-7. Каждое хайку с новой строки, пустая строка между хайку
+Пример:
+Было: "Спасибо за поддержку в трудный момент"
+Стало:
+Снег падает тихо
+{recipient} рядом был —
+Теплее зимы
 
-Пример стиля (не копируй):
-Снег кружит над крышей
-{recipient} — как маяк —
-Светит сквозь метель
+Только хайку, без комментариев.""",
 
-Новый год стучится
-Благодарность наша —
-Теплее огня
+    "newspaper": """Перепиши это поздравление как новостную заметку для корпоративной газеты.
 
-Создай 2-4 хайку, без дополнительных комментариев.""",
-    "newspaper": """Ты — журналист корпоративной газеты "Вестник Компании".
+Кому: {recipient}
+От кого: {sender}
+За что: {reason}
+Послание: {message}
 
-Задача: Напиши заметку о {recipient} для предновогоднего выпуска.
+Формат: цепляющий заголовок + текст заметки. Стиль — журналистский, но тёплый.
 
-Контекст:
-- За что благодарим: {reason}
-- Дополнительное сообщение: {message}
+Пример:
+Было: "Спасибо что вытянул проект"
+Стало:
+**{recipient} спасает проект в последний момент: как это было**
+Наш корреспондент выяснил подробности. Когда казалось, что сроки сорваны...
 
-Требования:
-1. Стиль: журналистский, информативный, но теплый
-2. Длина: 500-700 символов
-3. Структура: яркий заголовок + основной текст
-4. Используй журналистские приемы: цитаты (можно вымышленные от коллег), факты
-5. Упомяни {recipient} в заголовке или первом абзаце
-6. Новогодняя рубрика: "Герои уходящего года" или "Звезды 2024"
-7. Позитивный, вдохновляющий тон
-8. Без излишнего пафоса, живой язык
+Теперь напиши заметку про {reason}. 400-600 символов. Только текст.""",
 
-Пример структуры (не копируй):
-**Звезда декабря: {recipient} показывает класс**
+    "standup": """Перепиши это поздравление как дружеский стендап-монолог на корпоративе.
 
-В преддверии новогодних праздников редакция "Вестника" традиционно подводит итоги года. И сегодня наш герой — {recipient}...
+Кому: {recipient}
+От кого: {sender}
+За что: {reason}
+Послание: {message}
 
-Создай ОДНУ заметку с заголовком, без вариантов.""",
-    "standup": """Ты — стендап-комик на корпоративе, дружелюбный и остроумный.
+Стиль: тёплый юмор, обращение на "ты", шутки над ситуацией (не над человеком!), искренний финал.
 
-Задача: Напиши дружеский стендап-монолог про {recipient}.
+Пример:
+Было: "Спасибо за терпение с моими правками"
+Стало: "{recipient}, слушай, я посчитал — ты пережил 47 версий моих правок и ни разу не закатил глаза. Ну, может, закатил, но я не видел. Серьёзно, твоё терпение — это суперсила. Спасибо тебе!"
 
-Контекст:
-- За что благодарим: {reason}
-- Дополнительное сообщение: {message}
-
-Требования:
-1. Стиль: легкий, дружеский юмор, без сарказма и обидных шуток
-2. Длина: 400-600 символов
-3. Обращайся к {recipient} напрямую (на "ты")
-4. Используй юмор, но с теплотой и благодарностью
-5. Новогодняя тематика: корпоратив, елка, подарки
-6. Избегай профессиональных стереотипов
-7. Финал — искренняя благодарность
-
-Пример стиля (не копируй):
-"{recipient}, друг, помнишь, как в начале года мы думали, что {reason}? А ты взял и сделал это! Коллеги до сих пор в шоке... В хорошем смысле!"
-
-Создай ОДИН монолог, без вариантов и комментариев.""",
+Теперь напиши монолог. 350-500 символов. Только текст.""",
 }
 
 
 # Image style prompts in English for Gemini image generation
 IMAGE_STYLE_PROMPTS = {
-    "digital_art": """Create a vibrant digital painting for a corporate Christmas greeting card.
+    "digital_art": """Create a festive digital painting symbolizing this achievement: {reason}
 
-Subject: Celebrating in a festive winter setting
+Style: Modern digital art, warm vibrant colors, professional quality.
+Scene: Winter wonderland with Christmas lights and decorations.
+The image should FEEL like celebration and gratitude.
+Colors: Rich reds, warm golds, snow whites, deep blues.
 
-Requirements:
-1. Style: Modern digital art, vibrant colors, professional quality
-2. Scene: Winter wonderland with Christmas/New Year elements
-3. Mood: Warm, celebratory, inspiring
-4. Elements to include:
-   - Festive decorations (lights, ornaments, snowflakes)
-   - Corporate/office elements subtly integrated
-   - Warm color palette: reds, golds, blues, whites
-5. Composition: Balanced, eye-catching, suitable for a greeting card
-6. NO TEXT in the image
-7. NO realistic human faces or identifiable people
-8. Professional and tasteful, suitable for workplace
+Important:
+- NO text or letters in the image
+- NO realistic human faces
+- Make viewers sense the achievement through visual metaphors
 
-Additional context: {reason}
+Create a beautiful holiday scene that captures the spirit of appreciation.""",
 
-Create a beautiful, festive digital painting that captures the spirit of gratitude and celebration.""",
-    "pixel_art": """Create a retro pixel art image for a corporate Christmas greeting card.
+    "pixel_art": """Create retro pixel art celebrating this achievement: {reason}
 
-Subject: Festive pixel art celebration
+Style: 8-bit/16-bit video game aesthetic, like classic NES/SNES games.
+Scene: Festive winter pixel scene with Christmas tree, snow, warm lights.
+Mood: Nostalgic, cheerful, triumphant — like completing a game level.
+Palette: 16-32 vibrant colors, clear pixel grid.
 
-Requirements:
-1. Style: 8-bit/16-bit retro pixel art, reminiscent of classic video games
-2. Color palette: Limited palette (16-32 colors), vibrant but not garish
-3. Scene: Winter/Christmas themed office or celebration scene
-4. Elements to include:
-   - Pixelated Christmas tree with gifts
-   - Snow falling (simple pixel snow)
-   - Festive lights or decorations
-   - Office/workspace elements in pixel style
-5. Mood: Nostalgic, fun, cheerful
-6. NO TEXT in the image
-7. Clear pixel grid, authentic retro aesthetic
-8. Professional quality despite retro style
+Important:
+- NO text or letters in the image
+- Include holiday elements: pixelated tree, gifts, snow
+- The scene should feel like a victory screen
 
-Additional context: {reason}
+Create charming pixel art that says "achievement unlocked" visually.""",
 
-Create charming pixel art that combines workplace appreciation with holiday cheer.""",
-    "space": """Create a cosmic space fantasy image for a corporate Christmas greeting card.
+    "space": """Create a cosmic scene symbolizing this achievement: {reason}
 
-Subject: Spectacular space celebration setting
+Style: Space fantasy, ethereal nebulae, cosmic grandeur.
+Scene: Beautiful galaxy or nebula with stars arranged like celebration lights.
+Mood: Awe-inspiring, majestic, reaching for the stars.
+Colors: Deep purples, cosmic blues, golden starlight, nebula pinks.
 
-Requirements:
-1. Style: Space fantasy, cosmic, ethereal
-2. Scene: Beautiful nebula or galaxy with Christmas/winter elements
-3. Elements to include:
-   - Colorful nebula clouds (purples, blues, golds)
-   - Stars and cosmic lights resembling Christmas lights
-   - Snowflakes made of stardust
-   - Abstract representation of celebration/achievement
-4. Mood: Awe-inspiring, majestic, optimistic
-5. Color palette: Deep blues, purples, gold, white, cosmic colors
-6. NO TEXT in the image
-7. NO realistic human figures
-8. Professional quality, suitable for corporate use
+Important:
+- NO text in the image
+- NO human figures
+- Stars and cosmic elements should feel festive, like holiday lights in space
 
-Additional context: {reason}
+Create a breathtaking cosmic scene that makes the achievement feel universal.""",
 
-Create a breathtaking cosmic scene that symbolizes reaching for the stars and celebrating achievements.""",
-    "movie": """Create a cinematic movie poster style image for a corporate greeting card.
+    "movie": """Create a cinematic scene for this hero moment: {reason}
 
-Subject: Epic movie poster celebrating contributions
+Style: Movie poster aesthetic, dramatic cinematic lighting.
+Genre: Feel-good drama or inspiring adventure.
+Scene: Epic moment of triumph with winter/holiday atmosphere.
+Colors: Cinematic color grading — teals, warm oranges, deep blues, golden highlights.
 
-Requirements:
-1. Style: Cinematic, dramatic lighting, movie poster aesthetic
-2. Genre inspiration: Feel-good drama or inspiring adventure
-3. Scene: Dramatic winter/holiday scene with professional elements
-4. Elements to include:
-   - Cinematic lighting (golden hour or dramatic shadows)
-   - Winter/Christmas atmosphere
-   - Sense of achievement and celebration
-   - Corporate/professional context
-5. Mood: Inspiring, epic, heartwarming
-6. Color grading: Cinematic color palette (teals, oranges, deep blues)
-7. NO TEXT in the image
-8. NO realistic faces or identifiable people
-9. Professional quality, could be a real movie poster
+Important:
+- NO text or titles in the image
+- NO realistic human faces — use silhouettes if needed
+- Dramatic lighting: golden hour, lens flares, volumetric light
 
-Additional context: {reason}
-
-Create an epic, cinematic image that makes the recipient feel like the hero of their own inspiring story.""",
+Create an epic scene that makes viewers feel like witnessing a legendary moment.""",
 }
 
 
@@ -335,6 +271,7 @@ class GeminiClient:
         recipient: str,
         reason: Optional[str] = None,
         message: Optional[str] = None,
+        sender: Optional[str] = None,
     ) -> str:
         """Generate stylized greeting text using Gemini.
 
@@ -344,6 +281,7 @@ class GeminiClient:
             recipient: Name of the person receiving the greeting
             reason: Reason for gratitude (optional)
             message: Additional message from sender (optional)
+            sender: Name of the person sending the greeting (optional)
 
         Returns:
             Generated text content
@@ -358,7 +296,8 @@ class GeminiClient:
             ...     style="haiku",
             ...     recipient="Анна Смирнова",
             ...     reason="успешный запуск нового продукта",
-            ...     message="С Новым Годом!"
+            ...     message="С Новым Годом!",
+            ...     sender="Иван Петров"
             ... )
         """
         if style not in TEXT_STYLE_PROMPTS:
@@ -373,6 +312,7 @@ class GeminiClient:
             recipient=recipient,
             reason=reason or "вклад в развитие компании",
             message=message or "Спасибо за работу!",
+            sender=sender or "коллеги",
         )
 
         logger.debug(
@@ -520,6 +460,7 @@ class GeminiClient:
 
             # Request image generation via chat completions
             # Gemini image models use modalities parameter for image generation
+            # Using 3:2 aspect ratio for horizontal A6 postcard format (148x105mm)
             response = await client.post(
                 "/chat/completions",
                 json={
@@ -532,6 +473,11 @@ class GeminiClient:
                     ],
                     "max_tokens": IMAGE_MAX_TOKENS,
                     "modalities": ["image", "text"],
+                    "extra_body": {
+                        "imageConfig": {
+                            "aspectRatio": "3:2"
+                        }
+                    },
                 },
             )
 

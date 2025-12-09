@@ -69,7 +69,7 @@ const handleSubmit = async (): Promise<void> => {
     <!-- Recipient field with autocomplete -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-winter-snow text-lg">Кому <span class="text-christmas-red">*</span></span>
+        <span class="label-text text-winter-snow text-lg font-medium">Кому <span class="text-aurora-pink">*</span></span>
       </label>
       <AutoComplete
         v-model="recipient"
@@ -78,7 +78,7 @@ const handleSubmit = async (): Promise<void> => {
         optionLabel="name"
         placeholder="Начните вводить имя сотрудника"
         class="w-full"
-        inputClass="input input-bordered w-full bg-white/10 text-winter-snow border-white/20"
+        inputClass="input-magic w-full px-4 py-3 text-base"
         required
       />
     </div>
@@ -86,51 +86,51 @@ const handleSubmit = async (): Promise<void> => {
     <!-- Sender field -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-winter-snow text-lg">От кого (необязательно)</span>
+        <span class="label-text text-winter-snow text-lg font-medium">От кого <span class="text-winter-snow/40">(необязательно)</span></span>
       </label>
       <input
         v-model="sender"
         type="text"
         placeholder="Ваше имя"
-        class="input input-bordered w-full bg-white/10 text-winter-snow border-white/20 placeholder:text-winter-snow/50"
+        class="input-magic w-full px-4 py-3 text-base"
       />
     </div>
 
     <!-- Reason field -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-winter-snow text-lg">За что (необязательно)</span>
-        <span class="label-text-alt text-winter-snow/60">Макс. 150 символов</span>
+        <span class="label-text text-winter-snow text-lg font-medium">За что <span class="text-winter-snow/40">(необязательно)</span></span>
+        <span class="label-text-alt text-winter-snow/50 text-sm">Макс. 150 символов</span>
       </label>
       <input
         v-model="reason"
         type="text"
         placeholder="За вклад в проект, за помощь..."
         maxlength="150"
-        class="input input-bordered w-full bg-white/10 text-winter-snow border-white/20 placeholder:text-winter-snow/50"
+        class="input-magic w-full px-4 py-3 text-base"
       />
     </div>
 
     <!-- Message field -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-winter-snow text-lg">Сообщение (необязательно)</span>
-        <span class="label-text-alt text-winter-snow/60">Макс. 1000 символов</span>
+        <span class="label-text text-winter-snow text-lg font-medium">Сообщение <span class="text-winter-snow/40">(необязательно)</span></span>
+        <span class="label-text-alt text-winter-snow/50 text-sm">Макс. 1000 символов</span>
       </label>
       <textarea
         v-model="message"
         placeholder="Ваше пожелание или благодарность..."
         maxlength="1000"
         rows="4"
-        class="textarea textarea-bordered w-full bg-white/10 text-winter-snow border-white/20 placeholder:text-winter-snow/50"
+        class="input-magic w-full px-4 py-3 text-base resize-none"
       ></textarea>
     </div>
 
     <!-- Error message -->
-    <div v-if="cardStore.error" class="alert alert-error">
-      <i class="pi pi-exclamation-triangle"></i>
-      <span>{{ cardStore.error }}</span>
-      <button type="button" class="btn btn-sm btn-ghost" @click="cardStore.clearError()">
+    <div v-if="cardStore.error" class="glass-card bg-red-500/20 border-red-500/30 p-4 flex items-center gap-3">
+      <i class="pi pi-exclamation-triangle text-red-400 text-xl"></i>
+      <span class="flex-1 text-red-200">{{ cardStore.error }}</span>
+      <button type="button" class="text-red-300 hover:text-red-100 transition-colors" @click="cardStore.clearError()">
         <i class="pi pi-times"></i>
       </button>
     </div>
@@ -140,11 +140,13 @@ const handleSubmit = async (): Promise<void> => {
       <button
         type="submit"
         :disabled="cardStore.isGenerating || !recipientName"
-        class="btn btn-lg w-full bg-christmas-red hover:bg-christmas-red-dark border-0 text-white text-lg"
+        class="btn-magic w-full px-6 py-4 text-lg font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group"
       >
-        <span v-if="cardStore.isGenerating" class="loading loading-spinner"></span>
-        <i v-else class="pi pi-sparkles mr-2"></i>
-        {{ cardStore.isGenerating ? 'Создаём волшебство...' : 'Сгенерировать открытку' }}
+        <span class="flex items-center justify-center gap-2">
+          <span v-if="cardStore.isGenerating" class="loading loading-spinner"></span>
+          <i v-else class="pi pi-sparkles group-hover:animate-sparkle"></i>
+          <span>{{ cardStore.isGenerating ? 'Создаём волшебство...' : 'Сгенерировать открытку' }}</span>
+        </span>
       </button>
     </div>
   </form>

@@ -33,7 +33,7 @@ const selectVariant = (index: number) => {
 
           <!-- Style badge -->
           <div class="mb-2">
-            <span class="badge badge-sm bg-christmas-green/20 text-christmas-green border-christmas-green/30">
+            <span class="badge badge-sm bg-aurora-pink/20 text-aurora-pink border-aurora-pink/30">
               <i class="pi pi-image mr-1 text-xs"></i>
               {{ IMAGE_STYLE_LABELS[variant.style] }}
             </span>
@@ -69,8 +69,8 @@ const selectVariant = (index: number) => {
       class="loading-overlay"
     >
       <div class="text-center">
-        <span class="loading loading-spinner loading-lg text-christmas-gold"></span>
-        <p class="text-winter-snow mt-2">Генерируем новые изображения...</p>
+        <span class="loading loading-spinner loading-lg text-aurora-pink"></span>
+        <p class="text-winter-snow/90 mt-2">Генерируем новые изображения...</p>
       </div>
     </div>
   </div>
@@ -102,8 +102,8 @@ const selectVariant = (index: number) => {
 .image-card.selected {
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.3),
-    0 0 0 3px rgba(22, 163, 74, 0.5),
-    0 0 20px rgba(22, 163, 74, 0.3);
+    0 0 0 3px rgba(34, 211, 238, 0.5),
+    0 0 30px rgba(168, 85, 247, 0.3);
   transform: scale(1.02);
   z-index: 10;
 }
@@ -128,14 +128,15 @@ const selectVariant = (index: number) => {
   z-index: 20;
   width: 32px;
   height: 32px;
-  background: #16A34A;
+  background: linear-gradient(135deg, #A855F7 0%, #22D3EE 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.4),
-    0 0 0 3px #0F172A;
+    0 0 0 3px #0F172A,
+    0 0 20px rgba(168, 85, 247, 0.4);
 }
 
 .selection-badge i {
@@ -144,11 +145,11 @@ const selectVariant = (index: number) => {
   font-weight: bold;
 }
 
-/* Image container */
+/* Image container - 3:2 aspect ratio for horizontal A6 postcard */
 .image-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 3 / 2;
   background: #1E293B;
   border-radius: 10px;
   overflow: hidden;

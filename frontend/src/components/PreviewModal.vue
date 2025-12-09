@@ -77,13 +77,13 @@ const handleBackdropClick = (event: MouseEvent) => {
         >
           <!-- Header -->
           <div class="sticky top-0 z-10 bg-slate-900/90 backdrop-blur p-4 border-b border-white/10 flex items-center justify-between">
-            <h2 class="text-2xl font-bold text-winter-snow flex items-center gap-2">
-              <i class="pi pi-eye text-christmas-gold"></i>
+            <h2 class="text-2xl font-bold text-gradient flex items-center gap-2">
+              <i class="pi pi-eye text-aurora-cyan"></i>
               Предпросмотр открытки
             </h2>
             <button
               @click="handleClose"
-              class="btn btn-sm btn-circle btn-ghost text-winter-snow"
+              class="btn btn-sm btn-circle btn-ghost text-winter-snow hover:bg-aurora-purple/20 hover:text-aurora-purple transition-all"
             >
               <i class="pi pi-times text-xl"></i>
             </button>
@@ -94,18 +94,18 @@ const handleBackdropClick = (event: MouseEvent) => {
             <!-- Recipient -->
             <div class="text-center">
               <span class="text-winter-snow/60">Для:</span>
-              <span class="text-christmas-gold font-bold ml-2 text-lg">{{ cardStore.recipient }}</span>
+              <span class="text-aurora-cyan font-bold ml-2 text-lg">{{ cardStore.recipient }}</span>
             </div>
 
             <!-- Selected image -->
             <div v-if="selectedImage" class="space-y-2">
               <div class="flex items-center gap-2">
-                <span class="badge badge-lg bg-christmas-green/20 text-christmas-green border-christmas-green/30">
+                <span class="badge badge-lg bg-aurora-pink/20 text-aurora-pink border-aurora-pink/30">
                   <i class="pi pi-image mr-1"></i>
                   {{ imageLabel }}
                 </span>
               </div>
-              <div class="aspect-square bg-slate-800 rounded-xl overflow-hidden">
+              <div class="aspect-[3/2] bg-slate-800 rounded-xl overflow-hidden ring-1 ring-white/10">
                 <img
                   :src="selectedImage.url"
                   :alt="imageLabel"
@@ -117,12 +117,12 @@ const handleBackdropClick = (event: MouseEvent) => {
             <!-- Selected text -->
             <div v-if="displayText" class="space-y-2">
               <div class="flex items-center gap-2">
-                <span class="badge badge-lg bg-christmas-gold/20 text-christmas-gold border-christmas-gold/30">
+                <span class="badge badge-lg bg-aurora-purple/20 text-aurora-purple border-aurora-purple/30">
                   <i class="pi pi-align-left mr-1"></i>
                   {{ textLabel }}
                 </span>
               </div>
-              <div class="bg-white/5 p-4 rounded-xl">
+              <div class="bg-white/5 p-4 rounded-xl border border-white/5">
                 <p class="text-winter-snow text-lg leading-relaxed whitespace-pre-wrap">
                   {{ displayText }}
                 </p>
@@ -131,9 +131,9 @@ const handleBackdropClick = (event: MouseEvent) => {
               <!-- Original text addition indicator -->
               <div
                 v-if="!cardStore.useOriginalText && cardStore.includeOriginalText && cardStore.originalText"
-                class="bg-christmas-gold/10 p-3 rounded-lg border border-christmas-gold/20"
+                class="bg-aurora-cyan/10 p-3 rounded-lg border border-aurora-cyan/20"
               >
-                <p class="text-christmas-gold/80 text-sm mb-2">
+                <p class="text-aurora-cyan/80 text-sm mb-2">
                   <i class="pi pi-plus-circle mr-1"></i>
                   Также будет добавлен ваш текст:
                 </p>
@@ -148,19 +148,19 @@ const handleBackdropClick = (event: MouseEvent) => {
           <div class="sticky bottom-0 bg-slate-900/90 backdrop-blur p-4 border-t border-white/10 flex gap-4">
             <button
               @click="handleClose"
-              class="btn btn-lg flex-1 bg-white/10 hover:bg-white/20 border-white/20 text-winter-snow"
+              class="flex-1 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-winter-snow font-semibold transition-all duration-300 hover:border-white/30 flex items-center justify-center gap-2"
             >
-              <i class="pi pi-arrow-left mr-2"></i>
+              <i class="pi pi-arrow-left"></i>
               Назад
             </button>
             <button
               @click="handleSend"
               :disabled="cardStore.isSending"
-              class="btn btn-lg flex-1 bg-christmas-green hover:bg-christmas-green-dark border-0 text-white"
+              class="btn-magic flex-1 px-6 py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <span v-if="cardStore.isSending" class="loading loading-spinner"></span>
-              <i v-else class="pi pi-send mr-2"></i>
-              {{ cardStore.isSending ? 'Отправляем...' : 'Отправить в Telegram' }}
+              <i v-else class="pi pi-send"></i>
+              <span>{{ cardStore.isSending ? 'Отправляем...' : 'Отправить в Telegram' }}</span>
             </button>
           </div>
         </GlassCard>

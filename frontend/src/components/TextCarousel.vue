@@ -78,7 +78,7 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
               padding="p-6"
               class="cursor-pointer transition-all card-inner"
               :class="{
-                'ring-2 ring-christmas-green': cardStore.selectedTextIndex === index,
+                'ring-2 ring-aurora-cyan shadow-lg shadow-aurora-cyan/20': cardStore.selectedTextIndex === index,
                 'opacity-70 hover:opacity-100': cardStore.selectedTextIndex !== index
               }"
               @click="selectVariant(index)"
@@ -86,11 +86,11 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
               <div class="space-y-4">
                 <!-- Style badge -->
                 <div class="flex items-center justify-between">
-                  <span class="badge badge-lg bg-christmas-green/20 text-christmas-green border-christmas-green/30">
+                  <span class="badge badge-lg bg-aurora-purple/20 text-aurora-purple border-aurora-purple/30">
                     <i class="pi pi-sparkles mr-1"></i>
                     {{ TEXT_STYLE_LABELS[variant.style] }}
                   </span>
-                  <span class="text-winter-snow/60 text-sm">{{ index + 1 }} / {{ cardStore.textVariants.length }}</span>
+                  <span class="text-winter-snow/50 text-sm">{{ index + 1 }} / {{ cardStore.textVariants.length }}</span>
                 </div>
 
                 <!-- Text content -->
@@ -104,10 +104,10 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
                 <div class="flex justify-center pt-3 border-t border-white/10">
                   <button
                     type="button"
-                    class="btn btn-sm px-6"
+                    class="btn btn-sm px-6 transition-all"
                     :class="cardStore.selectedTextIndex === index
-                      ? 'btn-success'
-                      : 'btn-ghost bg-white/5 hover:bg-white/10 text-winter-snow'"
+                      ? 'bg-aurora-cyan text-white border-aurora-cyan hover:bg-aurora-cyan/80'
+                      : 'btn-ghost bg-white/5 hover:bg-aurora-purple/20 text-winter-snow hover:text-white'"
                     @click.stop="selectVariant(index)"
                   >
                     <i v-if="cardStore.selectedTextIndex === index" class="pi pi-check mr-2"></i>
@@ -156,11 +156,11 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
     <!-- Loading overlay for regeneration -->
     <div
       v-if="cardStore.isRegeneratingText"
-      class="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl z-10"
+      class="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center rounded-xl z-10"
     >
       <div class="text-center">
-        <span class="loading loading-spinner loading-lg text-christmas-gold"></span>
-        <p class="text-winter-snow mt-2">Генерируем новые варианты...</p>
+        <span class="loading loading-spinner loading-lg text-aurora-purple"></span>
+        <p class="text-winter-snow/90 mt-2">Генерируем новые варианты...</p>
       </div>
     </div>
   </div>
@@ -265,8 +265,10 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
 }
 
 .carousel-nav:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3) 0%, rgba(34, 211, 238, 0.3) 100%);
+  border-color: rgba(168, 85, 247, 0.4);
   transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
 }
 
 .carousel-nav:active {
@@ -310,8 +312,9 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
 }
 
 .carousel-dot-active {
-  background: #FFD700;
+  background: linear-gradient(135deg, #A855F7 0%, #22D3EE 100%);
   transform: scale(1.2);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
 }
 
 /* ===== RESPONSIVE ADJUSTMENTS ===== */

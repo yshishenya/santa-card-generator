@@ -1,7 +1,8 @@
 import type { ISourceOptions } from 'tsparticles-engine'
 
 /**
- * Configuration for snow particle effect
+ * Enhanced snow particle effect configuration
+ * Features: layered depth, realistic movement, subtle sparkle, mouse interaction
  */
 export function useParticlesConfig(): ISourceOptions {
   return {
@@ -13,34 +14,41 @@ export function useParticlesConfig(): ISourceOptions {
     fpsLimit: 60,
     particles: {
       number: {
-        value: 100,
+        value: 150,
         density: {
           enable: true,
           area: 800
         }
       },
       color: {
-        value: '#ffffff'
+        value: ['#ffffff', '#e0f7ff', '#c9e8ff']
       },
       shape: {
         type: 'circle'
       },
       opacity: {
-        value: { min: 0.3, max: 0.8 },
+        value: { min: 0.2, max: 0.9 },
         animation: {
           enable: true,
-          speed: 1,
-          minimumValue: 0.3
+          speed: 0.8,
+          minimumValue: 0.2,
+          sync: false
         }
       },
       size: {
-        value: { min: 1, max: 5 }
+        value: { min: 1, max: 6 },
+        animation: {
+          enable: true,
+          speed: 2,
+          minimumValue: 1,
+          sync: false
+        }
       },
       move: {
         enable: true,
-        speed: 2,
+        speed: { min: 0.5, max: 3 },
         direction: 'bottom',
-        random: false,
+        random: true,
         straight: false,
         outModes: {
           default: 'out',
@@ -48,29 +56,86 @@ export function useParticlesConfig(): ISourceOptions {
           left: 'out',
           right: 'out',
           top: 'out'
+        },
+        drift: {
+          min: -0.5,
+          max: 0.5
         }
       },
       wobble: {
         enable: true,
-        distance: 10,
+        distance: 15,
         speed: {
-          min: 5,
-          max: 15
+          min: 3,
+          max: 10
+        }
+      },
+      rotate: {
+        value: { min: 0, max: 360 },
+        animation: {
+          enable: true,
+          speed: 5,
+          sync: false
+        }
+      },
+      tilt: {
+        enable: true,
+        value: { min: 0, max: 20 },
+        animation: {
+          enable: true,
+          speed: 5
+        }
+      },
+      twinkle: {
+        particles: {
+          enable: true,
+          frequency: 0.03,
+          opacity: 1,
+          color: {
+            value: '#A855F7'
+          }
+        }
+      },
+      shadow: {
+        enable: true,
+        color: '#A855F7',
+        blur: 8,
+        offset: {
+          x: 0,
+          y: 0
         }
       }
     },
     interactivity: {
-      detectsOn: 'canvas',
+      detectsOn: 'window',
       events: {
         onHover: {
-          enable: false
+          enable: true,
+          mode: 'repulse',
+          parallax: {
+            enable: true,
+            force: 20,
+            smooth: 30
+          }
         },
         onClick: {
-          enable: false
+          enable: true,
+          mode: 'push'
         },
         resize: true
+      },
+      modes: {
+        repulse: {
+          distance: 80,
+          duration: 0.4,
+          speed: 0.5
+        },
+        push: {
+          quantity: 6
+        }
       }
     },
-    detectRetina: true
+    detectRetina: true,
+    smooth: true
   }
 }

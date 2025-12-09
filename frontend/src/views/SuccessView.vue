@@ -36,42 +36,44 @@ const createAnother = (): void => {
   <div class="text-center space-y-8 py-12">
     <!-- Success icon -->
     <div class="flex justify-center">
-      <div class="w-24 h-24 bg-christmas-green rounded-full flex items-center justify-center animate-twinkle">
+      <div class="w-24 h-24 bg-gradient-to-br from-aurora-purple to-aurora-cyan rounded-full flex items-center justify-center animate-glow-pulse shadow-lg shadow-aurora-purple/30">
         <i class="pi pi-check text-5xl text-white"></i>
       </div>
     </div>
 
     <!-- Success message -->
     <div class="space-y-4">
-      <h1 class="text-4xl font-bold text-winter-snow">
+      <h1 class="text-4xl md:text-5xl font-bold text-gradient">
         Открытка отправлена!
       </h1>
-      <p class="text-xl text-winter-snow/80">
+      <p class="text-xl text-winter-snow/70">
         Ваше новогоднее поздравление успешно доставлено в Telegram
       </p>
     </div>
 
     <!-- Decorative elements -->
     <div class="flex justify-center gap-4 text-3xl">
-      <span class="animate-twinkle">🎄</span>
-      <span class="animate-twinkle" style="animation-delay: 0.3s">✨</span>
-      <span class="animate-twinkle" style="animation-delay: 0.6s">🎁</span>
-      <span class="animate-twinkle" style="animation-delay: 0.9s">❄️</span>
+      <span class="animate-float">🎄</span>
+      <span class="animate-sparkle" style="animation-delay: 0.3s">✨</span>
+      <span class="animate-float" style="animation-delay: 0.6s">🎁</span>
+      <span class="animate-sparkle" style="animation-delay: 0.9s">❄️</span>
     </div>
 
     <!-- Action button -->
     <div class="pt-8">
       <button
         @click="createAnother"
-        class="btn btn-lg bg-christmas-red hover:bg-christmas-red-dark border-0 text-white px-8"
+        class="btn-magic px-8 py-4 text-lg font-semibold rounded-xl group"
       >
-        <i class="pi pi-plus mr-2"></i>
-        Создать ещё одну открытку
+        <span class="flex items-center gap-2">
+          <i class="pi pi-plus group-hover:rotate-90 transition-transform"></i>
+          <span>Создать ещё одну открытку</span>
+        </span>
       </button>
     </div>
 
     <!-- Auto redirect message -->
-    <p class="text-sm text-winter-snow/60">
+    <p class="text-sm text-winter-snow/50">
       Автоматический переход на главную через 5 секунд...
     </p>
   </div>
