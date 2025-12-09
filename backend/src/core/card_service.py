@@ -278,18 +278,18 @@ class CardService:
         self, generation_id: str, original_request: CardGenerationRequest
     ) -> Tuple[TextVariant, int]:
         """Regenerate a text variant and return the new variant with remaining count.
-
+        
+        This function handles the regeneration of a text variant based on a given
+        session ID and an original card generation request. It first retrieves the
+        session associated with the provided generation_id and checks for its validity,
+        including expiration and regeneration limits. If valid, it generates a new text
+        variant using the specified parameters from the original_request and updates
+        the session with the new variant, returning both the new variant and the
+        remaining regeneration count.
+        
         Args:
             generation_id: Session ID from initial generation.
             original_request: Original card generation request.
-
-        Returns:
-            Tuple of (new TextVariant, remaining regenerations count).
-
-        Raises:
-            SessionNotFoundError: If session ID is not found.
-            SessionExpiredError: If the session has expired.
-            RegenerationLimitExceededError: If regeneration limit exceeded.
         """
         correlation_id = str(uuid.uuid4())
         logger.info(
@@ -561,21 +561,20 @@ class CardService:
     async def _generate_text_variants(
         self, request: CardGenerationRequest, correlation_id: str
     ) -> List[TextVariant]:
+        # Prepare original text (used in multiple cases)
         """Generate text variants based on user preferences.
-
-        Supports three modes:
-        - enhance_text=False: Only original text
-        - enhance_text=True, keep_original_text=True: Original + AI variants
-        - enhance_text=True, keep_original_text=False: Only AI variants
-
+        
+        This function prepares and generates text variants according to the user's
+        specified options. It supports three modes of operation: returning only the
+        original text, returning the original text along with AI-generated variants,
+        or returning only AI-generated variants. The function utilizes the
+        _gemini_client to generate AI-enhanced text in parallel, based on the  provided
+        request and correlation ID for logging purposes.
+        
         Args:
             request: Card generation request.
             correlation_id: Correlation ID for logging.
-
-        Returns:
-            List of TextVariant objects.
         """
-        # Prepare original text (used in multiple cases)
         original_text = request.message or f"Поздравляю, {request.recipient}!"
 
         if not request.enhance_text:
