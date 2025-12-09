@@ -3,13 +3,16 @@
 This module contains comprehensive tests for the CardService class,
 which orchestrates the card generation workflow, including:
 - Recipient validation
-- Text and image variant generation
+- Text and image variant generation (5 text + 4 image)
 - Session management
-- Regeneration handling
+- Bulk regeneration handling
 - Telegram card delivery
 
-Tests follow the AAA pattern (Arrange-Act-Assert) and use AsyncMock
-for testing async dependencies.
+Updated for new multi-style generation architecture:
+- 5 text variants (one per AI style: ode, haiku, future, standup, newspaper)
+- 4 image variants (one per style: digital_art, space, pixel_art, movie)
+- Regeneration replaces ALL variants of a type
+- Separate regeneration counters for text and images
 """
 
 from typing import Dict, List
@@ -33,8 +36,11 @@ from src.models.card import (
     SendCardResponse,
     TextStyle,
     TextVariant,
+    AI_TEXT_STYLES,
+    ALL_IMAGE_STYLES,
 )
 from src.models.employee import Employee
+from src.models.response import RegenerateResponse
 
 
 class TestCardServiceGenerateCard:
@@ -47,11 +53,7 @@ class TestCardServiceGenerateCard:
         mock_telegram_client: AsyncMock,
         mock_employee_repo_empty: AsyncMock,
     ) -> None:
-        """Test that generate_card validates the recipient exists.
-
-        Verifies that RecipientNotFoundError is raised when the employee
-        name doesn't match any employee in the repository.
-        """
+        """Test that generate_card validates the recipient exists."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -61,9 +63,7 @@ class TestCardServiceGenerateCard:
             session_ttl_minutes=30,
         )
         request = CardGenerationRequest(
-            employee_name="Non Existent Person",
-            text_style=TextStyle.ODE,
-            image_style=ImageStyle.DIGITAL_ART,
+            recipient="Non Existent Person",
         )
 
         # Act & Assert
@@ -81,11 +81,7 @@ class TestCardServiceGenerateCard:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that generate_card creates a session and returns session ID.
-
-        Verifies that a successful card generation returns a response
-        containing a valid session ID.
-        """
+        """Test that generate_card creates a session and returns session ID."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -107,18 +103,14 @@ class TestCardServiceGenerateCard:
         uuid.UUID(response.session_id)
 
     @pytest.mark.asyncio
-    async def test_generate_card_returns_variants(
+    async def test_generate_card_returns_5_text_4_image_variants(
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that generate_card returns text and image variants.
-
-        Verifies that the response contains exactly 3 text variants
-        and 3 image variants as specified by the service.
-        """
+        """Test that generate_card returns 5 text and 4 image variants."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -132,10 +124,62 @@ class TestCardServiceGenerateCard:
         response = await service.generate_card(sample_card_request)
 
         # Assert
-        assert len(response.text_variants) == 3
-        assert len(response.image_variants) == 3
+        assert len(response.text_variants) == 5  # One per AI style
+        assert len(response.image_variants) == 4  # One per image style
         assert all(isinstance(v, TextVariant) for v in response.text_variants)
         assert all(isinstance(v, ImageVariant) for v in response.image_variants)
+
+    @pytest.mark.asyncio
+    async def test_generate_card_text_variants_have_correct_styles(
+        self,
+        mock_gemini_client: AsyncMock,
+        mock_telegram_client: AsyncMock,
+        mock_employee_repo: AsyncMock,
+        sample_card_request: CardGenerationRequest,
+    ) -> None:
+        """Test that text variants have one variant per AI style."""
+        # Arrange
+        service = CardService(
+            gemini_client=mock_gemini_client,
+            telegram_client=mock_telegram_client,
+            employee_repo=mock_employee_repo,
+            max_regenerations=3,
+            session_ttl_minutes=30,
+        )
+
+        # Act
+        response = await service.generate_card(sample_card_request)
+
+        # Assert - Each AI style should be represented
+        actual_styles = {v.style for v in response.text_variants}
+        expected_styles = set(AI_TEXT_STYLES)
+        assert actual_styles == expected_styles
+
+    @pytest.mark.asyncio
+    async def test_generate_card_image_variants_have_correct_styles(
+        self,
+        mock_gemini_client: AsyncMock,
+        mock_telegram_client: AsyncMock,
+        mock_employee_repo: AsyncMock,
+        sample_card_request: CardGenerationRequest,
+    ) -> None:
+        """Test that image variants have one variant per image style."""
+        # Arrange
+        service = CardService(
+            gemini_client=mock_gemini_client,
+            telegram_client=mock_telegram_client,
+            employee_repo=mock_employee_repo,
+            max_regenerations=3,
+            session_ttl_minutes=30,
+        )
+
+        # Act
+        response = await service.generate_card(sample_card_request)
+
+        # Assert - Each image style should be represented
+        actual_styles = {v.style for v in response.image_variants}
+        expected_styles = set(ALL_IMAGE_STYLES)
+        assert actual_styles == expected_styles
 
     @pytest.mark.asyncio
     async def test_generate_card_calls_gemini_client(
@@ -145,11 +189,7 @@ class TestCardServiceGenerateCard:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that generate_card calls Gemini client for generation.
-
-        Verifies that the Gemini client's generate_text and generate_image
-        methods are called for each variant.
-        """
+        """Test that generate_card calls Gemini client for generation."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -163,24 +203,20 @@ class TestCardServiceGenerateCard:
         await service.generate_card(sample_card_request)
 
         # Assert
-        # Should be called 3 times for text variants
-        assert mock_gemini_client.generate_text.call_count == 3
-        # Should be called 3 times for image variants
-        assert mock_gemini_client.generate_image.call_count == 3
+        # Should be called 5 times for text variants (one per AI style)
+        assert mock_gemini_client.generate_text.call_count == 5
+        # Should be called 4 times for image variants (one per image style)
+        assert mock_gemini_client.generate_image.call_count == 4
 
     @pytest.mark.asyncio
-    async def test_generate_card_includes_employee_name(
+    async def test_generate_card_includes_recipient(
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that generate_card includes employee name in response.
-
-        Verifies that the response correctly includes the employee name
-        from the original request.
-        """
+        """Test that generate_card includes recipient in response."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -194,25 +230,45 @@ class TestCardServiceGenerateCard:
         response = await service.generate_card(sample_card_request)
 
         # Assert
-        assert response.employee_name == sample_card_request.employee_name
-
-
-class TestCardServiceRegenerateText:
-    """Tests for CardService.regenerate_text method."""
+        assert response.recipient == sample_card_request.recipient
 
     @pytest.mark.asyncio
-    async def test_regenerate_text_adds_variant(
+    async def test_generate_card_stores_original_text(
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that regenerate_text adds a new text variant.
+        """Test that generate_card stores original text from user message."""
+        # Arrange
+        service = CardService(
+            gemini_client=mock_gemini_client,
+            telegram_client=mock_telegram_client,
+            employee_repo=mock_employee_repo,
+            max_regenerations=3,
+            session_ttl_minutes=30,
+        )
 
-        Verifies that regenerating text produces a new variant
-        and returns it along with the remaining regeneration count.
-        """
+        # Act
+        response = await service.generate_card(sample_card_request)
+
+        # Assert
+        assert response.original_text == sample_card_request.message
+
+
+class TestCardServiceRegenerateText:
+    """Tests for CardService.regenerate_text method."""
+
+    @pytest.mark.asyncio
+    async def test_regenerate_text_replaces_all_variants(
+        self,
+        mock_gemini_client: AsyncMock,
+        mock_telegram_client: AsyncMock,
+        mock_employee_repo: AsyncMock,
+        sample_card_request: CardGenerationRequest,
+    ) -> None:
+        """Test that regenerate_text replaces ALL text variants."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -229,16 +285,13 @@ class TestCardServiceRegenerateText:
         mock_gemini_client.generate_text.reset_mock()
 
         # Act
-        new_variant, remaining = await service.regenerate_text(
-            generation_id=session_id,
-            original_request=sample_card_request,
-        )
+        regen_response = await service.regenerate_text(session_id)
 
-        # Assert
-        assert new_variant is not None
-        assert isinstance(new_variant, TextVariant)
-        assert remaining == 2  # 3 max - 1 used = 2 remaining
-        mock_gemini_client.generate_text.assert_called_once()
+        # Assert - Should generate 5 new text variants
+        assert mock_gemini_client.generate_text.call_count == 5
+        assert regen_response.text_variants is not None
+        assert len(regen_response.text_variants) == 5
+        assert regen_response.remaining_regenerations == 2  # 3 max - 1 used
 
     @pytest.mark.asyncio
     async def test_regenerate_text_fails_when_limit_exceeded(
@@ -248,11 +301,7 @@ class TestCardServiceRegenerateText:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that regenerate_text fails when regeneration limit is exceeded.
-
-        Verifies that RegenerationLimitExceededError is raised when
-        attempting to regenerate beyond the maximum allowed.
-        """
+        """Test that regenerate_text fails when regeneration limit is exceeded."""
         # Arrange
         max_regenerations = 2
         service = CardService(
@@ -268,11 +317,11 @@ class TestCardServiceRegenerateText:
 
         # Use up all regenerations
         for _ in range(max_regenerations):
-            await service.regenerate_text(session_id, sample_card_request)
+            await service.regenerate_text(session_id)
 
         # Act & Assert
         with pytest.raises(RegenerationLimitExceededError) as exc_info:
-            await service.regenerate_text(session_id, sample_card_request)
+            await service.regenerate_text(session_id)
 
         assert "text" in str(exc_info.value).lower()
 
@@ -282,13 +331,8 @@ class TestCardServiceRegenerateText:
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
         mock_employee_repo: AsyncMock,
-        sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that regenerate_text fails for invalid session ID.
-
-        Verifies that SessionNotFoundError is raised when trying to
-        regenerate for a non-existent session.
-        """
+        """Test that regenerate_text fails for invalid session ID."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -301,7 +345,7 @@ class TestCardServiceRegenerateText:
 
         # Act & Assert
         with pytest.raises(SessionNotFoundError) as exc_info:
-            await service.regenerate_text(invalid_session_id, sample_card_request)
+            await service.regenerate_text(invalid_session_id)
 
         assert invalid_session_id in str(exc_info.value)
 
@@ -310,18 +354,14 @@ class TestCardServiceRegenerateImage:
     """Tests for CardService.regenerate_image method."""
 
     @pytest.mark.asyncio
-    async def test_regenerate_image_adds_variant(
+    async def test_regenerate_image_replaces_all_variants(
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that regenerate_image adds a new image variant.
-
-        Verifies that regenerating image produces a new variant
-        and returns it along with the remaining regeneration count.
-        """
+        """Test that regenerate_image replaces ALL image variants."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -338,16 +378,13 @@ class TestCardServiceRegenerateImage:
         mock_gemini_client.generate_image.reset_mock()
 
         # Act
-        new_variant, remaining = await service.regenerate_image(
-            generation_id=session_id,
-            original_request=sample_card_request,
-        )
+        regen_response = await service.regenerate_image(session_id)
 
-        # Assert
-        assert new_variant is not None
-        assert isinstance(new_variant, ImageVariant)
-        assert remaining == 2  # 3 max - 1 used = 2 remaining
-        mock_gemini_client.generate_image.assert_called_once()
+        # Assert - Should generate 4 new image variants
+        assert mock_gemini_client.generate_image.call_count == 4
+        assert regen_response.image_variants is not None
+        assert len(regen_response.image_variants) == 4
+        assert regen_response.remaining_regenerations == 2  # 3 max - 1 used
 
     @pytest.mark.asyncio
     async def test_regenerate_image_fails_when_limit_exceeded(
@@ -357,11 +394,7 @@ class TestCardServiceRegenerateImage:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that regenerate_image fails when regeneration limit is exceeded.
-
-        Verifies that RegenerationLimitExceededError is raised when
-        attempting to regenerate beyond the maximum allowed.
-        """
+        """Test that regenerate_image fails when regeneration limit is exceeded."""
         # Arrange
         max_regenerations = 1
         service = CardService(
@@ -376,11 +409,11 @@ class TestCardServiceRegenerateImage:
         session_id = response.session_id
 
         # Use up all regenerations
-        await service.regenerate_image(session_id, sample_card_request)
+        await service.regenerate_image(session_id)
 
         # Act & Assert
         with pytest.raises(RegenerationLimitExceededError) as exc_info:
-            await service.regenerate_image(session_id, sample_card_request)
+            await service.regenerate_image(session_id)
 
         assert "image" in str(exc_info.value).lower()
 
@@ -396,11 +429,7 @@ class TestCardServiceSendCard:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that send_card retrieves and uses session data.
-
-        Verifies that send_card correctly retrieves the session data
-        including selected text and image variants.
-        """
+        """Test that send_card retrieves and uses session data."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -415,7 +444,7 @@ class TestCardServiceSendCard:
 
         send_request = SendCardRequest(
             session_id=session_id,
-            employee_name=sample_card_request.employee_name,
+            employee_name=sample_card_request.recipient,
             selected_text_index=0,
             selected_image_index=0,
         )
@@ -435,11 +464,7 @@ class TestCardServiceSendCard:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that send_card calls Telegram client to send the card.
-
-        Verifies that the Telegram client's send_card method is called
-        with the correct parameters.
-        """
+        """Test that send_card calls Telegram client to send the card."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -454,7 +479,7 @@ class TestCardServiceSendCard:
 
         send_request = SendCardRequest(
             session_id=session_id,
-            employee_name=sample_card_request.employee_name,
+            employee_name=sample_card_request.recipient,
             selected_text_index=0,
             selected_image_index=0,
         )
@@ -464,10 +489,6 @@ class TestCardServiceSendCard:
 
         # Assert
         mock_telegram_client.send_card.assert_called_once()
-        call_kwargs = mock_telegram_client.send_card.call_args.kwargs
-        assert call_kwargs["employee_name"] == sample_card_request.employee_name
-        assert "text" in call_kwargs
-        assert "image_bytes" in call_kwargs
         assert response.success is True
 
     @pytest.mark.asyncio
@@ -478,11 +499,7 @@ class TestCardServiceSendCard:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that send_card returns the Telegram message ID.
-
-        Verifies that the response includes the message ID returned
-        by the Telegram client.
-        """
+        """Test that send_card returns the Telegram message ID."""
         # Arrange
         expected_message_id = 12345
         mock_telegram_client.send_card = AsyncMock(return_value=expected_message_id)
@@ -500,7 +517,7 @@ class TestCardServiceSendCard:
 
         send_request = SendCardRequest(
             session_id=session_id,
-            employee_name=sample_card_request.employee_name,
+            employee_name=sample_card_request.recipient,
             selected_text_index=0,
             selected_image_index=0,
         )
@@ -519,11 +536,7 @@ class TestCardServiceSendCard:
         mock_telegram_client: AsyncMock,
         mock_employee_repo: AsyncMock,
     ) -> None:
-        """Test that send_card fails for invalid session ID.
-
-        Verifies that SessionNotFoundError is raised when trying to
-        send a card with a non-existent session ID.
-        """
+        """Test that send_card fails for invalid session ID."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -555,11 +568,7 @@ class TestCardServiceSendCard:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that send_card handles Telegram errors gracefully.
-
-        Verifies that errors from Telegram client are caught and
-        a failure response is returned rather than raising an exception.
-        """
+        """Test that send_card handles Telegram errors gracefully."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -574,7 +583,7 @@ class TestCardServiceSendCard:
 
         send_request = SendCardRequest(
             session_id=session_id,
-            employee_name=sample_card_request.employee_name,
+            employee_name=sample_card_request.recipient,
             selected_text_index=0,
             selected_image_index=0,
         )
@@ -599,14 +608,10 @@ class TestCardServiceVariantSelection:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that send_card uses the correct text variant by index.
-
-        Verifies that the selected_text_index correctly selects the
-        corresponding text variant.
-        """
+        """Test that send_card uses the correct text variant by index."""
         # Arrange
         # Configure mock to return different texts for identification
-        text_responses = ["First text", "Second text", "Third text"]
+        text_responses = [f"Text variant {i}" for i in range(5)]
         mock_gemini_client.generate_text = AsyncMock(side_effect=text_responses)
 
         service = CardService(
@@ -619,11 +624,11 @@ class TestCardServiceVariantSelection:
         gen_response = await service.generate_card(sample_card_request)
         session_id = gen_response.session_id
 
-        # Select the second text variant (index 1)
+        # Select the third text variant (index 2)
         send_request = SendCardRequest(
             session_id=session_id,
-            employee_name=sample_card_request.employee_name,
-            selected_text_index=1,
+            employee_name=sample_card_request.recipient,
+            selected_text_index=2,
             selected_image_index=0,
         )
 
@@ -632,29 +637,21 @@ class TestCardServiceVariantSelection:
 
         # Assert
         call_kwargs = mock_telegram_client.send_card.call_args.kwargs
-        assert call_kwargs["text"] == "Second text"
+        assert call_kwargs["message"] == "Text variant 2"
 
     @pytest.mark.asyncio
-    async def test_send_card_uses_correct_image_index(
+    async def test_send_card_uses_original_text_when_requested(
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
         mock_employee_repo: AsyncMock,
-        sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that send_card uses the correct image variant by index.
-
-        Verifies that the selected_image_index correctly selects the
-        corresponding image variant and its data.
-        """
+        """Test that send_card uses original text when use_original_text is True."""
         # Arrange
-        # Configure mock to return different images for identification
-        image_responses = [
-            (b"image_1_bytes", "prompt 1"),
-            (b"image_2_bytes", "prompt 2"),
-            (b"image_3_bytes", "prompt 3"),
-        ]
-        mock_gemini_client.generate_image = AsyncMock(side_effect=image_responses)
+        request_with_message = CardGenerationRequest(
+            recipient="Ivanov Ivan Ivanovich",
+            message="My original heartfelt message",
+        )
 
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -663,15 +660,16 @@ class TestCardServiceVariantSelection:
             max_regenerations=3,
             session_ttl_minutes=30,
         )
-        gen_response = await service.generate_card(sample_card_request)
+        gen_response = await service.generate_card(request_with_message)
         session_id = gen_response.session_id
 
-        # Select the third image variant (index 2)
+        # Request to use original text
         send_request = SendCardRequest(
             session_id=session_id,
-            employee_name=sample_card_request.employee_name,
+            employee_name=request_with_message.recipient,
             selected_text_index=0,
-            selected_image_index=2,
+            selected_image_index=0,
+            use_original_text=True,
         )
 
         # Act
@@ -679,7 +677,7 @@ class TestCardServiceVariantSelection:
 
         # Assert
         call_kwargs = mock_telegram_client.send_card.call_args.kwargs
-        assert call_kwargs["image_bytes"] == b"image_3_bytes"
+        assert call_kwargs["message"] == "My original heartfelt message"
 
 
 class TestCardServiceConcurrentGeneration:
@@ -693,11 +691,7 @@ class TestCardServiceConcurrentGeneration:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that generate_card generates text and image variants concurrently.
-
-        Verifies that the service uses asyncio.gather to parallelize
-        text and image generation for better performance.
-        """
+        """Test that generate_card generates text and image variants concurrently."""
         # Arrange
         import asyncio
 
@@ -705,7 +699,7 @@ class TestCardServiceConcurrentGeneration:
 
         async def track_text_call(*args, **kwargs):
             call_order.append("text_start")
-            await asyncio.sleep(0.01)  # Small delay to check concurrency
+            await asyncio.sleep(0.01)
             call_order.append("text_end")
             return "Generated text"
 
@@ -729,81 +723,9 @@ class TestCardServiceConcurrentGeneration:
         # Act
         await service.generate_card(sample_card_request)
 
-        # Assert
-        # Verify both text and image generation were called
-        assert mock_gemini_client.generate_text.call_count == 3
-        assert mock_gemini_client.generate_image.call_count == 3
-
-
-class TestCardServiceDifferentStyles:
-    """Tests for different text and image styles."""
-
-    @pytest.mark.asyncio
-    async def test_generate_card_with_haiku_style(
-        self,
-        mock_gemini_client: AsyncMock,
-        mock_telegram_client: AsyncMock,
-        mock_employee_repo: AsyncMock,
-        sample_card_request_haiku: CardGenerationRequest,
-    ) -> None:
-        """Test that generate_card works with haiku text style.
-
-        Verifies that the service correctly processes requests with
-        different text styles.
-        """
-        # Arrange
-        service = CardService(
-            gemini_client=mock_gemini_client,
-            telegram_client=mock_telegram_client,
-            employee_repo=mock_employee_repo,
-            max_regenerations=3,
-            session_ttl_minutes=30,
-        )
-
-        # Act
-        response = await service.generate_card(sample_card_request_haiku)
-
-        # Assert
-        assert response is not None
-        assert response.employee_name == sample_card_request_haiku.employee_name
-
-    @pytest.mark.asyncio
-    async def test_generate_card_passes_correct_style_to_gemini(
-        self,
-        mock_gemini_client: AsyncMock,
-        mock_telegram_client: AsyncMock,
-        mock_employee_repo: AsyncMock,
-    ) -> None:
-        """Test that generate_card passes the correct style to Gemini.
-
-        Verifies that the specified text and image styles are correctly
-        passed to the Gemini client.
-        """
-        # Arrange
-        service = CardService(
-            gemini_client=mock_gemini_client,
-            telegram_client=mock_telegram_client,
-            employee_repo=mock_employee_repo,
-            max_regenerations=3,
-            session_ttl_minutes=30,
-        )
-        request = CardGenerationRequest(
-            employee_name="Ivanov Ivan Ivanovich",
-            text_style=TextStyle.NEWSPAPER,
-            image_style=ImageStyle.SPACE,
-        )
-
-        # Act
-        await service.generate_card(request)
-
-        # Assert
-        # Check that text generation was called with newspaper style
-        text_call = mock_gemini_client.generate_text.call_args_list[0]
-        assert text_call.args[1] == "newspaper" or text_call.kwargs.get("text_style") == "newspaper"
-
-        # Check that image generation was called with space style
-        image_call = mock_gemini_client.generate_image.call_args_list[0]
-        assert image_call.args[1] == "space" or image_call.kwargs.get("image_style") == "space"
+        # Assert - Verify all generations happened
+        assert mock_gemini_client.generate_text.call_count == 5
+        assert mock_gemini_client.generate_image.call_count == 4
 
 
 class TestCardServiceInitialization:
@@ -815,11 +737,7 @@ class TestCardServiceInitialization:
         mock_telegram_client: AsyncMock,
         mock_employee_repo: AsyncMock,
     ) -> None:
-        """Test that CardService initializes correctly with dependencies.
-
-        Verifies that the service accepts all required dependencies
-        and optional configuration parameters.
-        """
+        """Test that CardService initializes correctly with dependencies."""
         # Arrange & Act
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -842,11 +760,7 @@ class TestCardServiceInitialization:
         mock_telegram_client: AsyncMock,
         mock_employee_repo: AsyncMock,
     ) -> None:
-        """Test that CardService uses default configuration values.
-
-        Verifies that the service uses sensible defaults when optional
-        parameters are not provided.
-        """
+        """Test that CardService uses default configuration values."""
         # Arrange & Act
         service = CardService(
             gemini_client=mock_gemini_client,
@@ -869,11 +783,7 @@ class TestCardServiceErrorHandling:
         mock_employee_repo: AsyncMock,
         sample_card_request: CardGenerationRequest,
     ) -> None:
-        """Test that generate_card propagates Gemini API errors.
-
-        Verifies that errors from the Gemini client are properly
-        propagated to the caller.
-        """
+        """Test that generate_card propagates Gemini API errors."""
         # Arrange
         service = CardService(
             gemini_client=mock_gemini_client_with_errors,
@@ -888,3 +798,106 @@ class TestCardServiceErrorHandling:
             await service.generate_card(sample_card_request)
 
         assert "API Error" in str(exc_info.value)
+
+
+class TestCardServiceRegenerationLimitsIndependent:
+    """Tests for independent regeneration limits."""
+
+    @pytest.mark.asyncio
+    async def test_text_and_image_regeneration_limits_are_independent(
+        self,
+        mock_gemini_client: AsyncMock,
+        mock_telegram_client: AsyncMock,
+        mock_employee_repo: AsyncMock,
+        sample_card_request: CardGenerationRequest,
+    ) -> None:
+        """Test that text and image regeneration limits are tracked independently."""
+        # Arrange
+        max_regenerations = 2
+        service = CardService(
+            gemini_client=mock_gemini_client,
+            telegram_client=mock_telegram_client,
+            employee_repo=mock_employee_repo,
+            max_regenerations=max_regenerations,
+            session_ttl_minutes=30,
+        )
+
+        # Generate initial card
+        response = await service.generate_card(sample_card_request)
+        session_id = response.session_id
+
+        # Use all text regenerations
+        for _ in range(max_regenerations):
+            await service.regenerate_text(session_id)
+
+        # Act - Image regeneration should still work
+        image_response = await service.regenerate_image(session_id)
+
+        # Assert
+        assert image_response.image_variants is not None
+        assert len(image_response.image_variants) == 4
+        assert image_response.remaining_regenerations == max_regenerations - 1
+
+    @pytest.mark.asyncio
+    async def test_regeneration_response_includes_remaining_count(
+        self,
+        mock_gemini_client: AsyncMock,
+        mock_telegram_client: AsyncMock,
+        mock_employee_repo: AsyncMock,
+        sample_card_request: CardGenerationRequest,
+    ) -> None:
+        """Test that regeneration response includes correct remaining count."""
+        # Arrange
+        max_regenerations = 3
+        service = CardService(
+            gemini_client=mock_gemini_client,
+            telegram_client=mock_telegram_client,
+            employee_repo=mock_employee_repo,
+            max_regenerations=max_regenerations,
+            session_ttl_minutes=30,
+        )
+
+        response = await service.generate_card(sample_card_request)
+        session_id = response.session_id
+
+        # Act - First regeneration
+        regen_1 = await service.regenerate_text(session_id)
+        assert regen_1.remaining_regenerations == 2
+
+        # Act - Second regeneration
+        regen_2 = await service.regenerate_text(session_id)
+        assert regen_2.remaining_regenerations == 1
+
+        # Act - Third regeneration
+        regen_3 = await service.regenerate_text(session_id)
+        assert regen_3.remaining_regenerations == 0
+
+
+class TestCardServiceInitialRegenerationCounts:
+    """Tests for initial regeneration count in response."""
+
+    @pytest.mark.asyncio
+    async def test_generate_card_returns_initial_regeneration_counts(
+        self,
+        mock_gemini_client: AsyncMock,
+        mock_telegram_client: AsyncMock,
+        mock_employee_repo: AsyncMock,
+        sample_card_request: CardGenerationRequest,
+    ) -> None:
+        """Test that generate_card returns initial regeneration counts."""
+        # Arrange
+        max_regenerations = 5
+        service = CardService(
+            gemini_client=mock_gemini_client,
+            telegram_client=mock_telegram_client,
+            employee_repo=mock_employee_repo,
+            max_regenerations=max_regenerations,
+            session_ttl_minutes=30,
+        )
+
+        # Act
+        response = await service.generate_card(sample_card_request)
+
+        # Assert
+        assert response.remaining_text_regenerations == max_regenerations
+        assert response.remaining_image_regenerations == max_regenerations

@@ -1,6 +1,6 @@
 """Generic API response models."""
 
-from typing import Generic, Optional, TypeVar
+from typing import Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -24,12 +24,15 @@ class APIResponse(BaseModel, Generic[T]):
 class RegenerateResponse(BaseModel):
     """Response for regeneration endpoint.
 
-    Contains the newly regenerated variant (either text or image) and the
-    number of regenerations remaining for that element type.
+    Contains the newly regenerated variants (all 5 texts or all 4 images)
+    and the number of regenerations remaining for that element type.
     """
 
-    variant: TextVariant | ImageVariant = Field(
-        ..., description="The newly regenerated variant"
+    text_variants: Optional[List[TextVariant]] = Field(
+        None, description="New text variants if text was regenerated"
+    )
+    image_variants: Optional[List[ImageVariant]] = Field(
+        None, description="New image variants if images were regenerated"
     )
     remaining_regenerations: int = Field(
         ..., description="Number of regenerations remaining", ge=0

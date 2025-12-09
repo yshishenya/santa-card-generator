@@ -577,6 +577,39 @@ async def call_gemini_api(prompt: str) -> str:
         return response.json()["text"]
 ```
 
+### Handling Tenacity RetryError
+
+**IMPORTANT**: When using `tenacity` retry decorator, after all retry attempts are exhausted,
+tenacity raises `RetryError`, NOT the original exception. You must handle this explicitly:
+
+```python
+from tenacity import RetryError
+
+try:
+    result = await retry_decorated_function()
+except RetryError as e:
+    # Extract the last exception from retry chain
+    last_exception = e.last_attempt.exception()
+
+    # Check the type of underlying error
+    if isinstance(last_exception, (NetworkError, TimedOut)):
+        logger.error(f"Network error persisted after retries: {last_exception}")
+        raise TelegramNetworkError(original_error=last_exception)
+
+    # Handle other error types
+    logger.error(f"Error after retries: {e}")
+    raise TelegramSendError(
+        message="Ошибка после нескольких попыток",
+        original_error=e,
+    )
+except (NetworkError, TimedOut) as e:
+    # Direct network error (before retry decorator wraps it)
+    raise TelegramNetworkError(original_error=e)
+```
+
+**Why this matters**: Without this handling, `RetryError` will be caught by generic
+`except Exception` and may produce incorrect error types for the caller.
+
 ### Graceful Degradation
 When a service is unavailable:
 

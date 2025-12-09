@@ -38,6 +38,7 @@ from telegram.error import (
     TimedOut,
 )
 from tenacity import (
+    RetryError,
     retry,
     retry_if_exception_type,
     stop_after_attempt,
@@ -229,6 +230,29 @@ class TelegramClient:
                 exc_info=True,
             )
             raise TelegramSendError(original_error=e)
+
+        except RetryError as e:
+            # Tenacity raised this after retry attempts exhausted
+            # Check if underlying error was a network error
+            last_exception = e.last_attempt.exception()
+            if isinstance(last_exception, (NetworkError, TimedOut)):
+                logger.error(
+                    f"Network error persisted after retries: {last_exception}",
+                    extra=log_extra,
+                    exc_info=True,
+                )
+                raise TelegramNetworkError(original_error=last_exception)
+
+            # Non-network error after retries - raise as send error
+            logger.error(
+                f"Error after retries: {e}",
+                extra=log_extra,
+                exc_info=True,
+            )
+            raise TelegramSendError(
+                message="Ошибка отправки после нескольких попыток",
+                original_error=e,
+            )
 
         except Exception as e:
             # Unexpected error

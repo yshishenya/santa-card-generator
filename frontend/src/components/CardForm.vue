@@ -2,8 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useCardStore } from '@/stores/card'
 import { apiClient } from '@/api/client'
-import { TextStyle, ImageStyle, type Employee } from '@/types'
-// AutoComplete is registered globally in main.ts
+import type { Employee } from '@/types'
 
 const cardStore = useCardStore()
 
@@ -19,30 +18,10 @@ const recipientName = computed(() => {
 })
 const reason = ref<string>('')
 const message = ref<string>('')
-const enhanceText = ref<boolean>(false)
-const textStyle = ref<TextStyle>(TextStyle.ODE)
-const imageStyle = ref<ImageStyle>(ImageStyle.DIGITAL_ART)
 
 // Employees for autocomplete
 const employees = ref<Employee[]>([])
 const filteredEmployees = ref<Employee[]>([])
-
-// Text style options
-const textStyleOptions = [
-  { value: TextStyle.ODE, label: 'Торжественная ода' },
-  { value: TextStyle.FUTURE, label: 'Отчет из будущего' },
-  { value: TextStyle.HAIKU, label: 'Хайку' },
-  { value: TextStyle.NEWSPAPER, label: 'Заметка в газете' },
-  { value: TextStyle.STANDUP, label: 'Дружеский стендап' }
-]
-
-// Image style options
-const imageStyleOptions = [
-  { value: ImageStyle.DIGITAL_ART, label: 'Цифровая живопись' },
-  { value: ImageStyle.PIXEL_ART, label: 'Пиксель-арт' },
-  { value: ImageStyle.SPACE, label: 'Космическая фантастика' },
-  { value: ImageStyle.MOVIE, label: 'Кадр из фильма' }
-]
 
 // Load employees on mount
 onMounted(async () => {
@@ -66,7 +45,7 @@ const searchEmployees = (event: AutoCompleteSearchEvent): void => {
   )
 }
 
-// Submit form
+// Submit form - generates 5 text variants + 4 image variants automatically
 const handleSubmit = async (): Promise<void> => {
   if (!recipientName.value) {
     return
@@ -77,11 +56,7 @@ const handleSubmit = async (): Promise<void> => {
       recipient: recipientName.value,
       sender: sender.value || undefined,
       reason: reason.value || undefined,
-      message: message.value || undefined,
-      enhance_text: enhanceText.value,
-      keep_original_text: enhanceText.value ? true : undefined,  // Always include original for choice on preview screen
-      text_style: enhanceText.value ? textStyle.value : undefined,
-      image_style: imageStyle.value
+      message: message.value || undefined
     })
   } catch {
     // Error is handled by the store and displayed in the UI
@@ -149,65 +124,6 @@ const handleSubmit = async (): Promise<void> => {
         rows="4"
         class="textarea textarea-bordered w-full bg-white/10 text-winter-snow border-white/20 placeholder:text-winter-snow/50"
       ></textarea>
-    </div>
-
-    <!-- Enhance text checkbox -->
-    <div class="form-control">
-      <label class="label cursor-pointer justify-start gap-3">
-        <input
-          v-model="enhanceText"
-          type="checkbox"
-          class="checkbox checkbox-primary"
-        />
-        <span class="label-text text-winter-snow text-lg">Улучшить текст с помощью AI</span>
-      </label>
-    </div>
-
-    <!-- Text style selection (visible when enhance is checked) -->
-    <div v-if="enhanceText" class="form-control">
-      <label class="label">
-        <span class="label-text text-winter-snow text-lg">Стиль текста</span>
-      </label>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <label
-          v-for="option in textStyleOptions"
-          :key="option.value"
-          class="label cursor-pointer bg-white/5 p-4 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
-          :class="{ 'bg-christmas-green/30 border-christmas-green': textStyle === option.value }"
-        >
-          <span class="label-text text-winter-snow">{{ option.label }}</span>
-          <input
-            v-model="textStyle"
-            type="radio"
-            :value="option.value"
-            class="radio radio-primary"
-          />
-        </label>
-      </div>
-    </div>
-
-    <!-- Image style selection -->
-    <div class="form-control">
-      <label class="label">
-        <span class="label-text text-winter-snow text-lg">Стиль изображения <span class="text-christmas-red">*</span></span>
-      </label>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <label
-          v-for="option in imageStyleOptions"
-          :key="option.value"
-          class="label cursor-pointer bg-white/5 p-4 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
-          :class="{ 'bg-christmas-green/30 border-christmas-green': imageStyle === option.value }"
-        >
-          <span class="label-text text-winter-snow">{{ option.label }}</span>
-          <input
-            v-model="imageStyle"
-            type="radio"
-            :value="option.value"
-            class="radio radio-primary"
-            required
-          />
-        </label>
-      </div>
     </div>
 
     <!-- Error message -->

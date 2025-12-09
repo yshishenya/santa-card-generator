@@ -7,6 +7,15 @@ export enum TextStyle {
   STANDUP = 'standup'       // Дружеский стендап
 }
 
+// Human-readable labels for text styles
+export const TEXT_STYLE_LABELS: Record<TextStyle, string> = {
+  [TextStyle.ODE]: 'Торжественная ода',
+  [TextStyle.HAIKU]: 'Хайку',
+  [TextStyle.FUTURE]: 'Отчет из будущего',
+  [TextStyle.STANDUP]: 'Дружеский стендап',
+  [TextStyle.NEWSPAPER]: 'Заметка в газете',
+}
+
 // Image styles for AI generation
 export enum ImageStyle {
   DIGITAL_ART = 'digital_art',  // Цифровая живопись
@@ -15,55 +24,62 @@ export enum ImageStyle {
   MOVIE = 'movie'               // Кадр из фильма
 }
 
+// Human-readable labels for image styles
+export const IMAGE_STYLE_LABELS: Record<ImageStyle, string> = {
+  [ImageStyle.DIGITAL_ART]: 'Цифровая живопись',
+  [ImageStyle.SPACE]: 'Космическая фантастика',
+  [ImageStyle.PIXEL_ART]: 'Пиксель-арт',
+  [ImageStyle.MOVIE]: 'Кадр из фильма',
+}
+
 // Employee data
 export interface Employee {
   name: string
   telegram_username?: string
 }
 
-// Card generation request
+// Card generation request (simplified - all styles generated automatically)
 export interface CardGenerationRequest {
   recipient: string
   sender?: string
   reason?: string
   message?: string
-  enhance_text: boolean
-  keep_original_text?: boolean  // When enhance_text=true, include original text as first variant
-  text_style?: TextStyle
-  image_style: ImageStyle
 }
 
-// Text variant
+// Text variant with style info
 export interface TextVariant {
   id: string
   content: string
-  style?: string  // 'original' for user's message, or TextStyle value for AI-enhanced
+  style: TextStyle
 }
 
-// Image variant
+// Image variant with style info
 export interface ImageVariant {
   id: string
   url: string
+  style: ImageStyle
 }
 
 // Card generation response
 export interface CardGenerationResponse {
   generation_id: string
-  text_variants: TextVariant[]
-  image_variants: ImageVariant[]
-  remaining_regenerations: number
+  original_text: string | null  // User's original message
+  text_variants: TextVariant[]  // 5 AI variants (one per style)
+  image_variants: ImageVariant[]  // 4 variants (one per style)
+  remaining_text_regenerations: number
+  remaining_image_regenerations: number
 }
 
-// Regenerate request
+// Regenerate request (regenerates ALL variants of specified type)
 export interface RegenerateRequest {
   generation_id: string
   type: 'text' | 'image'
-  style?: TextStyle | ImageStyle
 }
 
-// Regenerate response
+// Regenerate response (returns ALL new variants)
 export interface RegenerateResponse {
-  variant: TextVariant | ImageVariant
+  text_variants?: TextVariant[]  // 5 new text variants if text was regenerated
+  image_variants?: ImageVariant[]  // 4 new image variants if images were regenerated
   remaining_regenerations: number
 }
 
@@ -71,9 +87,10 @@ export interface RegenerateResponse {
 export interface SendCardRequest {
   generation_id: string
   recipient: string
-  text_variant_id: string
-  image_variant_id: string
-  include_original_text?: boolean  // When true, send both original text and selected AI text
+  selected_text_index: number  // Index of selected AI text variant
+  selected_image_index: number  // Index of selected image variant
+  use_original_text: boolean  // When true, use original text instead of AI variant
+  include_original_text: boolean  // When true, include original text alongside AI text
 }
 
 // Send card response

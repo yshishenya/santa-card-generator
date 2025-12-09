@@ -52,8 +52,8 @@ class TestGeminiClientInit:
         # Assert
         assert client._api_key == api_key
         assert client._base_url == "https://litellm.pro-4.ru/v1"
-        assert client._text_model == "gemini/gemini-2.5-flash-image-preview"
-        assert client._image_model == "gemini/gemini-3-pro-image-preview"
+        assert client._text_model == "gemini-2.5-flash"
+        assert client._image_model == "gemini/gemini-2.5-flash-image-preview"
 
     def test_init_with_custom_config(self) -> None:
         """Test initialization with custom configuration.
@@ -335,10 +335,13 @@ class TestGenerateImage:
         }
 
     @pytest.mark.asyncio
-    async def test_generate_image_returns_bytes(
+    async def test_generate_image_returns_tuple(
         self, gemini_client: GeminiClient, mock_image_response: dict
     ) -> None:
-        """Test that image generation returns valid image bytes."""
+        """Test that image generation returns tuple of (bytes, prompt).
+
+        NEW architecture: generate_image returns Tuple[bytes, str].
+        """
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = mock_image_response
@@ -355,8 +358,15 @@ class TestGenerateImage:
                 style="digital_art",
             )
 
-            assert isinstance(result, bytes)
-            assert result[:4] == b"\x89PNG"  # PNG magic bytes
+            # Verify tuple structure
+            assert isinstance(result, tuple)
+            assert len(result) == 2
+
+            image_bytes, prompt = result
+            assert isinstance(image_bytes, bytes)
+            assert image_bytes[:4] == b"\x89PNG"  # PNG magic bytes
+            assert isinstance(prompt, str)
+            assert len(prompt) > 0
 
     @pytest.mark.asyncio
     async def test_generate_image_with_all_styles(
@@ -380,7 +390,10 @@ class TestGenerateImage:
                     style=style,
                 )
 
-                assert isinstance(result, bytes)
+                # Verify result is tuple (bytes, str)
+                assert isinstance(result, tuple)
+                image_bytes, prompt = result
+                assert isinstance(image_bytes, bytes)
 
     @pytest.mark.asyncio
     async def test_generate_image_invalid_style_raises_error(
@@ -528,16 +541,17 @@ class TestClientLifecycle:
     @pytest.mark.asyncio
     async def test_close_client(self, gemini_client: GeminiClient) -> None:
         """Test that close() method completes without error."""
-        # First, create a client
-        gemini_client._http_client = AsyncMock()
-        gemini_client._http_client.is_closed = False
-        gemini_client._http_client.aclose = AsyncMock()
+        # First, create a mock client
+        mock_http_client = AsyncMock()
+        mock_http_client.is_closed = False
+        mock_http_client.aclose = AsyncMock()
+        gemini_client._http_client = mock_http_client
 
         # Act
         await gemini_client.close()
 
-        # Assert
-        gemini_client._http_client.aclose.assert_called_once()
+        # Assert - save reference before close() sets it to None
+        mock_http_client.aclose.assert_called_once()
         assert gemini_client._http_client is None
 
     @pytest.mark.asyncio

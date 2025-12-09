@@ -7,8 +7,12 @@ import type {
   SendCardRequest,
   SendCardResponse,
   Employee,
+  TextStyle,
   ImageStyle
 } from '@/types'
+
+// API timeout for generation requests (5 minutes for 9 parallel AI generations)
+const GENERATION_TIMEOUT_MS = 300000
 
 // Backend API response wrapper
 interface APIResponse<T> {
@@ -20,25 +24,28 @@ interface APIResponse<T> {
 // Backend response types (different from frontend types)
 interface BackendTextVariant {
   text: string
-  style: string  // 'original' or TextStyle value
+  style: string  // TextStyle value
 }
 
 interface BackendImageVariant {
   url: string
-  style: ImageStyle
+  style: string  // ImageStyle value
   prompt: string
 }
 
 interface BackendCardGenerationResponse {
   session_id: string
   recipient: string
+  original_text: string | null
   text_variants: BackendTextVariant[]
   image_variants: BackendImageVariant[]
-  remaining_regenerations: number
+  remaining_text_regenerations: number
+  remaining_image_regenerations: number
 }
 
 interface BackendRegenerateResponse {
-  variant: BackendTextVariant | BackendImageVariant
+  text_variants?: BackendTextVariant[]
+  image_variants?: BackendImageVariant[]
   remaining_regenerations: number
 }
 
@@ -59,7 +66,7 @@ class APIClient {
       headers: {
         'Content-Type': 'application/json'
       },
-      timeout: 180000 // 3 minutes for AI generation
+      timeout: GENERATION_TIMEOUT_MS
     })
   }
 
@@ -74,16 +81,19 @@ class APIClient {
     // Transform backend response to frontend format
     return {
       generation_id: backendData.session_id,
+      original_text: backendData.original_text,
       text_variants: backendData.text_variants.map((tv, index) => ({
         id: `text-${index}`,
         content: tv.text,
-        style: tv.style
+        style: tv.style as TextStyle
       })),
       image_variants: backendData.image_variants.map((iv, index) => ({
         id: `image-${index}`,
-        url: this.transformImageUrl(backendData.session_id, iv.url)
+        url: this.transformImageUrl(backendData.session_id, iv.url),
+        style: iv.style as ImageStyle
       })),
-      remaining_regenerations: backendData.remaining_regenerations
+      remaining_text_regenerations: backendData.remaining_text_regenerations,
+      remaining_image_regenerations: backendData.remaining_image_regenerations
     }
   }
 
@@ -100,40 +110,38 @@ class APIClient {
   }
 
   /**
-   * Regenerate text or image variant
+   * Regenerate all text or image variants
    */
-  async regenerate(request: RegenerateRequest): Promise<RegenerateResponse> {
+  async regenerate(request: RegenerateRequest, sessionId: string): Promise<RegenerateResponse> {
     // Transform frontend request to backend format
     const backendRequest = {
       session_id: request.generation_id,
-      element_type: request.type,
-      element_index: 0 // Backend regenerates and adds to list
+      element_type: request.type
     }
 
     const response = await this.client.post<APIResponse<BackendRegenerateResponse>>('/cards/regenerate', backendRequest)
     const backendData = response.data.data
 
     // Transform response based on type
-    if (request.type === 'text') {
-      const tv = backendData.variant as BackendTextVariant
-      return {
-        variant: {
-          id: `text-regen-${Date.now()}`,
-          content: tv.text,
-          style: tv.style  // AI-generated variants always have a style
-        },
-        remaining_regenerations: backendData.remaining_regenerations
-      }
-    } else {
-      const iv = backendData.variant as BackendImageVariant
-      return {
-        variant: {
-          id: `image-regen-${Date.now()}`,
-          url: this.transformImageUrl(request.generation_id, iv.url)
-        },
-        remaining_regenerations: backendData.remaining_regenerations
-      }
+    const result: RegenerateResponse = {
+      remaining_regenerations: backendData.remaining_regenerations
     }
+
+    if (request.type === 'text' && backendData.text_variants) {
+      result.text_variants = backendData.text_variants.map((tv, index) => ({
+        id: `text-regen-${Date.now()}-${index}`,
+        content: tv.text,
+        style: tv.style as TextStyle
+      }))
+    } else if (request.type === 'image' && backendData.image_variants) {
+      result.image_variants = backendData.image_variants.map((iv, index) => ({
+        id: `image-regen-${Date.now()}-${index}`,
+        url: this.transformImageUrl(sessionId, iv.url),
+        style: iv.style as ImageStyle
+      }))
+    }
+
+    return result
   }
 
   /**
@@ -141,16 +149,13 @@ class APIClient {
    */
   async sendCard(request: SendCardRequest): Promise<SendCardResponse> {
     // Transform frontend request to backend format
-    // Extract index from id (e.g., "text-0" -> 0)
-    const textIndex = parseInt(request.text_variant_id.split('-').pop() || '0', 10)
-    const imageIndex = parseInt(request.image_variant_id.split('-').pop() || '0', 10)
-
     const backendRequest = {
       session_id: request.generation_id,
       employee_name: request.recipient,
-      selected_text_index: textIndex,
-      selected_image_index: imageIndex,
-      include_original_text: request.include_original_text || false
+      selected_text_index: request.selected_text_index,
+      selected_image_index: request.selected_image_index,
+      use_original_text: request.use_original_text,
+      include_original_text: request.include_original_text
     }
 
     const response = await this.client.post<APIResponse<BackendSendCardResponse>>('/cards/send', backendRequest)

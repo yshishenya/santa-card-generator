@@ -694,11 +694,22 @@ class GeminiClient:
                     base64_data = item["url"].split("base64,")[1]
                     return base64.b64decode(base64_data)
 
+        # Log detailed response structure for debugging
+        content_preview = str(content)[:500] if content else "empty"
+        logger.error(
+            f"Failed to extract image from response. "
+            f"style={style}, response_keys={list(data.keys()) if data else []}, "
+            f"choice_keys={list(choice.keys()) if choice else []}, "
+            f"message_keys={list(message.keys()) if message else []}, "
+            f"content_type={type(content).__name__}, has_images={bool(images)}, "
+            f"content_preview={content_preview}"
+        )
         raise GeminiImageGenerationError(
             message="Не удалось извлечь изображение из ответа API",
             details={
                 "style": style,
                 "response_keys": list(data.keys()) if data else [],
+                "message_keys": list(message.keys()) if message else [],
             },
         )
 

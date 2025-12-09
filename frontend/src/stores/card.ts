@@ -4,27 +4,27 @@ import { apiClient } from '@/api/client'
 import type {
   CardGenerationRequest,
   TextVariant,
-  ImageVariant,
-  RegenerateRequest,
-  SendCardRequest,
-  TextStyle,
-  ImageStyle
+  ImageVariant
 } from '@/types'
 
 export const useCardStore = defineStore('card', () => {
   // State
   const generationId = ref<string | null>(null)
   const recipient = ref<string | null>(null)
-  const textVariants = ref<TextVariant[]>([])
-  const imageVariants = ref<ImageVariant[]>([])
-  const selectedTextId = ref<string | null>(null)
-  const selectedImageId = ref<string | null>(null)
-  const remainingRegenerations = ref<number>(3)
-  const includeOriginalText = ref<boolean>(false)  // When true, send both original and AI text
+  const originalText = ref<string | null>(null)  // User's original message
+  const textVariants = ref<TextVariant[]>([])  // 5 AI variants (one per style)
+  const imageVariants = ref<ImageVariant[]>([])  // 4 variants (one per style)
+  const selectedTextIndex = ref<number>(0)  // Index-based selection
+  const selectedImageIndex = ref<number>(0)  // Index-based selection
+  const useOriginalText = ref<boolean>(false)  // When true, use original text instead of AI variant
+  const includeOriginalText = ref<boolean>(false)  // When true, include original text alongside AI text
+  const remainingTextRegenerations = ref<number>(3)
+  const remainingImageRegenerations = ref<number>(3)
 
   // Loading states
   const isGenerating = ref(false)
-  const isRegenerating = ref(false)
+  const isRegeneratingText = ref(false)
+  const isRegeneratingImages = ref(false)
   const isSending = ref(false)
 
   // Error state
@@ -32,21 +32,38 @@ export const useCardStore = defineStore('card', () => {
 
   // Computed
   const hasGeneration = computed(() => generationId.value !== null)
-  const canRegenerate = computed(() => remainingRegenerations.value > 0)
-  const canSend = computed(() => selectedTextId.value !== null && selectedImageId.value !== null)
+  const canRegenerateText = computed(() => remainingTextRegenerations.value > 0)
+  const canRegenerateImages = computed(() => remainingImageRegenerations.value > 0)
+  const hasOriginalText = computed(() => originalText.value !== null && originalText.value.length > 0)
 
-  const selectedText = computed(() =>
-    textVariants.value.find(v => v.id === selectedTextId.value)
+  const canSend = computed(() => {
+    // Can send if we have either original text selected or a valid AI text index
+    const hasValidText = useOriginalText.value
+      ? hasOriginalText.value
+      : (textVariants.value.length > 0 && selectedTextIndex.value >= 0)
+    const hasValidImage = imageVariants.value.length > 0 && selectedImageIndex.value >= 0
+    return hasValidText && hasValidImage
+  })
+
+  const selectedText = computed(() => {
+    if (useOriginalText.value) {
+      return originalText.value
+    }
+    return textVariants.value[selectedTextIndex.value]?.content ?? null
+  })
+
+  const selectedTextVariant = computed(() =>
+    textVariants.value[selectedTextIndex.value]
   )
 
-  const selectedImage = computed(() =>
-    imageVariants.value.find(v => v.id === selectedImageId.value)
+  const selectedImageVariant = computed(() =>
+    imageVariants.value[selectedImageIndex.value]
   )
 
   // Actions
 
   /**
-   * Generate new card with text and image variants
+   * Generate new card with text and image variants (5 text + 4 image)
    */
   async function generate(request: CardGenerationRequest): Promise<void> {
     try {
@@ -56,17 +73,17 @@ export const useCardStore = defineStore('card', () => {
 
       generationId.value = response.generation_id
       recipient.value = request.recipient
+      originalText.value = response.original_text
       textVariants.value = response.text_variants
       imageVariants.value = response.image_variants
-      remainingRegenerations.value = response.remaining_regenerations
+      remainingTextRegenerations.value = response.remaining_text_regenerations
+      remainingImageRegenerations.value = response.remaining_image_regenerations
 
       // Auto-select first variants
-      if (textVariants.value.length > 0) {
-        selectedTextId.value = textVariants.value[0].id
-      }
-      if (imageVariants.value.length > 0) {
-        selectedImageId.value = imageVariants.value[0].id
-      }
+      selectedTextIndex.value = 0
+      selectedImageIndex.value = 0
+      useOriginalText.value = false
+      includeOriginalText.value = false
     } catch (err) {
       error.value = 'Не удалось создать открытку. Попробуйте ещё раз.'
       throw err
@@ -76,68 +93,64 @@ export const useCardStore = defineStore('card', () => {
   }
 
   /**
-   * Regenerate text variant with new style
+   * Regenerate ALL text variants (5 new variants, one per style)
    */
-  async function regenerateText(style?: TextStyle): Promise<void> {
-    if (!generationId.value || !canRegenerate.value) return
+  async function regenerateText(): Promise<void> {
+    if (!generationId.value || !canRegenerateText.value) return
 
     try {
-      isRegenerating.value = true
+      isRegeneratingText.value = true
       error.value = null
-      const request: RegenerateRequest = {
-        generation_id: generationId.value,
-        type: 'text',
-        style
+
+      const response = await apiClient.regenerate(
+        { generation_id: generationId.value, type: 'text' },
+        generationId.value
+      )
+
+      // Replace all text variants
+      if (response.text_variants) {
+        textVariants.value = response.text_variants
+        // Keep selection at first variant
+        selectedTextIndex.value = 0
       }
 
-      const response = await apiClient.regenerate(request)
-
-      // Add new variant to the list
-      const newVariant = response.variant as TextVariant
-      textVariants.value.push(newVariant)
-
-      // Auto-select the new variant
-      selectedTextId.value = newVariant.id
-
-      remainingRegenerations.value = response.remaining_regenerations
+      remainingTextRegenerations.value = response.remaining_regenerations
     } catch (err) {
       error.value = 'Не удалось перегенерировать текст. Попробуйте ещё раз.'
       throw err
     } finally {
-      isRegenerating.value = false
+      isRegeneratingText.value = false
     }
   }
 
   /**
-   * Regenerate image variant with new style
+   * Regenerate ALL image variants (4 new variants, one per style)
    */
-  async function regenerateImage(style?: ImageStyle): Promise<void> {
-    if (!generationId.value || !canRegenerate.value) return
+  async function regenerateImages(): Promise<void> {
+    if (!generationId.value || !canRegenerateImages.value) return
 
     try {
-      isRegenerating.value = true
+      isRegeneratingImages.value = true
       error.value = null
-      const request: RegenerateRequest = {
-        generation_id: generationId.value,
-        type: 'image',
-        style
+
+      const response = await apiClient.regenerate(
+        { generation_id: generationId.value, type: 'image' },
+        generationId.value
+      )
+
+      // Replace all image variants
+      if (response.image_variants) {
+        imageVariants.value = response.image_variants
+        // Keep selection at first variant
+        selectedImageIndex.value = 0
       }
 
-      const response = await apiClient.regenerate(request)
-
-      // Add new variant to the list
-      const newVariant = response.variant as ImageVariant
-      imageVariants.value.push(newVariant)
-
-      // Auto-select the new variant
-      selectedImageId.value = newVariant.id
-
-      remainingRegenerations.value = response.remaining_regenerations
+      remainingImageRegenerations.value = response.remaining_regenerations
     } catch (err) {
-      error.value = 'Не удалось перегенерировать изображение. Попробуйте ещё раз.'
+      error.value = 'Не удалось перегенерировать изображения. Попробуйте ещё раз.'
       throw err
     } finally {
-      isRegenerating.value = false
+      isRegeneratingImages.value = false
     }
   }
 
@@ -150,21 +163,47 @@ export const useCardStore = defineStore('card', () => {
     try {
       isSending.value = true
       error.value = null
-      const request: SendCardRequest = {
+
+      await apiClient.sendCard({
         generation_id: generationId.value,
         recipient: recipient.value,
-        text_variant_id: selectedTextId.value!,
-        image_variant_id: selectedImageId.value!,
+        selected_text_index: selectedTextIndex.value,
+        selected_image_index: selectedImageIndex.value,
+        use_original_text: useOriginalText.value,
         include_original_text: includeOriginalText.value
-      }
-
-      await apiClient.sendCard(request)
+      })
     } catch (err) {
       error.value = 'Не удалось отправить открытку. Попробуйте ещё раз.'
       throw err
     } finally {
       isSending.value = false
     }
+  }
+
+  /**
+   * Select text variant by index
+   */
+  function selectTextVariant(index: number): void {
+    if (index >= 0 && index < textVariants.value.length) {
+      selectedTextIndex.value = index
+      useOriginalText.value = false  // Switching to AI text
+    }
+  }
+
+  /**
+   * Select image variant by index
+   */
+  function selectImageVariant(index: number): void {
+    if (index >= 0 && index < imageVariants.value.length) {
+      selectedImageIndex.value = index
+    }
+  }
+
+  /**
+   * Set whether to use original text instead of AI variant
+   */
+  function setUseOriginalText(value: boolean): void {
+    useOriginalText.value = value
   }
 
   /**
@@ -180,14 +219,18 @@ export const useCardStore = defineStore('card', () => {
   function reset(): void {
     generationId.value = null
     recipient.value = null
+    originalText.value = null
     textVariants.value = []
     imageVariants.value = []
-    selectedTextId.value = null
-    selectedImageId.value = null
-    remainingRegenerations.value = 3
+    selectedTextIndex.value = 0
+    selectedImageIndex.value = 0
+    useOriginalText.value = false
     includeOriginalText.value = false
+    remainingTextRegenerations.value = 3
+    remainingImageRegenerations.value = 3
     isGenerating.value = false
-    isRegenerating.value = false
+    isRegeneratingText.value = false
+    isRegeneratingImages.value = false
     isSending.value = false
     error.value = null
   }
@@ -200,29 +243,39 @@ export const useCardStore = defineStore('card', () => {
     // State
     generationId,
     recipient,
+    originalText,
     textVariants,
     imageVariants,
-    selectedTextId,
-    selectedImageId,
-    remainingRegenerations,
+    selectedTextIndex,
+    selectedImageIndex,
+    useOriginalText,
     includeOriginalText,
+    remainingTextRegenerations,
+    remainingImageRegenerations,
     isGenerating,
-    isRegenerating,
+    isRegeneratingText,
+    isRegeneratingImages,
     isSending,
     error,
 
     // Computed
     hasGeneration,
-    canRegenerate,
+    canRegenerateText,
+    canRegenerateImages,
+    hasOriginalText,
     canSend,
     selectedText,
-    selectedImage,
+    selectedTextVariant,
+    selectedImageVariant,
 
     // Actions
     generate,
     regenerateText,
-    regenerateImage,
+    regenerateImages,
     send,
+    selectTextVariant,
+    selectImageVariant,
+    setUseOriginalText,
     setIncludeOriginalText,
     reset,
     clearError

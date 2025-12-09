@@ -4,15 +4,14 @@ This module contains comprehensive tests for the SessionManager class,
 which handles in-memory session storage for card generation sessions,
 including variant management and regeneration limits.
 
-Tests follow the AAA pattern (Arrange-Act-Assert) and cover:
-- Session creation and retrieval
-- Session expiration handling
-- Text and image variant management
-- Regeneration limit enforcement
-- Session cleanup operations
+Updated for new multi-style generation architecture:
+- 5 text variants (one per AI style)
+- 4 image variants (one per style)
+- replace_text_variants() / replace_image_variants() replace ALL variants
+- Separate regeneration counters for text and images
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 from unittest.mock import patch
 import uuid
@@ -39,17 +38,14 @@ class TestSessionManagerCreateSession:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that create_session returns a valid UUID string.
-
-        Verifies that the session ID returned by create_session is a valid UUID
-        format string that can be used to retrieve the session later.
-        """
+        """Test that create_session returns a valid UUID string."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
 
         # Act
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=sample_card_request.message,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
@@ -69,17 +65,15 @@ class TestSessionManagerCreateSession:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that create_session stores all request data correctly.
-
-        Verifies that the created session contains the original request,
-        variants, and image data as provided.
-        """
+        """Test that create_session stores all request data correctly."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
+        original_text = "Custom message from user"
 
         # Act
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=original_text,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
@@ -88,10 +82,37 @@ class TestSessionManagerCreateSession:
 
         # Assert
         assert session is not None
-        assert session.request == sample_card_request
+        assert session.original_request == sample_card_request
+        assert session.original_text == original_text
         assert session.text_variants == sample_text_variants
         assert session.image_variants == sample_image_variants
         assert session.image_data == sample_image_data
+
+    def test_create_session_stores_5_text_4_image_variants(
+        self,
+        sample_card_request: CardGenerationRequest,
+        sample_text_variants: List[TextVariant],
+        sample_image_variants: List[ImageVariant],
+        sample_image_data: Dict[str, bytes],
+    ) -> None:
+        """Test that session stores the correct number of variants (5 text, 4 image)."""
+        # Arrange
+        manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
+
+        # Act
+        session_id = manager.create_session(
+            request=sample_card_request,
+            original_text=None,
+            text_variants=sample_text_variants,
+            image_variants=sample_image_variants,
+            image_data=sample_image_data,
+        )
+        session = manager.get_session(session_id)
+
+        # Assert
+        assert session is not None
+        assert len(session.text_variants) == 5  # One per AI style
+        assert len(session.image_variants) == 4  # One per image style
 
     def test_create_session_initializes_regeneration_counters(
         self,
@@ -100,11 +121,7 @@ class TestSessionManagerCreateSession:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that create_session initializes regeneration counters correctly.
-
-        Verifies that the session is created with the correct initial
-        regeneration limits for both text and images.
-        """
+        """Test that create_session initializes regeneration counters correctly."""
         # Arrange
         max_regenerations = 5
         manager = SessionManager(max_regenerations=max_regenerations, session_ttl_minutes=30)
@@ -112,6 +129,7 @@ class TestSessionManagerCreateSession:
         # Act
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
@@ -130,10 +148,7 @@ class TestSessionManagerCreateSession:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that creating sessions increments the session count.
-
-        Verifies that each session creation adds to the total session count.
-        """
+        """Test that creating sessions increments the session count."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
         initial_count = manager.get_session_count()
@@ -141,12 +156,14 @@ class TestSessionManagerCreateSession:
         # Act
         manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
         manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
@@ -166,15 +183,12 @@ class TestSessionManagerGetSession:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that get_session returns the correct session for a valid ID.
-
-        Verifies that a session can be retrieved using its ID and contains
-        the expected data.
-        """
+        """Test that get_session returns the correct session for a valid ID."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
@@ -187,14 +201,10 @@ class TestSessionManagerGetSession:
         assert session is not None
         assert isinstance(session, GenerationSession)
         assert session.id == session_id
-        assert session.request.employee_name == sample_card_request.employee_name
+        assert session.original_request.recipient == sample_card_request.recipient
 
     def test_get_session_returns_none_for_invalid_id(self) -> None:
-        """Test that get_session returns None for an invalid session ID.
-
-        Verifies that requesting a session with a non-existent ID returns None
-        rather than raising an exception.
-        """
+        """Test that get_session returns None for an invalid session ID."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
         invalid_session_id = str(uuid.uuid4())
@@ -212,15 +222,12 @@ class TestSessionManagerGetSession:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that get_session returns None for an expired session.
-
-        Verifies that sessions that have exceeded their TTL are not returned
-        and are automatically cleaned up.
-        """
+        """Test that get_session returns None for an expired session."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=1)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
@@ -229,14 +236,15 @@ class TestSessionManagerGetSession:
         # Verify session exists initially
         assert manager.get_session(session_id) is not None
 
-        # Act - Simulate time passing by patching datetime
-        expired_time = datetime.utcnow() + timedelta(minutes=2)
-        with patch("src.core.session_manager.datetime") as mock_datetime:
-            mock_datetime.utcnow.return_value = expired_time
-            session = manager.get_session(session_id)
+        # Act - Access the session directly and modify created_at to simulate expiration
+        session = manager._sessions[session_id]
+        session.created_at = datetime.now(timezone.utc) - timedelta(minutes=2)
+
+        # Now get_session should return None
+        result = manager.get_session(session_id)
 
         # Assert
-        assert session is None
+        assert result is None
 
     def test_get_session_removes_expired_session_from_storage(
         self,
@@ -245,181 +253,177 @@ class TestSessionManagerGetSession:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that expired sessions are removed from storage when accessed.
-
-        Verifies that accessing an expired session triggers its removal
-        from the internal storage.
-        """
+        """Test that expired sessions are removed from storage when accessed."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=1)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
         initial_count = manager.get_session_count()
 
-        # Act - Simulate time passing
-        expired_time = datetime.utcnow() + timedelta(minutes=2)
-        with patch("src.core.session_manager.datetime") as mock_datetime:
-            mock_datetime.utcnow.return_value = expired_time
-            manager.get_session(session_id)
+        # Simulate expiration
+        session = manager._sessions[session_id]
+        session.created_at = datetime.now(timezone.utc) - timedelta(minutes=2)
+
+        # Act - Access expired session
+        manager.get_session(session_id)
 
         # Assert - Session should be removed from storage
-        # Note: We need to check without the mock to verify actual storage
         assert manager.get_session_count() == initial_count - 1
 
 
-class TestSessionManagerAddTextVariant:
-    """Tests for SessionManager.add_text_variant method."""
+class TestSessionManagerReplaceTextVariants:
+    """Tests for SessionManager.replace_text_variants method."""
 
-    def test_add_text_variant_decrements_counter(
+    def test_replace_text_variants_decrements_counter(
         self,
         sample_card_request: CardGenerationRequest,
         sample_text_variants: List[TextVariant],
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that adding a text variant decrements the regeneration counter.
-
-        Verifies that each call to add_text_variant properly decrements
-        the text_regenerations_left counter and returns the updated count.
-        """
+        """Test that replacing text variants decrements the regeneration counter."""
         # Arrange
         max_regenerations = 3
         manager = SessionManager(max_regenerations=max_regenerations, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
-        new_variant = TextVariant(text="New generated text", style=TextStyle.ODE)
+        new_variants = [
+            TextVariant(text=f"New text {i}", style=style)
+            for i, style in enumerate([
+                TextStyle.ODE, TextStyle.HAIKU, TextStyle.NEWSPAPER,
+                TextStyle.FUTURE, TextStyle.STANDUP
+            ])
+        ]
 
         # Act
-        remaining = manager.add_text_variant(session_id, new_variant)
+        remaining = manager.replace_text_variants(session_id, new_variants)
 
         # Assert
         assert remaining == max_regenerations - 1
         session = manager.get_session(session_id)
         assert session is not None
         assert session.text_regenerations_left == max_regenerations - 1
-        assert len(session.text_variants) == len(sample_text_variants) + 1
+        assert len(session.text_variants) == 5
 
-    def test_add_text_variant_appends_to_list(
+    def test_replace_text_variants_replaces_all_variants(
         self,
         sample_card_request: CardGenerationRequest,
         sample_text_variants: List[TextVariant],
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that adding a text variant appends it to the variants list.
-
-        Verifies that the new variant is added to the end of the text_variants list.
-        """
+        """Test that replace_text_variants replaces all existing variants."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
-        new_variant = TextVariant(text="Brand new text variant!", style=TextStyle.HAIKU)
+        new_variants = [
+            TextVariant(text="Brand new text 1", style=TextStyle.ODE),
+            TextVariant(text="Brand new text 2", style=TextStyle.HAIKU),
+            TextVariant(text="Brand new text 3", style=TextStyle.NEWSPAPER),
+            TextVariant(text="Brand new text 4", style=TextStyle.FUTURE),
+            TextVariant(text="Brand new text 5", style=TextStyle.STANDUP),
+        ]
 
         # Act
-        manager.add_text_variant(session_id, new_variant)
+        manager.replace_text_variants(session_id, new_variants)
         session = manager.get_session(session_id)
 
         # Assert
         assert session is not None
-        assert session.text_variants[-1] == new_variant
+        assert session.text_variants == new_variants
+        assert session.text_variants[0].text == "Brand new text 1"
 
-    def test_add_text_variant_raises_on_invalid_session(self) -> None:
-        """Test that add_text_variant raises ValueError for invalid session ID.
-
-        Verifies that attempting to add a variant to a non-existent session
-        raises an appropriate error.
-        """
+    def test_replace_text_variants_raises_on_invalid_session(self) -> None:
+        """Test that replace_text_variants raises ValueError for invalid session ID."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
         invalid_session_id = str(uuid.uuid4())
-        new_variant = TextVariant(text="Test text", style=TextStyle.ODE)
+        new_variants = [TextVariant(text="Test text", style=TextStyle.ODE)]
 
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
-            manager.add_text_variant(invalid_session_id, new_variant)
+            manager.replace_text_variants(invalid_session_id, new_variants)
 
         assert "Session not found" in str(exc_info.value)
 
-    def test_add_text_variant_raises_on_limit_exceeded(
+    def test_replace_text_variants_raises_on_limit_exceeded(
         self,
         sample_card_request: CardGenerationRequest,
         sample_text_variants: List[TextVariant],
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that add_text_variant raises error when limit is exceeded.
-
-        Verifies that attempting to add more variants than allowed by
-        max_regenerations raises an appropriate error.
-        """
+        """Test that replace_text_variants raises error when limit is exceeded."""
         # Arrange
         max_regenerations = 2
         manager = SessionManager(max_regenerations=max_regenerations, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
-        new_variant = TextVariant(text="Test text", style=TextStyle.ODE)
+        new_variants = sample_text_variants
 
         # Use up all regenerations
         for _ in range(max_regenerations):
-            manager.add_text_variant(session_id, new_variant)
+            manager.replace_text_variants(session_id, new_variants)
 
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
-            manager.add_text_variant(session_id, new_variant)
+            manager.replace_text_variants(session_id, new_variants)
 
         assert "Regeneration limit exceeded" in str(exc_info.value)
 
 
-class TestSessionManagerAddImageVariant:
-    """Tests for SessionManager.add_image_variant method."""
+class TestSessionManagerReplaceImageVariants:
+    """Tests for SessionManager.replace_image_variants method."""
 
-    def test_add_image_variant_decrements_counter(
+    def test_replace_image_variants_decrements_counter(
         self,
         sample_card_request: CardGenerationRequest,
         sample_text_variants: List[TextVariant],
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that adding an image variant decrements the regeneration counter.
-
-        Verifies that each call to add_image_variant properly decrements
-        the image_regenerations_left counter and returns the updated count.
-        """
+        """Test that replacing image variants decrements the regeneration counter."""
         # Arrange
         max_regenerations = 3
         manager = SessionManager(max_regenerations=max_regenerations, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
-        new_variant = ImageVariant(
-            url="generated://new-img",
-            style=ImageStyle.DIGITAL_ART,
-            prompt="New festive image",
-        )
-        new_image_bytes = b"new_image_data_bytes"
+        new_variants = [
+            ImageVariant(url="generated://new-1", style=ImageStyle.DIGITAL_ART, prompt="New 1"),
+            ImageVariant(url="generated://new-2", style=ImageStyle.SPACE, prompt="New 2"),
+            ImageVariant(url="generated://new-3", style=ImageStyle.PIXEL_ART, prompt="New 3"),
+            ImageVariant(url="generated://new-4", style=ImageStyle.MOVIE, prompt="New 4"),
+        ]
+        new_image_data = {v.url: f"new_bytes_{i}".encode() for i, v in enumerate(new_variants)}
 
         # Act
-        remaining = manager.add_image_variant(session_id, new_variant, new_image_bytes)
+        remaining = manager.replace_image_variants(session_id, new_variants, new_image_data)
 
         # Assert
         assert remaining == max_regenerations - 1
@@ -427,107 +431,100 @@ class TestSessionManagerAddImageVariant:
         assert session is not None
         assert session.image_regenerations_left == max_regenerations - 1
 
-    def test_add_image_variant_stores_image_data(
+    def test_replace_image_variants_stores_new_image_data(
         self,
         sample_card_request: CardGenerationRequest,
         sample_text_variants: List[TextVariant],
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that adding an image variant stores the image bytes.
-
-        Verifies that the image data is properly stored and can be retrieved.
-        """
+        """Test that replacing image variants stores new image bytes."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
         new_variant = ImageVariant(
-            url="generated://new-img-123",
+            url="generated://brand-new-img",
             style=ImageStyle.PIXEL_ART,
             prompt="Pixel art winter scene",
         )
-        new_image_bytes = b"pixel_art_image_data"
+        new_image_bytes = b"brand_new_pixel_art_data"
+        new_variants = [new_variant]
+        new_image_data = {new_variant.url: new_image_bytes}
 
         # Act
-        manager.add_image_variant(session_id, new_variant, new_image_bytes)
+        manager.replace_image_variants(session_id, new_variants, new_image_data)
 
         # Assert
         retrieved_data = manager.get_image_data(session_id, new_variant.url)
         assert retrieved_data == new_image_bytes
 
-    def test_add_image_variant_appends_to_list(
+    def test_replace_image_variants_clears_old_data(
         self,
         sample_card_request: CardGenerationRequest,
         sample_text_variants: List[TextVariant],
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that adding an image variant appends it to the variants list.
-
-        Verifies that the new variant is added to the end of the image_variants list.
-        """
+        """Test that replacing image variants clears old image data."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
-        new_variant = ImageVariant(
-            url="generated://appended-img",
-            style=ImageStyle.SPACE,
-            prompt="Space themed greeting",
-        )
-        initial_count = len(sample_image_variants)
+        old_image_url = sample_image_variants[0].url
+
+        # Verify old data exists
+        assert manager.get_image_data(session_id, old_image_url) is not None
+
+        # Create new variants
+        new_variants = [
+            ImageVariant(url="generated://new-img", style=ImageStyle.SPACE, prompt="test")
+        ]
+        new_image_data = {"generated://new-img": b"new_data"}
 
         # Act
-        manager.add_image_variant(session_id, new_variant, b"image_bytes")
-        session = manager.get_session(session_id)
+        manager.replace_image_variants(session_id, new_variants, new_image_data)
 
-        # Assert
-        assert session is not None
-        assert len(session.image_variants) == initial_count + 1
-        assert session.image_variants[-1] == new_variant
+        # Assert - old data should be gone
+        assert manager.get_image_data(session_id, old_image_url) is None
 
-    def test_add_image_variant_raises_on_limit_exceeded(
+    def test_replace_image_variants_raises_on_limit_exceeded(
         self,
         sample_card_request: CardGenerationRequest,
         sample_text_variants: List[TextVariant],
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that add_image_variant raises error when limit is exceeded.
-
-        Verifies that attempting to add more image variants than allowed
-        raises an appropriate error.
-        """
+        """Test that replace_image_variants raises error when limit is exceeded."""
         # Arrange
         max_regenerations = 1
         manager = SessionManager(max_regenerations=max_regenerations, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
-        new_variant = ImageVariant(
-            url="generated://test-img",
-            style=ImageStyle.MOVIE,
-            prompt="Movie poster style",
-        )
+        new_variants = sample_image_variants
+        new_image_data = sample_image_data
 
         # Use up all regenerations
-        manager.add_image_variant(session_id, new_variant, b"data")
+        manager.replace_image_variants(session_id, new_variants, new_image_data)
 
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
-            manager.add_image_variant(session_id, new_variant, b"more_data")
+            manager.replace_image_variants(session_id, new_variants, new_image_data)
 
         assert "Regeneration limit exceeded" in str(exc_info.value)
 
@@ -542,23 +539,21 @@ class TestSessionManagerCleanupExpired:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that cleanup_expired removes sessions that have exceeded TTL.
-
-        Verifies that expired sessions are removed and the count of removed
-        sessions is returned correctly.
-        """
+        """Test that cleanup_expired removes sessions that have exceeded TTL."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=1)
 
         # Create multiple sessions
         session_id_1 = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
         session_id_2 = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
@@ -567,11 +562,12 @@ class TestSessionManagerCleanupExpired:
         initial_count = manager.get_session_count()
         assert initial_count == 2
 
-        # Act - Simulate time passing
-        expired_time = datetime.utcnow() + timedelta(minutes=2)
-        with patch("src.core.session_manager.datetime") as mock_datetime:
-            mock_datetime.utcnow.return_value = expired_time
-            removed_count = manager.cleanup_expired()
+        # Simulate expiration for both sessions
+        for sid in [session_id_1, session_id_2]:
+            manager._sessions[sid].created_at = datetime.now(timezone.utc) - timedelta(minutes=2)
+
+        # Act
+        removed_count = manager.cleanup_expired()
 
         # Assert
         assert removed_count == 2
@@ -584,15 +580,12 @@ class TestSessionManagerCleanupExpired:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that cleanup_expired preserves sessions that haven't expired.
-
-        Verifies that only expired sessions are removed, while valid sessions
-        remain intact.
-        """
+        """Test that cleanup_expired preserves sessions that haven't expired."""
         # Arrange
-        manager = SessionManager(max_regenerations=3, session_ttl_minutes=60)  # 1 hour TTL
+        manager = SessionManager(max_regenerations=3, session_ttl_minutes=60)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
@@ -613,14 +606,12 @@ class TestSessionManagerCleanupExpired:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that cleanup_expired returns 0 when no sessions have expired.
-
-        Verifies correct behavior when all sessions are still valid.
-        """
+        """Test that cleanup_expired returns 0 when no sessions have expired."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
         manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
@@ -633,44 +624,8 @@ class TestSessionManagerCleanupExpired:
         assert removed_count == 0
 
 
-class TestRegenerationLimitRespected:
-    """Tests for regeneration limit enforcement."""
-
-    def test_regeneration_limit_respected(
-        self,
-        sample_card_request: CardGenerationRequest,
-        sample_text_variants: List[TextVariant],
-        sample_image_variants: List[ImageVariant],
-        sample_image_data: Dict[str, bytes],
-    ) -> None:
-        """Test that regeneration limits are strictly enforced.
-
-        Verifies that after using all regeneration attempts, further
-        regeneration requests are rejected with appropriate errors.
-        """
-        # Arrange
-        max_regenerations = 3
-        manager = SessionManager(max_regenerations=max_regenerations, session_ttl_minutes=30)
-        session_id = manager.create_session(
-            request=sample_card_request,
-            text_variants=sample_text_variants,
-            image_variants=sample_image_variants,
-            image_data=sample_image_data,
-        )
-
-        # Act - Use all text regenerations
-        for i in range(max_regenerations):
-            new_variant = TextVariant(text=f"Regenerated text {i}", style=TextStyle.ODE)
-            remaining = manager.add_text_variant(session_id, new_variant)
-            assert remaining == max_regenerations - i - 1
-
-        # Assert - Next regeneration should fail
-        with pytest.raises(ValueError) as exc_info:
-            manager.add_text_variant(
-                session_id,
-                TextVariant(text="Too many regenerations", style=TextStyle.ODE),
-            )
-        assert "Regeneration limit exceeded" in str(exc_info.value)
+class TestRegenerationLimitsIndependent:
+    """Tests for independent regeneration limit enforcement."""
 
     def test_text_and_image_limits_are_independent(
         self,
@@ -679,27 +634,21 @@ class TestRegenerationLimitRespected:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that text and image regeneration limits are tracked independently.
-
-        Verifies that using up text regenerations doesn't affect image
-        regeneration limit and vice versa.
-        """
+        """Test that text and image regeneration limits are tracked independently."""
         # Arrange
         max_regenerations = 2
         manager = SessionManager(max_regenerations=max_regenerations, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
         )
 
         # Act - Use all text regenerations
-        for i in range(max_regenerations):
-            manager.add_text_variant(
-                session_id,
-                TextVariant(text=f"Text {i}", style=TextStyle.ODE),
-            )
+        for _ in range(max_regenerations):
+            manager.replace_text_variants(session_id, sample_text_variants)
 
         # Assert - Image regenerations should still be available
         session = manager.get_session(session_id)
@@ -707,15 +656,11 @@ class TestRegenerationLimitRespected:
         assert session.text_regenerations_left == 0
         assert session.image_regenerations_left == max_regenerations
 
-        # Verify we can still add image variants
-        remaining = manager.add_image_variant(
+        # Verify we can still replace image variants
+        remaining = manager.replace_image_variants(
             session_id,
-            ImageVariant(
-                url="generated://img-new",
-                style=ImageStyle.DIGITAL_ART,
-                prompt="test",
-            ),
-            b"image_bytes",
+            sample_image_variants,
+            sample_image_data,
         )
         assert remaining == max_regenerations - 1
 
@@ -723,45 +668,37 @@ class TestRegenerationLimitRespected:
 class TestGenerationSessionExpiration:
     """Tests for GenerationSession.is_expired method."""
 
-    def test_session_is_expired_when_past_ttl(self) -> None:
-        """Test that is_expired returns True when session exceeds TTL.
-
-        Verifies the expiration logic in the GenerationSession dataclass.
-        """
+    def test_session_is_expired_when_past_ttl(
+        self,
+        sample_card_request: CardGenerationRequest,
+    ) -> None:
+        """Test that is_expired returns True when session exceeds TTL."""
         # Arrange
-        request = CardGenerationRequest(
-            employee_name="Test Employee",
-            text_style=TextStyle.ODE,
-            image_style=ImageStyle.DIGITAL_ART,
-        )
         session = GenerationSession(
             id=str(uuid.uuid4()),
-            request=request,
+            original_request=sample_card_request,
+            original_text=None,
             text_variants=[],
             image_variants=[],
-            created_at=datetime.utcnow() - timedelta(minutes=35),
+            created_at=datetime.now(timezone.utc) - timedelta(minutes=35),
         )
 
         # Act & Assert
         assert session.is_expired(ttl_minutes=30) is True
 
-    def test_session_is_not_expired_within_ttl(self) -> None:
-        """Test that is_expired returns False when session is within TTL.
-
-        Verifies that sessions are considered valid before the TTL expires.
-        """
+    def test_session_is_not_expired_within_ttl(
+        self,
+        sample_card_request: CardGenerationRequest,
+    ) -> None:
+        """Test that is_expired returns False when session is within TTL."""
         # Arrange
-        request = CardGenerationRequest(
-            employee_name="Test Employee",
-            text_style=TextStyle.ODE,
-            image_style=ImageStyle.DIGITAL_ART,
-        )
         session = GenerationSession(
             id=str(uuid.uuid4()),
-            request=request,
+            original_request=sample_card_request,
+            original_text=None,
             text_variants=[],
             image_variants=[],
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
 
         # Act & Assert
@@ -778,14 +715,12 @@ class TestGetImageData:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that get_image_data returns the correct image bytes.
-
-        Verifies that image data can be retrieved by session ID and image URL.
-        """
+        """Test that get_image_data returns the correct image bytes."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,
@@ -800,10 +735,7 @@ class TestGetImageData:
         assert image_data == expected_data
 
     def test_get_image_data_returns_none_for_invalid_session(self) -> None:
-        """Test that get_image_data returns None for invalid session ID.
-
-        Verifies graceful handling of requests for non-existent sessions.
-        """
+        """Test that get_image_data returns None for invalid session ID."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
 
@@ -820,14 +752,12 @@ class TestGetImageData:
         sample_image_variants: List[ImageVariant],
         sample_image_data: Dict[str, bytes],
     ) -> None:
-        """Test that get_image_data returns None for invalid image ID.
-
-        Verifies graceful handling of requests for non-existent images.
-        """
+        """Test that get_image_data returns None for invalid image ID."""
         # Arrange
         manager = SessionManager(max_regenerations=3, session_ttl_minutes=30)
         session_id = manager.create_session(
             request=sample_card_request,
+            original_text=None,
             text_variants=sample_text_variants,
             image_variants=sample_image_variants,
             image_data=sample_image_data,

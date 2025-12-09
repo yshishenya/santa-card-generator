@@ -46,13 +46,13 @@ async def generate_card(
     """Generate a new greeting card with text and image variants.
 
     This endpoint creates a new card generation session and produces:
-    - 3 text variants in the specified style
-    - 3 image variants in the specified style
+    - 5 text variants (one per AI style: ode, haiku, future, standup, newspaper)
+    - 4 image variants (one per style: digital_art, space, pixel_art, movie)
 
     The session ID returned can be used for regeneration and sending operations.
 
     Args:
-        request: Card generation request with employee name and styles.
+        request: Card generation request with recipient name.
         service: Injected CardService instance.
 
     Returns:
@@ -63,17 +63,16 @@ async def generate_card(
         HTTPException 500: If generation fails due to internal error.
     """
     correlation_id = str(uuid4())
-    text_style_value = request.text_style.value if request.text_style else "none"
     logger.info(
-        f"[{correlation_id}] POST /cards/generate - recipient: {request.recipient}, "
-        f"enhance_text: {request.enhance_text}, text_style: {text_style_value}, "
-        f"image_style: {request.image_style.value}"
+        f"[{correlation_id}] POST /cards/generate - recipient: {request.recipient}"
     )
 
     try:
         response = await service.generate_card(request)
         logger.info(
-            f"[{correlation_id}] Card generated successfully, session: {response.session_id}"
+            f"[{correlation_id}] Card generated successfully, session: {response.session_id}, "
+            f"text_variants: {len(response.text_variants)}, "
+            f"image_variants: {len(response.image_variants)}"
         )
         return APIResponse(success=True, data=response, error=None)
 
@@ -104,51 +103,39 @@ async def regenerate_variant(
     request: RegenerateRequest,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> APIResponse[RegenerateResponse]:
-    """Regenerate a text or image variant.
+    """Regenerate all text or image variants.
 
-    This endpoint regenerates a specific variant within an existing session.
-    The regeneration count is tracked per element type (text/image) separately.
+    This endpoint regenerates ALL variants of the specified type:
+    - 'text': Regenerates all 5 text variants (one per AI style)
+    - 'image': Regenerates all 4 image variants (one per style)
 
     Args:
-        request: Regeneration request with session ID and element details.
+        request: Regeneration request with session ID and element type.
         service: Injected CardService instance.
 
     Returns:
-        APIResponse containing RegenerateResponse with new variant and remaining count.
+        APIResponse containing RegenerateResponse with new variants and remaining count.
 
     Raises:
-        HTTPException 404: If session or variant is not found.
-        HTTPException 400: If session has expired.
+        HTTPException 404: If session is not found.
+        HTTPException 400: If session has expired or invalid element type.
         HTTPException 429: If regeneration limit has been exceeded.
         HTTPException 500: If regeneration fails due to internal error.
     """
     correlation_id = str(uuid4())
     logger.info(
         f"[{correlation_id}] POST /cards/regenerate - session: {request.session_id}, "
-        f"element: {request.element_type}, index: {request.element_index}"
+        f"element: {request.element_type}"
     )
 
     try:
-        # Get the original request from session to use for regeneration
-        # We need to retrieve it first to know the styles
-        # Note: get_session() returns None for expired sessions (handled internally)
-        session = service.get_session(request.session_id)
-
-        if session is None:
-            logger.error(f"[{correlation_id}] Session not found or expired: {request.session_id}")
-            raise SessionNotFoundError(request.session_id)
-
         # Regenerate based on element type
         if request.element_type == "text":
-            new_variant, remaining = await service.regenerate_text(
-                generation_id=request.session_id,
-                original_request=session.original_request,
-            )
+            response = await service.regenerate_text(session_id=request.session_id)
+            variant_count = len(response.text_variants) if response.text_variants else 0
         elif request.element_type == "image":
-            new_variant, remaining = await service.regenerate_image(
-                generation_id=request.session_id,
-                original_request=session.original_request,
-            )
+            response = await service.regenerate_image(session_id=request.session_id)
+            variant_count = len(response.image_variants) if response.image_variants else 0
         else:
             logger.error(f"[{correlation_id}] Invalid element type: {request.element_type}")
             raise HTTPException(
@@ -157,15 +144,11 @@ async def regenerate_variant(
             )
 
         logger.info(
-            f"[{correlation_id}] Regenerated {request.element_type} successfully, "
-            f"remaining: {remaining}"
+            f"[{correlation_id}] Regenerated {variant_count} {request.element_type} variants, "
+            f"remaining: {response.remaining_regenerations}"
         )
 
-        return APIResponse(
-            success=True,
-            data=RegenerateResponse(variant=new_variant, remaining_regenerations=remaining),
-            error=None,
-        )
+        return APIResponse(success=True, data=response, error=None)
 
     except SessionNotFoundError as e:
         logger.error(f"[{correlation_id}] Session not found: {e.session_id}")
@@ -233,7 +216,8 @@ async def send_card(
     logger.info(
         f"[{correlation_id}] POST /cards/send - session: {request.session_id}, "
         f"employee: {request.employee_name}, text_idx: {request.selected_text_index}, "
-        f"image_idx: {request.selected_image_index}"
+        f"image_idx: {request.selected_image_index}, "
+        f"use_original: {request.use_original_text}, include_original: {request.include_original_text}"
     )
 
     try:

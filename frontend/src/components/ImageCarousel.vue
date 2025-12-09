@@ -1,119 +1,195 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Carousel, Slide, Navigation } from 'vue3-carousel'
 import { useCardStore } from '@/stores/card'
-import { ImageStyle } from '@/types'
-import 'vue3-carousel/dist/carousel.css'
+import { IMAGE_STYLE_LABELS } from '@/types'
 import GlassCard from './GlassCard.vue'
 
 const cardStore = useCardStore()
-const selectedStyle = ref<ImageStyle | undefined>(undefined)
 
-const imageStyleOptions = [
-  { value: ImageStyle.DIGITAL_ART, label: 'Живопись' },
-  { value: ImageStyle.PIXEL_ART, label: 'Пиксель' },
-  { value: ImageStyle.SPACE, label: 'Космос' },
-  { value: ImageStyle.MOVIE, label: 'Фильм' }
-]
-
-const handleRegenerate = async () => {
-  if (!cardStore.canRegenerate) return
-
-  try {
-    await cardStore.regenerateImage(selectedStyle.value)
-    selectedStyle.value = undefined
-  } catch (error) {
-    console.error('Failed to regenerate image:', error)
-    alert('Не удалось регенерировать изображение. Попробуйте ещё раз.')
-  }
-}
-
-const handleSelect = (id: string) => {
-  cardStore.selectedImageId = id
+const selectVariant = (index: number) => {
+  cardStore.selectImageVariant(index)
 }
 </script>
 
 <template>
-  <div class="space-y-4">
-    <!-- Carousel -->
-    <Carousel :items-to-show="1" :wrap-around="false" class="image-carousel">
-      <Slide v-for="variant in cardStore.imageVariants" :key="variant.id">
-        <GlassCard padding="p-4">
-          <div class="space-y-4">
-            <!-- Image display -->
-            <div class="relative aspect-video bg-slate-800 rounded-lg overflow-hidden">
-              <img
-                :src="variant.url"
-                :alt="`Вариант изображения ${variant.id}`"
-                class="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </div>
+  <div class="relative">
+    <!-- 2x2 Grid for instant comparison of all 4 images -->
+    <div v-if="cardStore.imageVariants.length > 0" class="image-grid-wrapper">
+      <div class="image-grid">
+        <GlassCard
+          v-for="(variant, index) in cardStore.imageVariants"
+          :key="variant.id"
+          padding="p-3"
+          class="image-card"
+          :class="{
+            'selected': cardStore.selectedImageIndex === index,
+            'unselected': cardStore.selectedImageIndex !== index
+          }"
+          @click="selectVariant(index)"
+        >
+          <!-- Selection badge -->
+          <div v-if="cardStore.selectedImageIndex === index" class="selection-badge">
+            <i class="pi pi-check"></i>
+          </div>
 
-            <!-- Selection checkbox -->
-            <div class="flex justify-center">
-              <label class="label cursor-pointer gap-3 bg-white/5 px-6 py-3 rounded-lg hover:bg-white/10 transition-colors">
-                <span class="label-text text-winter-snow font-semibold">Выбрать это изображение</span>
-                <input
-                  type="radio"
-                  :checked="cardStore.selectedImageId === variant.id"
-                  @change="handleSelect(variant.id)"
-                  class="radio radio-primary"
-                />
-              </label>
-            </div>
+          <!-- Style badge -->
+          <div class="mb-2">
+            <span class="badge badge-sm bg-christmas-green/20 text-christmas-green border-christmas-green/30">
+              <i class="pi pi-image mr-1 text-xs"></i>
+              {{ IMAGE_STYLE_LABELS[variant.style] }}
+            </span>
+          </div>
+
+          <!-- Image -->
+          <div class="image-container">
+            <img
+              :src="variant.url"
+              :alt="`${IMAGE_STYLE_LABELS[variant.style]} - вариант ${index + 1}`"
+              class="grid-image"
+              loading="lazy"
+            />
+          </div>
+
+          <!-- Click hint -->
+          <div class="text-center mt-2 text-winter-snow/50 text-xs">
+            {{ cardStore.selectedImageIndex === index ? '✓ Выбрано' : 'Нажмите для выбора' }}
           </div>
         </GlassCard>
-      </Slide>
-
-      <template #addons>
-        <Navigation />
-      </template>
-    </Carousel>
-
-    <!-- Regeneration controls -->
-    <div v-if="cardStore.canRegenerate" class="space-y-3">
-      <!-- Style selector -->
-      <div class="flex flex-wrap gap-2 justify-center">
-        <button
-          v-for="option in imageStyleOptions"
-          :key="option.value"
-          @click="selectedStyle = option.value"
-          class="btn btn-sm"
-          :class="selectedStyle === option.value ? 'btn-primary' : 'btn-outline btn-ghost text-winter-snow'"
-        >
-          {{ option.label }}
-        </button>
       </div>
+    </div>
 
-      <!-- Regenerate button -->
-      <div class="flex justify-center">
-        <button
-          @click="handleRegenerate"
-          :disabled="cardStore.isRegenerating"
-          class="btn bg-christmas-gold hover:bg-christmas-gold-light border-0 text-slate-900"
-        >
-          <span v-if="cardStore.isRegenerating" class="loading loading-spinner"></span>
-          <i v-else class="pi pi-refresh mr-2"></i>
-          {{ cardStore.isRegenerating ? 'Регенерация...' : 'Регенерировать изображение' }}
-          <span class="ml-2 badge badge-sm">{{ cardStore.remainingRegenerations }}</span>
-        </button>
+    <!-- Empty state -->
+    <div v-else class="text-center py-8 text-winter-snow/60">
+      <i class="pi pi-info-circle text-2xl mb-2"></i>
+      <p>Нет вариантов изображения</p>
+    </div>
+
+    <!-- Loading overlay -->
+    <div
+      v-if="cardStore.isRegeneratingImages"
+      class="loading-overlay"
+    >
+      <div class="text-center">
+        <span class="loading loading-spinner loading-lg text-christmas-gold"></span>
+        <p class="text-winter-snow mt-2">Генерируем новые изображения...</p>
       </div>
     </div>
   </div>
 </template>
 
-<style>
-.image-carousel .carousel__prev,
-.image-carousel .carousel__next {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
+<style scoped>
+/* Grid wrapper */
+.image-grid-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 8px;
 }
 
-.image-carousel .carousel__prev:hover,
-.image-carousel .carousel__next:hover {
-  background: rgba(255, 255, 255, 0.3);
+/* 2x2 Grid layout */
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* Individual card */
+.image-card {
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Selected state */
+.image-card.selected {
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 3px rgba(22, 163, 74, 0.5),
+    0 0 20px rgba(22, 163, 74, 0.3);
+  transform: scale(1.02);
+  z-index: 10;
+}
+
+/* Unselected state */
+.image-card.unselected {
+  opacity: 0.65;
+  filter: grayscale(0.15);
+}
+
+.image-card.unselected:hover {
+  opacity: 0.85;
+  filter: grayscale(0);
+  transform: scale(1.01);
+}
+
+/* Selection badge */
+.selection-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  background: #16A34A;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 0 0 3px #0F172A;
+}
+
+.selection-badge i {
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Image container */
+.image-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #1E293B;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Image styling */
+.grid-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  z-index: 30;
+}
+
+/* Responsive: single column on mobile */
+@media (max-width: 600px) {
+  .image-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .image-card.selected {
+    transform: scale(1.01);
+  }
+
+  .image-container {
+    max-width: 350px;
+    margin: 0 auto;
+  }
 }
 </style>

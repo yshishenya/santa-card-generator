@@ -7,8 +7,8 @@ sessions, variants, and regeneration limits.
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Tuple
 
 from src.models.card import CardGenerationRequest, ImageVariant, TextVariant
 
@@ -26,12 +26,13 @@ class GenerationSession:
 
     id: str
     original_request: CardGenerationRequest
+    original_text: Optional[str]  # User's original message
     text_variants: List[TextVariant]
     image_variants: List[ImageVariant]
     image_data: Dict[str, bytes] = field(default_factory=dict)
     text_regenerations_left: int = 3
     image_regenerations_left: int = 3
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_expired(self, ttl_minutes: int) -> bool:
         """Check if the session has expired.
@@ -43,7 +44,7 @@ class GenerationSession:
             True if the session has exceeded the TTL, False otherwise.
         """
         expiry_time = self.created_at + timedelta(minutes=ttl_minutes)
-        return datetime.utcnow() > expiry_time
+        return datetime.now(timezone.utc) > expiry_time
 
 
 class SessionManager:
@@ -71,6 +72,7 @@ class SessionManager:
     def create_session(
         self,
         request: CardGenerationRequest,
+        original_text: Optional[str],
         text_variants: List[TextVariant],
         image_variants: List[ImageVariant],
         image_data: Dict[str, bytes],
@@ -79,6 +81,7 @@ class SessionManager:
 
         Args:
             request: Original card generation request.
+            original_text: User's original message text.
             text_variants: List of generated text variants.
             image_variants: List of generated image variants.
             image_data: Dictionary mapping image variant IDs to image bytes.
@@ -91,6 +94,7 @@ class SessionManager:
         session = GenerationSession(
             id=session_id,
             original_request=request,
+            original_text=original_text,
             text_variants=text_variants,
             image_variants=image_variants,
             image_data=image_data,
@@ -131,12 +135,14 @@ class SessionManager:
         logger.debug(f"Retrieved session {session_id}")
         return session
 
-    def add_text_variant(self, session_id: str, variant: TextVariant) -> int:
-        """Add text variant to session and decrement regeneration counter.
+    def replace_text_variants(
+        self, session_id: str, variants: List[TextVariant]
+    ) -> int:
+        """Replace all text variants in session and decrement regeneration counter.
 
         Args:
             session_id: Session ID to update.
-            variant: New text variant to add.
+            variants: New text variants to replace existing ones.
 
         Returns:
             Number of regenerations remaining.
@@ -153,25 +159,28 @@ class SessionManager:
                 f"Regeneration limit exceeded for text in session {session_id}"
             )
 
-        session.text_variants.append(variant)
+        session.text_variants = variants
         session.text_regenerations_left -= 1
 
         logger.info(
-            f"Added text variant to session {session_id}, "
+            f"Replaced {len(variants)} text variants in session {session_id}, "
             f"regenerations_left={session.text_regenerations_left}"
         )
 
         return session.text_regenerations_left
 
-    def add_image_variant(
-        self, session_id: str, variant: ImageVariant, image_bytes: bytes
+    def replace_image_variants(
+        self,
+        session_id: str,
+        variants: List[ImageVariant],
+        image_data: Dict[str, bytes],
     ) -> int:
-        """Add image variant to session and decrement regeneration counter.
+        """Replace all image variants in session and decrement regeneration counter.
 
         Args:
             session_id: Session ID to update.
-            variant: New image variant to add.
-            image_bytes: Raw image data for the variant.
+            variants: New image variants to replace existing ones.
+            image_data: New image data dictionary.
 
         Returns:
             Number of regenerations remaining.
@@ -188,15 +197,14 @@ class SessionManager:
                 f"Regeneration limit exceeded for image in session {session_id}"
             )
 
-        session.image_variants.append(variant)
-        # Extract image ID from URL (assuming URL format contains an identifier)
-        # For now, use the variant URL as the key
-        image_id = variant.url
-        session.image_data[image_id] = image_bytes
+        # Clear old image data to free memory
+        session.image_data.clear()
+        session.image_variants = variants
+        session.image_data = image_data
         session.image_regenerations_left -= 1
 
         logger.info(
-            f"Added image variant to session {session_id}, "
+            f"Replaced {len(variants)} image variants in session {session_id}, "
             f"regenerations_left={session.image_regenerations_left}"
         )
 

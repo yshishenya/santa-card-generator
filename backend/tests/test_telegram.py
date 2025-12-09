@@ -93,14 +93,15 @@ class TestTelegramClientInit:
         """Test that missing topic_id raises TelegramConfigError.
 
         Verifies that:
-        - TelegramConfigError is raised when topic_id is 0 or falsy
+        - TelegramConfigError is raised when topic_id is None
+        Note: topic_id=0 is valid (refers to general/main topic in Telegram groups)
         """
         # Arrange & Act & Assert
         with pytest.raises(TelegramConfigError) as exc_info:
             TelegramClient(
                 bot_token="valid-token",
                 chat_id=-1001234567890,
-                topic_id=0,
+                topic_id=None,
             )
 
         assert "telegram_topic_id" in exc_info.value.details.get("missing_config", "")

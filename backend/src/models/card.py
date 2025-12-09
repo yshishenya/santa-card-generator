@@ -2,7 +2,7 @@
 
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class TextStyle(str, Enum):
@@ -16,6 +16,26 @@ class TextStyle(str, Enum):
     STANDUP = "standup"
 
 
+# All AI text styles (excluding ORIGINAL)
+AI_TEXT_STYLES = [
+    TextStyle.ODE,
+    TextStyle.HAIKU,
+    TextStyle.FUTURE,
+    TextStyle.STANDUP,
+    TextStyle.NEWSPAPER,
+]
+
+# Human-readable labels for text styles
+TEXT_STYLE_LABELS = {
+    TextStyle.ORIGINAL: "Оригинальный текст",
+    TextStyle.ODE: "Торжественная ода",
+    TextStyle.HAIKU: "Хайку",
+    TextStyle.FUTURE: "Отчет из будущего",
+    TextStyle.STANDUP: "Дружеский стендап",
+    TextStyle.NEWSPAPER: "Заметка в газете",
+}
+
+
 class ImageStyle(str, Enum):
     """Image generation styles for greeting cards."""
 
@@ -23,6 +43,23 @@ class ImageStyle(str, Enum):
     PIXEL_ART = "pixel_art"
     SPACE = "space"
     MOVIE = "movie"
+
+
+# All image styles
+ALL_IMAGE_STYLES = [
+    ImageStyle.DIGITAL_ART,
+    ImageStyle.SPACE,
+    ImageStyle.PIXEL_ART,
+    ImageStyle.MOVIE,
+]
+
+# Human-readable labels for image styles
+IMAGE_STYLE_LABELS = {
+    ImageStyle.DIGITAL_ART: "Цифровая живопись",
+    ImageStyle.SPACE: "Космическая фантастика",
+    ImageStyle.PIXEL_ART: "Пиксель-арт",
+    ImageStyle.MOVIE: "Кадр из фильма",
+}
 
 
 class TextVariant(BaseModel):
@@ -41,7 +78,10 @@ class ImageVariant(BaseModel):
 
 
 class CardGenerationRequest(BaseModel):
-    """Request model for card generation."""
+    """Request model for card generation.
+
+    Simplified model - all text styles and all image styles are generated automatically.
+    """
 
     recipient: str = Field(
         ..., description="Full name of the card recipient", min_length=1
@@ -55,15 +95,6 @@ class CardGenerationRequest(BaseModel):
     message: Optional[str] = Field(
         None, description="Custom message from sender (optional)", max_length=1000
     )
-    enhance_text: bool = Field(False, description="Whether to enhance text using AI")
-    keep_original_text: bool = Field(
-        True,
-        description="When enhance_text is True, whether to keep original text as first variant"
-    )
-    text_style: Optional[TextStyle] = Field(
-        None, description="Style for text generation (required if enhance_text is True)"
-    )
-    image_style: ImageStyle = Field(..., description="Style for image generation")
 
     @field_validator("recipient")
     @classmethod
@@ -83,45 +114,38 @@ class CardGenerationRequest(BaseModel):
             raise ValueError("Recipient name cannot be empty")
         return v.strip()
 
-    @model_validator(mode="after")
-    def validate_text_style_when_enhance(self) -> "CardGenerationRequest":
-        """Validate text_style is provided when enhance_text is True.
-
-        Returns:
-            Validated request.
-
-        Raises:
-            ValueError: If enhance_text is True but text_style is None.
-        """
-        if self.enhance_text and self.text_style is None:
-            raise ValueError("text_style is required when enhance_text is True")
-        return self
-
 
 class CardGenerationResponse(BaseModel):
     """Response model for card generation."""
 
     session_id: str = Field(..., description="Unique session ID for this generation")
     recipient: str = Field(..., description="Recipient name from request")
+    original_text: Optional[str] = Field(
+        None, description="Original user message (if provided)"
+    )
     text_variants: List[TextVariant] = Field(
-        ..., description="List of generated text variants", min_length=1
+        ..., description="List of generated text variants (5 styles)", min_length=1
     )
     image_variants: List[ImageVariant] = Field(
-        ..., description="List of generated image variants", min_length=1
+        ..., description="List of generated image variants (4 styles)", min_length=1
     )
-    remaining_regenerations: int = Field(
-        ..., description="Number of regenerations remaining for this session"
+    remaining_text_regenerations: int = Field(
+        ..., description="Number of text regenerations remaining"
     )
-
+    remaining_image_regenerations: int = Field(
+        ..., description="Number of image regenerations remaining"
+    )
 
 
 class RegenerateRequest(BaseModel):
-    """Request model for regenerating a specific card element."""
+    """Request model for regenerating card elements.
+
+    Regenerates ALL variants of the specified type (all 5 texts or all 4 images).
+    """
 
     session_id: str = Field(..., description="Session ID from initial generation")
-    element_type: str = Field(..., description="Type of element to regenerate: 'text' or 'image'")
-    element_index: int = Field(
-        ..., description="Index of the element to regenerate (0-2)", ge=0, le=2
+    element_type: str = Field(
+        ..., description="Type of element to regenerate: 'text' or 'image'"
     )
 
     @field_validator("element_type")
@@ -153,6 +177,10 @@ class SendCardRequest(BaseModel):
     )
     selected_image_index: int = Field(
         ..., description="Index of selected image variant", ge=0
+    )
+    use_original_text: bool = Field(
+        False,
+        description="When true, use original user text instead of AI variant"
     )
     include_original_text: bool = Field(
         False,

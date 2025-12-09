@@ -2,12 +2,17 @@
 
 This module provides the main business logic for generating greeting cards,
 managing regeneration sessions, and sending cards to Telegram.
+
+New architecture:
+- Generates 5 text variants (one per AI style) in parallel
+- Generates 4 image variants (one per style) in parallel
+- Regeneration replaces ALL variants of a type
 """
 
 import asyncio
 import logging
 import uuid
-from typing import Any, Dict, List, Protocol, Tuple
+from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 from src.core.exceptions import (
     RecipientNotFoundError,
@@ -16,16 +21,20 @@ from src.core.exceptions import (
     SessionNotFoundError,
     VariantNotFoundError,
 )
-from src.core.session_manager import SessionManager
+from src.core.session_manager import GenerationSession, SessionManager
 from src.models.card import (
+    AI_TEXT_STYLES,
+    ALL_IMAGE_STYLES,
     CardGenerationRequest,
     CardGenerationResponse,
+    ImageStyle,
     ImageVariant,
     SendCardRequest,
     SendCardResponse,
     TextStyle,
     TextVariant,
 )
+from src.models.response import RegenerateResponse
 from src.repositories.employee_repo import EmployeeRepository
 
 logger = logging.getLogger(__name__)
@@ -116,9 +125,10 @@ class TelegramClient(Protocol):
 class CardService:
     """Service for generating and managing greeting cards.
 
-    This service orchestrates the card generation workflow, including:
+    This service orchestrates the card generation workflow:
     - Validating recipients against the employee list
-    - Generating text and image variants using Gemini
+    - Generating 5 text variants (one per AI style) using Gemini
+    - Generating 4 image variants (one per style) using Gemini
     - Managing generation sessions with regeneration limits
     - Sending completed cards to Telegram
     """
@@ -137,7 +147,7 @@ class CardService:
             gemini_client: Client for Gemini API operations.
             telegram_client: Client for Telegram Bot API operations.
             employee_repo: Repository for employee data access.
-            max_regenerations: Maximum number of regenerations allowed per element.
+            max_regenerations: Maximum number of regenerations allowed per element type.
             session_ttl_minutes: Time-to-live for sessions in minutes.
         """
         self._gemini_client = gemini_client
@@ -155,7 +165,7 @@ class CardService:
             f"session_ttl={session_ttl_minutes}min"
         )
 
-    def get_session(self, session_id: str) -> "GenerationSession | None":
+    def get_session(self, session_id: str) -> Optional[GenerationSession]:
         """Get session by ID.
 
         Args:
@@ -185,13 +195,13 @@ class CardService:
 
         This method performs the following operations:
         1. Validates that the recipient exists in the employee list
-        2. Generates 3 text variants (or uses original text if enhance_text is False)
-        3. Generates 3 image variants in parallel
+        2. Generates 5 text variants (one per AI style) in parallel
+        3. Generates 4 image variants (one per style) in parallel
         4. Creates a session to store the variants and track regenerations
         5. Returns the response with all variants
 
         Args:
-            request: Card generation request containing employee name and styles.
+            request: Card generation request containing employee name.
 
         Returns:
             CardGenerationResponse with session ID and all variants.
@@ -216,21 +226,19 @@ class CardService:
             f"[{correlation_id}] Validated employee: {employee.name} (id: {employee.id})"
         )
 
-        # Generate text and image variants
+        # Store original text from user
+        original_text = request.message
+
+        # Generate text and image variants in parallel
         try:
-            text_style_value = request.text_style.value if request.text_style else None
             logger.info(
-                f"[{correlation_id}] Generating variants: "
-                f"enhance_text={request.enhance_text}, "
-                f"text_style={text_style_value}, "
-                f"image_style={request.image_style.value}"
+                f"[{correlation_id}] Generating 5 text variants and 4 image variants"
             )
 
-            # Generate text variants (AI-enhanced or original message)
+            # Generate all text variants (5 AI styles) and image variants (4 styles)
             text_task = self._generate_text_variants(
                 request=request, correlation_id=correlation_id
             )
-            # Generate image variants
             image_task = self._generate_image_variants(
                 request=request, correlation_id=correlation_id
             )
@@ -257,6 +265,7 @@ class CardService:
         # Create session for regeneration tracking
         session_id = self._session_manager.create_session(
             request=request,
+            original_text=original_text,
             text_variants=text_variants,
             image_variants=image_variants,
             image_data=image_data,
@@ -269,22 +278,21 @@ class CardService:
         return CardGenerationResponse(
             session_id=session_id,
             recipient=request.recipient,
+            original_text=original_text,
             text_variants=text_variants,
             image_variants=image_variants,
-            remaining_regenerations=self._max_regenerations,
+            remaining_text_regenerations=self._max_regenerations,
+            remaining_image_regenerations=self._max_regenerations,
         )
 
-    async def regenerate_text(
-        self, generation_id: str, original_request: CardGenerationRequest
-    ) -> Tuple[TextVariant, int]:
-        """Regenerate a text variant and return the new variant with remaining count.
+    async def regenerate_text(self, session_id: str) -> RegenerateResponse:
+        """Regenerate ALL text variants and return the new variants.
 
         Args:
-            generation_id: Session ID from initial generation.
-            original_request: Original card generation request.
+            session_id: Session ID from initial generation.
 
         Returns:
-            Tuple of (new TextVariant, remaining regenerations count).
+            RegenerateResponse with all new text variants.
 
         Raises:
             SessionNotFoundError: If session ID is not found.
@@ -293,65 +301,61 @@ class CardService:
         """
         correlation_id = str(uuid.uuid4())
         logger.info(
-            f"[{correlation_id}] Regenerating text for session: {generation_id}"
+            f"[{correlation_id}] Regenerating ALL texts for session: {session_id}"
         )
 
         # Get session
-        session = self._session_manager.get_session(generation_id)
+        session = self._session_manager.get_session(session_id)
         if session is None:
-            logger.error(f"[{correlation_id}] Session not found: {generation_id}")
-            raise SessionNotFoundError(generation_id)
+            logger.error(f"[{correlation_id}] Session not found: {session_id}")
+            raise SessionNotFoundError(session_id)
 
         if session.is_expired(self._session_ttl_minutes):
-            logger.error(f"[{correlation_id}] Session expired: {generation_id}")
-            raise SessionExpiredError(generation_id)
+            logger.error(f"[{correlation_id}] Session expired: {session_id}")
+            raise SessionExpiredError(session_id)
 
         # Check regeneration limit
         if session.text_regenerations_left <= 0:
             logger.error(
-                f"[{correlation_id}] Regeneration limit exceeded for text in session {generation_id}"
+                f"[{correlation_id}] Regeneration limit exceeded for text in session {session_id}"
             )
             raise RegenerationLimitExceededError("text", self._max_regenerations)
 
-        # Generate new text variant
+        # Generate all 5 new text variants
         try:
-            text = await self._gemini_client.generate_text(
-                prompt="",  # Will be built inside
-                style=original_request.text_style.value if original_request.text_style else "ode",
-                recipient=original_request.recipient,
-                reason=original_request.reason,
-                message=original_request.message,
+            original_request = session.original_request
+            new_variants = await self._generate_text_variants(
+                request=original_request, correlation_id=correlation_id
             )
 
-            new_variant = TextVariant(
-                text=text, style=original_request.text_style or TextStyle.ODE
+            # Replace all variants in session
+            remaining = self._session_manager.replace_text_variants(
+                session_id, new_variants
             )
-
-            # Add to session and get remaining count
-            remaining = self._session_manager.add_text_variant(generation_id, new_variant)
 
             logger.info(
-                f"[{correlation_id}] Regenerated text for session {generation_id}, "
+                f"[{correlation_id}] Regenerated {len(new_variants)} text variants, "
                 f"remaining={remaining}"
             )
 
-            return new_variant, remaining
+            return RegenerateResponse(
+                text_variants=new_variants,
+                image_variants=None,
+                remaining_regenerations=remaining,
+            )
 
         except Exception as e:
             logger.exception(f"[{correlation_id}] Error regenerating text: {e}")
             raise
 
-    async def regenerate_image(
-        self, generation_id: str, original_request: CardGenerationRequest
-    ) -> Tuple[ImageVariant, int]:
-        """Regenerate an image variant and return the new variant with remaining count.
+    async def regenerate_image(self, session_id: str) -> RegenerateResponse:
+        """Regenerate ALL image variants and return the new variants.
 
         Args:
-            generation_id: Session ID from initial generation.
-            original_request: Original card generation request.
+            session_id: Session ID from initial generation.
 
         Returns:
-            Tuple of (new ImageVariant, remaining regenerations count).
+            RegenerateResponse with all new image variants.
 
         Raises:
             SessionNotFoundError: If session ID is not found.
@@ -360,58 +364,59 @@ class CardService:
         """
         correlation_id = str(uuid.uuid4())
         logger.info(
-            f"[{correlation_id}] Regenerating image for session: {generation_id}"
+            f"[{correlation_id}] Regenerating ALL images for session: {session_id}"
         )
 
         # Get session
-        session = self._session_manager.get_session(generation_id)
+        session = self._session_manager.get_session(session_id)
         if session is None:
-            logger.error(f"[{correlation_id}] Session not found: {generation_id}")
-            raise SessionNotFoundError(generation_id)
+            logger.error(f"[{correlation_id}] Session not found: {session_id}")
+            raise SessionNotFoundError(session_id)
 
         if session.is_expired(self._session_ttl_minutes):
-            logger.error(f"[{correlation_id}] Session expired: {generation_id}")
-            raise SessionExpiredError(generation_id)
+            logger.error(f"[{correlation_id}] Session expired: {session_id}")
+            raise SessionExpiredError(session_id)
 
         # Check regeneration limit
         if session.image_regenerations_left <= 0:
             logger.error(
-                f"[{correlation_id}] Regeneration limit exceeded for image in session {generation_id}"
+                f"[{correlation_id}] Regeneration limit exceeded for image in session {session_id}"
             )
             raise RegenerationLimitExceededError("image", self._max_regenerations)
 
-        # Generate new image variant
+        # Generate all 4 new image variants
         try:
-            image_bytes, prompt = await self._gemini_client.generate_image(
-                recipient=original_request.recipient,
-                reason=original_request.reason,
-                style=original_request.image_style.value,
+            original_request = session.original_request
+            image_results = await self._generate_image_variants(
+                request=original_request, correlation_id=correlation_id
             )
 
-            # Create unique URL for the image (using UUID)
-            image_id = str(uuid.uuid4())
-            image_url = f"generated://{image_id}"
+            # Unpack results
+            new_variants: List[ImageVariant] = []
+            new_image_data: Dict[str, bytes] = {}
 
-            new_variant = ImageVariant(
-                url=image_url,
-                style=original_request.image_style,
-                prompt=prompt,
-            )
+            for variant, image_bytes in image_results:
+                new_variants.append(variant)
+                new_image_data[variant.url] = image_bytes
 
-            # Add to session and get remaining count
-            remaining = self._session_manager.add_image_variant(
-                generation_id, new_variant, image_bytes
+            # Replace all variants in session
+            remaining = self._session_manager.replace_image_variants(
+                session_id, new_variants, new_image_data
             )
 
             logger.info(
-                f"[{correlation_id}] Regenerated image for session {generation_id}, "
+                f"[{correlation_id}] Regenerated {len(new_variants)} image variants, "
                 f"remaining={remaining}"
             )
 
-            return new_variant, remaining
+            return RegenerateResponse(
+                text_variants=None,
+                image_variants=new_variants,
+                remaining_regenerations=remaining,
+            )
 
         except Exception as e:
-            logger.exception(f"[{correlation_id}] Error regenerating image: {e}")
+            logger.exception(f"[{correlation_id}] Error regenerating images: {e}")
             raise
 
     async def send_card(self, request: SendCardRequest) -> SendCardResponse:
@@ -446,14 +451,49 @@ class CardService:
             logger.error(f"[{correlation_id}] Session expired: {request.session_id}")
             raise SessionExpiredError(request.session_id)
 
-        # Validate and get selected text variant
-        if request.selected_text_index >= len(session.text_variants):
-            logger.error(
-                f"[{correlation_id}] Text variant not found at index: {request.selected_text_index}"
+        original_request = session.original_request
+        if original_request is None:
+            logger.error(f"[{correlation_id}] Original request not found in session")
+            return SendCardResponse(
+                success=False,
+                message="Session data is corrupted",
+                telegram_message_id=None,
             )
-            raise VariantNotFoundError("text", request.selected_text_index)
 
-        selected_text = session.text_variants[request.selected_text_index]
+        # Determine which text to use
+        message_text: str
+        original_message_for_telegram: Optional[str] = None
+
+        if request.use_original_text:
+            # User wants to use their original text only
+            if session.original_text:
+                message_text = session.original_text
+                logger.info(f"[{correlation_id}] Using original user text")
+            else:
+                # No original text, use default
+                message_text = f"Поздравляю, {original_request.recipient}!"
+                logger.info(f"[{correlation_id}] No original text, using default")
+        else:
+            # User selected an AI variant
+            if request.selected_text_index >= len(session.text_variants):
+                logger.error(
+                    f"[{correlation_id}] Text variant not found at index: {request.selected_text_index}"
+                )
+                raise VariantNotFoundError("text", request.selected_text_index)
+
+            selected_text = session.text_variants[request.selected_text_index]
+            message_text = selected_text.text
+            logger.info(
+                f"[{correlation_id}] Using AI text variant index={request.selected_text_index}, "
+                f"style={selected_text.style.value}"
+            )
+
+            # Check if we should also include original text alongside AI text
+            if request.include_original_text and session.original_text:
+                original_message_for_telegram = session.original_text
+                logger.info(
+                    f"[{correlation_id}] Including original text alongside AI text"
+                )
 
         # Validate and get selected image variant
         if request.selected_image_index >= len(session.image_variants):
@@ -476,67 +516,15 @@ class CardService:
             raise VariantNotFoundError("image", request.selected_image_index)
 
         # Send to Telegram
-        # Get recipient and sender info from original request in session
-        # We use original_request.recipient instead of request.employee_name
-        # because the recipient was already validated during generation
-        original_request = session.original_request
-        if original_request is None:
-            logger.error(f"[{correlation_id}] Original request not found in session")
-            return SendCardResponse(
-                success=False,
-                message="Session data is corrupted",
-                telegram_message_id=None,
-            )
-
-        # Determine if we need to include original text alongside AI text
-        original_message_text: str | None = None
-        if request.include_original_text:
-            logger.info(
-                f"[{correlation_id}] include_original_text=True, searching for original variant"
-            )
-            # Log all variants for debugging
-            for i, v in enumerate(session.text_variants):
-                logger.debug(
-                    f"[{correlation_id}] Variant {i}: style={v.style}, "
-                    f"style_type={type(v.style).__name__}, "
-                    f"is_original={v.style == TextStyle.ORIGINAL}"
-                )
-
-            # Find the original text variant (style=ORIGINAL)
-            # Use explicit enum comparison for reliability
-            original_variant = next(
-                (v for v in session.text_variants if v.style == TextStyle.ORIGINAL),
-                None
-            )
-
-            if original_variant:
-                logger.info(
-                    f"[{correlation_id}] Found original variant, "
-                    f"text preview: {original_variant.text[:50]}..."
-                )
-                if original_variant.text != selected_text.text:
-                    original_message_text = original_variant.text
-                    logger.info(
-                        f"[{correlation_id}] Including original text alongside AI text"
-                    )
-                else:
-                    logger.info(
-                        f"[{correlation_id}] Original text same as selected, not including separately"
-                    )
-            else:
-                logger.warning(
-                    f"[{correlation_id}] Original variant NOT found in session variants"
-                )
-
         try:
             message_id = await self._telegram_client.send_card(
                 image_bytes=image_data,
                 recipient=original_request.recipient,
                 reason=original_request.reason,
-                message=selected_text.text,
+                message=message_text,
                 sender=original_request.sender,
                 correlation_id=correlation_id,
-                original_message=original_message_text,
+                original_message=original_message_for_telegram,
             )
 
             logger.info(
@@ -561,68 +549,42 @@ class CardService:
     async def _generate_text_variants(
         self, request: CardGenerationRequest, correlation_id: str
     ) -> List[TextVariant]:
-        """Generate text variants based on user preferences.
-
-        Supports three modes:
-        - enhance_text=False: Only original text
-        - enhance_text=True, keep_original_text=True: Original + AI variants
-        - enhance_text=True, keep_original_text=False: Only AI variants
+        """Generate 5 text variants, one per AI style, in parallel.
 
         Args:
             request: Card generation request.
             correlation_id: Correlation ID for logging.
 
         Returns:
-            List of TextVariant objects.
+            List of 5 TextVariant objects (ode, haiku, future, standup, newspaper).
         """
-        # Prepare original text (used in multiple cases)
-        original_text = request.message or f"Поздравляю, {request.recipient}!"
+        logger.debug(
+            f"[{correlation_id}] Generating 5 text variants for {request.recipient}"
+        )
 
-        if not request.enhance_text:
-            # Mode 1: Only original message, no AI enhancement
-            logger.debug(
-                f"[{correlation_id}] Using original message for {request.recipient}"
-            )
-            return [TextVariant(text=original_text, style=TextStyle.ORIGINAL)]
-
-        # AI enhancement requested
-        text_style = request.text_style.value if request.text_style else "ode"
-        variants: List[TextVariant] = []
-
-        # Mode 2 or 3: Include original text if requested
-        if request.keep_original_text:
-            variants.append(TextVariant(text=original_text, style=TextStyle.ORIGINAL))
-            logger.debug(
-                f"[{correlation_id}] Generating text variants for {request.recipient}: "
-                f"1 original + 3 AI-enhanced in style: {text_style}"
-            )
-        else:
-            logger.debug(
-                f"[{correlation_id}] Generating text variants for {request.recipient}: "
-                f"3 AI-enhanced only in style: {text_style}"
-            )
-
-        # Generate 3 AI-enhanced variants in parallel
+        # Generate one variant per AI style in parallel
         tasks = [
             self._gemini_client.generate_text(
                 prompt="",
-                style=text_style,
+                style=style.value,
                 recipient=request.recipient,
                 reason=request.reason,
                 message=request.message,
             )
-            for _ in range(3)
+            for style in AI_TEXT_STYLES
         ]
+
         texts = await asyncio.gather(*tasks)
 
-        # Add AI variants
-        for text in texts:
-            variants.append(TextVariant(text=text, style=request.text_style or TextStyle.ODE))
+        # Create variants with their respective styles
+        variants = [
+            TextVariant(text=text, style=style)
+            for text, style in zip(texts, AI_TEXT_STYLES)
+        ]
 
-        original_count = 1 if request.keep_original_text else 0
         logger.debug(
             f"[{correlation_id}] Generated {len(variants)} text variants "
-            f"({original_count} original + {len(texts)} AI-enhanced)"
+            f"(styles: {[v.style.value for v in variants]})"
         )
 
         return variants
@@ -630,48 +592,78 @@ class CardService:
     async def _generate_image_variants(
         self, request: CardGenerationRequest, correlation_id: str
     ) -> List[Tuple[ImageVariant, bytes]]:
-        """Generate 3 image variants using Gemini.
+        """Generate 4 image variants, one per style, in parallel.
+
+        Handles partial failures gracefully - if some images fail to generate,
+        returns the successful ones. At least one image must succeed.
 
         Args:
             request: Card generation request.
             correlation_id: Correlation ID for logging.
 
         Returns:
-            List of 3 tuples containing (ImageVariant, image_bytes).
+            List of tuples containing (ImageVariant, image_bytes).
+
+        Raises:
+            Exception: If all image generations fail.
         """
-        image_style_value = request.image_style.value
         logger.debug(
-            f"[{correlation_id}] Generating 3 image variants for {request.recipient} "
-            f"in style: {image_style_value}"
+            f"[{correlation_id}] Generating 4 image variants for {request.recipient}"
         )
 
-        # Generate 3 variants in parallel
+        # Generate one variant per image style in parallel
         tasks = [
             self._gemini_client.generate_image(
                 recipient=request.recipient,
                 reason=request.reason,
-                style=image_style_value,
+                style=style.value,
             )
-            for _ in range(3)
+            for style in ALL_IMAGE_STYLES
         ]
-        image_results = await asyncio.gather(*tasks)
+
+        # Use return_exceptions=True to handle partial failures
+        image_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         variants: List[Tuple[ImageVariant, bytes]] = []
-        for i, (image_bytes, prompt) in enumerate(image_results):
+        failed_styles: List[str] = []
+
+        for result, style in zip(image_results, ALL_IMAGE_STYLES):
+            if isinstance(result, Exception):
+                # Log the failure but continue with other images
+                logger.warning(
+                    f"[{correlation_id}] Failed to generate image for style {style.value}: {result}"
+                )
+                failed_styles.append(style.value)
+                continue
+
+            image_bytes, prompt = result
             # Create unique URL for each image
             image_id = str(uuid.uuid4())
             image_url = f"generated://{image_id}"
 
             variant = ImageVariant(
                 url=image_url,
-                style=request.image_style,
+                style=style,
                 prompt=prompt,
             )
 
             variants.append((variant, image_bytes))
 
+        # If all images failed, raise an error
+        if not variants:
+            raise Exception(
+                f"All image generations failed. Styles attempted: {failed_styles}"
+            )
+
+        if failed_styles:
+            logger.warning(
+                f"[{correlation_id}] Partial image generation: {len(variants)} succeeded, "
+                f"{len(failed_styles)} failed (styles: {failed_styles})"
+            )
+
         logger.debug(
-            f"[{correlation_id}] Generated {len(variants)} image variants"
+            f"[{correlation_id}] Generated {len(variants)} image variants "
+            f"(styles: {[v.style.value for v, _ in variants]})"
         )
 
         return variants

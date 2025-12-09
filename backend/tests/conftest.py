@@ -2,15 +2,22 @@
 
 This module provides reusable fixtures for testing the card generation service,
 including mock clients, sample data, and test utilities.
+
+Updated for new multi-style generation architecture:
+- 5 text variants (one per AI style)
+- 4 image variants (one per style)
+- Simplified CardGenerationRequest (no style selectors)
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.models.card import (
+    AI_TEXT_STYLES,
+    ALL_IMAGE_STYLES,
     CardGenerationRequest,
     ImageStyle,
     ImageVariant,
@@ -18,49 +25,6 @@ from src.models.card import (
     TextVariant,
 )
 from src.models.employee import Employee
-
-
-# ============================================================================
-# Original Fixtures (preserved from existing conftest.py)
-# ============================================================================
-
-
-@pytest.fixture
-def mock_gemini_response():
-    """Create a mock Gemini API response object.
-
-    Returns:
-        MagicMock: Mocked response with text attribute.
-    """
-    response = MagicMock()
-    response.text = "Generated test text content"
-    return response
-
-
-@pytest.fixture
-def mock_telegram_message():
-    """Create a mock Telegram message object.
-
-    Returns:
-        MagicMock: Mocked message with message_id attribute.
-    """
-    message = MagicMock()
-    message.message_id = 12345
-    return message
-
-
-@pytest.fixture
-def sample_employee_data():
-    """Create sample employee data for testing.
-
-    Returns:
-        list: List of employee dictionaries.
-    """
-    return [
-        {"id": "1", "name": "Ivanov Ivan Ivanovich", "department": "IT"},
-        {"id": "2", "name": "Petrova Maria Sergeevna", "department": "HR"},
-        {"id": "3", "name": "Sidorov Petr Alexandrovich", "department": "Sales"},
-    ]
 
 
 # ============================================================================
@@ -77,15 +41,6 @@ def mock_gemini_client() -> AsyncMock:
 
     Returns:
         AsyncMock: Mocked GeminiClient with pre-configured return values.
-
-    Example:
-        >>> async def test_example(mock_gemini_client):
-        ...     text = await mock_gemini_client.generate_text(
-        ...         employee_name="Test",
-        ...         text_style="ode",
-        ...         correlation_id="123"
-        ...     )
-        ...     assert "Test Employee" in text
     """
     mock = AsyncMock()
 
@@ -137,16 +92,6 @@ def mock_telegram_client() -> AsyncMock:
 
     Returns:
         AsyncMock: Mocked TelegramClient with pre-configured return values.
-
-    Example:
-        >>> async def test_example(mock_telegram_client):
-        ...     message_id = await mock_telegram_client.send_card(
-        ...         employee_name="Test",
-        ...         text="Hello",
-        ...         image_bytes=b"...",
-        ...         correlation_id="123"
-        ...     )
-        ...     assert message_id == 12345
     """
     mock = AsyncMock()
 
@@ -205,12 +150,6 @@ def mock_employee_repo(sample_employees: List[Employee]) -> AsyncMock:
 
     Returns:
         AsyncMock: Mocked EmployeeRepository with pre-configured return values.
-
-    Example:
-        >>> async def test_example(mock_employee_repo):
-        ...     employee = await mock_employee_repo.get_by_name("Ivanov Ivan Ivanovich")
-        ...     assert employee is not None
-        ...     assert employee.id == "1"
     """
     mock = AsyncMock()
 
@@ -248,7 +187,7 @@ def mock_employee_repo_empty() -> AsyncMock:
 
 
 # ============================================================================
-# Sample CardGenerationRequest Fixture
+# Sample CardGenerationRequest Fixtures (NEW architecture)
 # ============================================================================
 
 
@@ -256,32 +195,28 @@ def mock_employee_repo_empty() -> AsyncMock:
 def sample_card_request() -> CardGenerationRequest:
     """Create a sample CardGenerationRequest for testing.
 
+    NEW architecture: no style selectors, all styles generated automatically.
+
     Returns:
         CardGenerationRequest: A valid card generation request.
-
-    Example:
-        >>> def test_example(sample_card_request):
-        ...     assert sample_card_request.employee_name == "Ivanov Ivan Ivanovich"
-        ...     assert sample_card_request.text_style == TextStyle.ODE
     """
     return CardGenerationRequest(
-        employee_name="Ivanov Ivan Ivanovich",
-        text_style=TextStyle.ODE,
-        image_style=ImageStyle.DIGITAL_ART,
+        recipient="Ivanov Ivan Ivanovich",
+        sender="HR Team",
+        reason="Outstanding performance",
+        message="Thank you for your hard work!",
     )
 
 
 @pytest.fixture
-def sample_card_request_haiku() -> CardGenerationRequest:
-    """Create a sample CardGenerationRequest with haiku style.
+def sample_card_request_minimal() -> CardGenerationRequest:
+    """Create a minimal CardGenerationRequest with only required field.
 
     Returns:
-        CardGenerationRequest: A valid card generation request with haiku style.
+        CardGenerationRequest: A minimal card request with only recipient.
     """
     return CardGenerationRequest(
-        employee_name="Petrova Maria Sergeevna",
-        text_style=TextStyle.HAIKU,
-        image_style=ImageStyle.PIXEL_ART,
+        recipient="Petrova Maria Sergeevna",
     )
 
 
@@ -293,14 +228,12 @@ def sample_card_request_unknown_employee() -> CardGenerationRequest:
         CardGenerationRequest: A card request with non-existent employee name.
     """
     return CardGenerationRequest(
-        employee_name="Unknown Person",
-        text_style=TextStyle.STANDUP,
-        image_style=ImageStyle.SPACE,
+        recipient="Unknown Person",
     )
 
 
 # ============================================================================
-# Sample Variant Fixtures
+# Sample Variant Fixtures (NEW architecture - 5 text, 4 image)
 # ============================================================================
 
 
@@ -308,8 +241,10 @@ def sample_card_request_unknown_employee() -> CardGenerationRequest:
 def sample_text_variants() -> List[TextVariant]:
     """Create sample text variants for testing.
 
+    NEW architecture: 5 variants, one per AI style.
+
     Returns:
-        List[TextVariant]: List of 3 text variants as expected by the service.
+        List[TextVariant]: List of 5 text variants (one per style).
     """
     return [
         TextVariant(
@@ -317,12 +252,20 @@ def sample_text_variants() -> List[TextVariant]:
             style=TextStyle.ODE,
         ),
         TextVariant(
-            text="In the halls of our company, your name echoes with praise...",
-            style=TextStyle.ODE,
+            text="Winter snow falls\nIvanov brings the joy\nSuccess blooms bright",
+            style=TextStyle.HAIKU,
         ),
         TextVariant(
-            text="Noble colleague, accept our heartfelt gratitude for all you do!",
-            style=TextStyle.ODE,
+            text="BREAKING: Employee Ivanov achieves outstanding results!",
+            style=TextStyle.NEWSPAPER,
+        ),
+        TextVariant(
+            text="Report from 2074: Ivanov's legacy still inspires generations...",
+            style=TextStyle.FUTURE,
+        ),
+        TextVariant(
+            text="So, Ivanov walks into the office... and productivity goes up 200%!",
+            style=TextStyle.STANDUP,
         ),
     ]
 
@@ -331,8 +274,10 @@ def sample_text_variants() -> List[TextVariant]:
 def sample_image_variants() -> List[ImageVariant]:
     """Create sample image variants for testing.
 
+    NEW architecture: 4 variants, one per image style.
+
     Returns:
-        List[ImageVariant]: List of 3 image variants as expected by the service.
+        List[ImageVariant]: List of 4 image variants (one per style).
     """
     return [
         ImageVariant(
@@ -342,13 +287,18 @@ def sample_image_variants() -> List[ImageVariant]:
         ),
         ImageVariant(
             url="generated://img-002",
-            style=ImageStyle.DIGITAL_ART,
-            prompt="Corporate holiday celebration artwork",
+            style=ImageStyle.SPACE,
+            prompt="Cosmic celebration among stars",
         ),
         ImageVariant(
             url="generated://img-003",
-            style=ImageStyle.DIGITAL_ART,
-            prompt="Winter wonderland greeting card design",
+            style=ImageStyle.PIXEL_ART,
+            prompt="Retro pixel art holiday greeting",
+        ),
+        ImageVariant(
+            url="generated://img-004",
+            style=ImageStyle.MOVIE,
+            prompt="Cinematic movie poster greeting",
         ),
     ]
 
@@ -414,9 +364,9 @@ def past_datetime() -> datetime:
     """Create a datetime in the past (1 hour ago).
 
     Returns:
-        datetime: A datetime object representing 1 hour ago.
+        datetime: A timezone-aware datetime object representing 1 hour ago.
     """
-    return datetime.utcnow() - timedelta(hours=1)
+    return datetime.now(timezone.utc) - timedelta(hours=1)
 
 
 @pytest.fixture
@@ -424,6 +374,44 @@ def future_datetime() -> datetime:
     """Create a datetime in the future (1 hour from now).
 
     Returns:
-        datetime: A datetime object representing 1 hour from now.
+        datetime: A timezone-aware datetime object representing 1 hour from now.
     """
-    return datetime.utcnow() + timedelta(hours=1)
+    return datetime.now(timezone.utc) + timedelta(hours=1)
+
+
+# ============================================================================
+# Sample Employee Data Fixture (for test_employee_repo.py)
+# ============================================================================
+
+
+@pytest.fixture
+def sample_employee_data() -> List[Dict[str, Any]]:
+    """Create sample employee data as raw dictionaries.
+
+    Used for testing EmployeeRepository file loading.
+
+    Returns:
+        List[Dict[str, Any]]: List of employee dictionaries.
+    """
+    return [
+        {"id": "1", "name": "Ivanov Ivan Ivanovich", "department": "IT"},
+        {"id": "2", "name": "Petrova Maria Sergeevna", "department": "HR"},
+        {"id": "3", "name": "Sidorov Alexey Petrovich", "department": "Finance"},
+    ]
+
+
+# ============================================================================
+# Mock Telegram Message Fixture (for test_telegram.py)
+# ============================================================================
+
+
+@pytest.fixture
+def mock_telegram_message() -> MagicMock:
+    """Create a mock Telegram Message object.
+
+    Returns:
+        MagicMock: Mocked Telegram Message with message_id.
+    """
+    mock_message = MagicMock()
+    mock_message.message_id = 12345
+    return mock_message

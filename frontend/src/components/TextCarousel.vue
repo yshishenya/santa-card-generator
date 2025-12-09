@@ -1,234 +1,331 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { Carousel, Slide, Navigation } from 'vue3-carousel'
+import { ref, computed } from 'vue'
 import { useCardStore } from '@/stores/card'
-import { TextStyle } from '@/types'
-import 'vue3-carousel/dist/carousel.css'
+import { TEXT_STYLE_LABELS } from '@/types'
 import GlassCard from './GlassCard.vue'
 
 const cardStore = useCardStore()
-const selectedStyle = ref<TextStyle | undefined>(undefined)
-const useOriginalText = ref<boolean>(true)
+const carouselRef = ref<HTMLElement | null>(null)
+const currentSlide = ref(0)
 
-// Separate original text from AI variants
-const originalText = computed(() =>
-  cardStore.textVariants.find(v => v.style === 'original')
-)
-
-const aiVariants = computed(() =>
-  cardStore.textVariants.filter(v => v.style !== 'original')
-)
-
-// Check if user chose original or AI
-const isOriginalSelected = computed(() =>
-  originalText.value && cardStore.selectedTextId === originalText.value.id
-)
-
-// When user unchecks "use original", auto-select first AI variant if original was selected
-watch(useOriginalText, (newValue) => {
-  if (!newValue && isOriginalSelected.value && aiVariants.value.length > 0) {
-    cardStore.selectedTextId = aiVariants.value[0].id
-  }
-})
-
-// Sync includeOriginalText with store based on checkbox and selection
-// Include original if: checkbox is checked AND an AI variant is selected
-watch(
-  [useOriginalText, () => cardStore.selectedTextId, originalText],
-  ([useOriginal, selectedId, original]) => {
-    const aiVariantSelected = Boolean(original && selectedId !== original.id)
-    cardStore.setIncludeOriginalText(Boolean(useOriginal) && aiVariantSelected)
-  },
-  { immediate: true }
-)
-
-const textStyleOptions = [
-  { value: TextStyle.ODE, label: 'Ода' },
-  { value: TextStyle.FUTURE, label: 'Будущее' },
-  { value: TextStyle.HAIKU, label: 'Хайку' },
-  { value: TextStyle.NEWSPAPER, label: 'Газета' },
-  { value: TextStyle.STANDUP, label: 'Стендап' }
-]
-
-const handleRegenerate = async () => {
-  if (!cardStore.canRegenerate) return
-
-  try {
-    await cardStore.regenerateText(selectedStyle.value)
-    selectedStyle.value = undefined
-  } catch (error) {
-    console.error('Failed to regenerate text:', error)
-    alert('Не удалось регенерировать текст. Попробуйте ещё раз.')
-  }
+const selectVariant = (index: number) => {
+  cardStore.selectTextVariant(index)
 }
 
-const selectOriginal = () => {
-  if (originalText.value) {
-    cardStore.selectedTextId = originalText.value.id
-  }
+const scrollToSlide = (index: number) => {
+  if (!carouselRef.value) return
+  const slideWidth = carouselRef.value.offsetWidth
+  carouselRef.value.scrollTo({
+    left: slideWidth * index,
+    behavior: 'smooth'
+  })
+  currentSlide.value = index
 }
 
-const selectAiVariant = (id: string) => {
-  cardStore.selectedTextId = id
+const nextSlide = () => {
+  const next = (currentSlide.value + 1) % cardStore.textVariants.length
+  scrollToSlide(next)
 }
+
+const prevSlide = () => {
+  const prev = (currentSlide.value - 1 + cardStore.textVariants.length) % cardStore.textVariants.length
+  scrollToSlide(prev)
+}
+
+// Detect scroll position to update current slide indicator
+const handleScroll = () => {
+  if (!carouselRef.value) return
+  const slideWidth = carouselRef.value.offsetWidth
+  const scrollLeft = carouselRef.value.scrollLeft
+  const newIndex = Math.round(scrollLeft / slideWidth)
+  currentSlide.value = newIndex
+}
+
+const canGoPrev = computed(() => cardStore.textVariants.length > 1)
+const canGoNext = computed(() => cardStore.textVariants.length > 1)
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Original text section (if available) -->
-    <div v-if="originalText" class="space-y-3">
-      <GlassCard padding="p-6" :class="{ 'opacity-50': !useOriginalText }">
-        <div class="space-y-4">
-          <!-- Header -->
-          <div class="flex items-center">
-            <span class="badge badge-lg bg-christmas-gold/20 text-christmas-gold border-christmas-gold/30">
-              <i class="pi pi-user mr-1"></i>
-              Ваш текст
-            </span>
-          </div>
+  <div class="space-y-4 relative">
+    <!-- Pure CSS Carousel -->
+    <div v-if="cardStore.textVariants.length > 0" class="carousel-container">
+      <!-- Navigation Buttons -->
+      <button
+        v-if="canGoPrev"
+        type="button"
+        class="carousel-nav carousel-nav-prev"
+        @click="prevSlide"
+        aria-label="Previous slide"
+      >
+        <svg class="carousel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
 
-          <!-- Original text content -->
-          <div class="prose prose-invert max-w-none">
-            <p class="text-winter-snow text-lg leading-relaxed whitespace-pre-wrap">
-              {{ originalText.content }}
-            </p>
-          </div>
+      <!-- Slides Container -->
+      <div
+        ref="carouselRef"
+        class="carousel-viewport"
+        @scroll="handleScroll"
+      >
+        <div
+          v-for="(variant, index) in cardStore.textVariants"
+          :key="variant.id"
+          class="carousel-slide"
+        >
+          <div class="carousel-slide-content">
+            <GlassCard
+              padding="p-6"
+              class="cursor-pointer transition-all card-inner"
+              :class="{
+                'ring-2 ring-christmas-green': cardStore.selectedTextIndex === index,
+                'opacity-70 hover:opacity-100': cardStore.selectedTextIndex !== index
+              }"
+              @click="selectVariant(index)"
+            >
+              <div class="space-y-4">
+                <!-- Style badge -->
+                <div class="flex items-center justify-between">
+                  <span class="badge badge-lg bg-christmas-green/20 text-christmas-green border-christmas-green/30">
+                    <i class="pi pi-sparkles mr-1"></i>
+                    {{ TEXT_STYLE_LABELS[variant.style] }}
+                  </span>
+                  <span class="text-winter-snow/60 text-sm">{{ index + 1 }} / {{ cardStore.textVariants.length }}</span>
+                </div>
 
-          <!-- Checkbox to use/exclude original text (left aligned) -->
-          <div class="pt-2 border-t border-white/10">
-            <label class="label cursor-pointer justify-start gap-3">
-              <input
-                v-model="useOriginalText"
-                type="checkbox"
-                class="checkbox checkbox-primary"
-                @change="useOriginalText && selectOriginal()"
-              />
-              <span class="label-text text-winter-snow">Использовать мой текст</span>
-            </label>
+                <!-- Text content -->
+                <div class="text-content-area">
+                  <p class="text-winter-snow text-lg leading-relaxed whitespace-pre-wrap break-words">
+                    {{ variant.content }}
+                  </p>
+                </div>
+
+                <!-- Selection button -->
+                <div class="flex justify-center pt-3 border-t border-white/10">
+                  <button
+                    type="button"
+                    class="btn btn-sm px-6"
+                    :class="cardStore.selectedTextIndex === index
+                      ? 'btn-success'
+                      : 'btn-ghost bg-white/5 hover:bg-white/10 text-winter-snow'"
+                    @click.stop="selectVariant(index)"
+                  >
+                    <i v-if="cardStore.selectedTextIndex === index" class="pi pi-check mr-2"></i>
+                    {{ cardStore.selectedTextIndex === index ? 'Выбрано' : 'Выбрать' }}
+                  </button>
+                </div>
+              </div>
+            </GlassCard>
           </div>
         </div>
-      </GlassCard>
-    </div>
-
-    <!-- AI variants section -->
-    <div v-if="aiVariants.length > 0" class="space-y-3">
-      <div class="flex items-center justify-between px-2">
-        <span class="badge badge-lg bg-christmas-green/20 text-christmas-green border-christmas-green/30">
-          <i class="pi pi-sparkles mr-1"></i>
-          AI стилизация
-        </span>
-        <span class="text-winter-snow/60 text-sm">{{ aiVariants.length }} вариантов</span>
       </div>
 
-      <!-- AI Carousel -->
-      <Carousel :items-to-show="1" :wrap-around="false" class="text-carousel">
-        <Slide v-for="variant in aiVariants" :key="variant.id">
-          <GlassCard padding="p-6">
-            <div class="space-y-4">
-              <!-- Text content -->
-              <div class="prose prose-invert max-w-none">
-                <p class="text-winter-snow text-lg leading-relaxed whitespace-pre-wrap">
-                  {{ variant.content }}
-                </p>
-              </div>
+      <!-- Next Button -->
+      <button
+        v-if="canGoNext"
+        type="button"
+        class="carousel-nav carousel-nav-next"
+        @click="nextSlide"
+        aria-label="Next slide"
+      >
+        <svg class="carousel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
 
-              <!-- Selection -->
-              <div class="flex justify-center pt-2">
-                <label class="label cursor-pointer gap-3 bg-white/5 px-6 py-3 rounded-lg hover:bg-white/10 transition-colors">
-                  <span class="label-text text-winter-snow font-semibold">Выбрать этот вариант</span>
-                  <input
-                    type="radio"
-                    name="text-choice"
-                    :checked="cardStore.selectedTextId === variant.id"
-                    @change="selectAiVariant(variant.id)"
-                    class="radio radio-primary"
-                  />
-                </label>
-              </div>
-            </div>
-          </GlassCard>
-        </Slide>
-
-        <template #addons>
-          <Navigation />
-        </template>
-      </Carousel>
-
-      <!-- Regeneration controls -->
-      <div v-if="cardStore.canRegenerate" class="space-y-3 pt-2">
-        <!-- Style selector -->
-        <div class="flex flex-wrap gap-2 justify-center">
-          <button
-            v-for="option in textStyleOptions"
-            :key="option.value"
-            @click="selectedStyle = option.value"
-            class="btn btn-sm"
-            :class="selectedStyle === option.value ? 'btn-primary' : 'btn-outline btn-ghost text-winter-snow'"
-          >
-            {{ option.label }}
-          </button>
-        </div>
-
-        <!-- Regenerate button -->
-        <div class="flex justify-center">
-          <button
-            @click="handleRegenerate"
-            :disabled="cardStore.isRegenerating"
-            class="btn bg-christmas-gold hover:bg-christmas-gold-light border-0 text-slate-900"
-          >
-            <span v-if="cardStore.isRegenerating" class="loading loading-spinner"></span>
-            <i v-else class="pi pi-refresh mr-2"></i>
-            {{ cardStore.isRegenerating ? 'Регенерация...' : 'Ещё вариант' }}
-            <span class="ml-2 badge badge-sm">{{ cardStore.remainingRegenerations }}</span>
-          </button>
-        </div>
+      <!-- Pagination Dots -->
+      <div v-if="cardStore.textVariants.length > 1" class="carousel-pagination">
+        <button
+          v-for="(_, index) in cardStore.textVariants"
+          :key="index"
+          type="button"
+          class="carousel-dot"
+          :class="{ 'carousel-dot-active': currentSlide === index }"
+          @click="scrollToSlide(index)"
+          :aria-label="`Go to slide ${index + 1}`"
+        ></button>
       </div>
     </div>
 
-    <!-- Fallback: only original text, no AI -->
-    <div v-if="!originalText && aiVariants.length === 0">
-      <Carousel :items-to-show="1" :wrap-around="false" class="text-carousel">
-        <Slide v-for="variant in cardStore.textVariants" :key="variant.id">
-          <GlassCard padding="p-6">
-            <div class="space-y-4">
-              <div class="prose prose-invert max-w-none">
-                <p class="text-winter-snow text-lg leading-relaxed whitespace-pre-wrap">
-                  {{ variant.content }}
-                </p>
-              </div>
-              <div class="flex justify-center pt-2">
-                <label class="label cursor-pointer gap-3 bg-white/5 px-6 py-3 rounded-lg hover:bg-white/10 transition-colors">
-                  <span class="label-text text-winter-snow font-semibold">Выбрать</span>
-                  <input
-                    type="radio"
-                    :checked="cardStore.selectedTextId === variant.id"
-                    @change="cardStore.selectedTextId = variant.id"
-                    class="radio radio-primary"
-                  />
-                </label>
-              </div>
-            </div>
-          </GlassCard>
-        </Slide>
-        <template #addons>
-          <Navigation />
-        </template>
-      </Carousel>
+    <!-- Empty state -->
+    <div v-else class="text-center py-8 text-winter-snow/60">
+      <i class="pi pi-info-circle text-2xl mb-2"></i>
+      <p>Нет вариантов текста</p>
+    </div>
+
+    <!-- Loading overlay for regeneration -->
+    <div
+      v-if="cardStore.isRegeneratingText"
+      class="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl z-10"
+    >
+      <div class="text-center">
+        <span class="loading loading-spinner loading-lg text-christmas-gold"></span>
+        <p class="text-winter-snow mt-2">Генерируем новые варианты...</p>
+      </div>
     </div>
   </div>
 </template>
 
-<style>
-.text-carousel .carousel__prev,
-.text-carousel .carousel__next {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
+<style scoped>
+/* ===== CAROUSEL CONTAINER ===== */
+.carousel-container {
+  position: relative;
+  max-width: 700px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-.text-carousel .carousel__prev:hover,
-.text-carousel .carousel__next:hover {
+/* ===== CAROUSEL VIEWPORT (Scroll Container) ===== */
+.carousel-viewport {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  gap: 0; /* No gap between slides */
+}
+
+/* Hide scrollbar for Chrome, Safari, and Opera */
+.carousel-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== INDIVIDUAL SLIDE ===== */
+.carousel-slide {
+  flex: 0 0 100%; /* Each slide takes exactly 100% of viewport width */
+  min-width: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* ===== SLIDE CONTENT WRAPPER ===== */
+.carousel-slide-content {
+  width: 100%;
+  max-width: 600px;
+  padding: 0 12px; /* Breathing room, doesn't affect slide width calculation */
+  box-sizing: border-box;
+}
+
+/* ===== CARD STYLING ===== */
+.card-inner {
+  width: 100%;
+}
+
+/* ===== TEXT CONTENT AREA ===== */
+.text-content-area {
+  min-height: 180px;
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar for text area */
+.text-content-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.text-content-area::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.text-content-area::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.text-content-area::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* ===== NAVIGATION BUTTONS ===== */
+.carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.carousel-nav:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.carousel-nav:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.carousel-nav-prev {
+  left: -22px;
+}
+
+.carousel-nav-next {
+  right: -22px;
+}
+
+.carousel-icon {
+  width: 24px;
+  height: 24px;
+}
+
+/* ===== PAGINATION DOTS ===== */
+.carousel-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 16px;
+}
+
+.carousel-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.carousel-dot:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.carousel-dot-active {
+  background: #FFD700;
+  transform: scale(1.2);
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+@media (max-width: 768px) {
+  .carousel-nav-prev {
+    left: 4px;
+  }
+
+  .carousel-nav-next {
+    right: 4px;
+  }
+
+  .carousel-slide-content {
+    padding: 0 8px;
+  }
 }
 </style>
