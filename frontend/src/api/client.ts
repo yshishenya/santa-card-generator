@@ -64,7 +64,7 @@ class APIClient {
   }
 
   /**
-   * Generate new greeting card with text and image variants
+   * Generates a new greeting card with text and image variants.
    */
   async generateCard(request: CardGenerationRequest): Promise<CardGenerationResponse> {
     const response = await this.client.post<APIResponse<BackendCardGenerationResponse>>('/cards/generate', request)
@@ -100,7 +100,14 @@ class APIClient {
   }
 
   /**
-   * Regenerate text or image variant
+   * Regenerate text or image variant.
+   *
+   * This function transforms a frontend request into a backend format and sends it to the server for regeneration.
+   * It handles both text and image types, transforming the response accordingly. For text, it constructs a variant
+   * with an ID, content, and style. For images, it generates a variant with an ID and a transformed URL.
+   * The function also returns the number of remaining regenerations available.
+   *
+   * @param request - The request object containing generation_id and type for the regeneration process.
    */
   async regenerate(request: RegenerateRequest): Promise<RegenerateResponse> {
     // Transform frontend request to backend format
@@ -137,7 +144,15 @@ class APIClient {
   }
 
   /**
-   * Send selected card to Telegram
+   * Send selected card to Telegram.
+   *
+   * This function transforms the frontend request into a backend-compatible format by extracting indices from the provided
+   * text and image variant IDs. It constructs a backend request object with the necessary details, including session ID
+   * and recipient information, and sends it to the Telegram API. The response is then processed to return a simplified
+   * success status and message.
+   *
+   * @param request - The request object containing details for sending the card, including text and image variant IDs,
+   *                  generation ID, recipient name, and an option to include the original text.
    */
   async sendCard(request: SendCardRequest): Promise<SendCardResponse> {
     // Transform frontend request to backend format
