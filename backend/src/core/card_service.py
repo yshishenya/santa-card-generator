@@ -23,6 +23,7 @@ from src.models.card import (
     ImageVariant,
     SendCardRequest,
     SendCardResponse,
+    TextStyle,
     TextVariant,
 )
 from src.repositories.employee_repo import EmployeeRepository
@@ -93,6 +94,7 @@ class TelegramClient(Protocol):
         message: str,
         sender: str | None,
         correlation_id: str | None = None,
+        original_message: str | None = None,
     ) -> int:
         """Send a greeting card to Telegram.
 
@@ -100,9 +102,10 @@ class TelegramClient(Protocol):
             image_bytes: Image data to send.
             recipient: Name of the card recipient.
             reason: Reason for gratitude (optional).
-            message: The greeting message text.
+            message: The greeting message text (or AI text if original_message provided).
             sender: Name of the sender (optional, anonymous if None).
             correlation_id: Correlation ID for logging.
+            original_message: Original user text to include alongside AI text.
 
         Returns:
             Telegram message ID.
@@ -321,7 +324,7 @@ class CardService:
             )
 
             new_variant = TextVariant(
-                text=text, style=original_request.text_style or "ode"
+                text=text, style=original_request.text_style or TextStyle.ODE
             )
 
             # Add to session and get remaining count
@@ -473,20 +476,71 @@ class CardService:
             raise VariantNotFoundError("image", request.selected_image_index)
 
         # Send to Telegram
-        # Get sender info from original request in session
+        # Get recipient and sender info from original request in session
+        # We use original_request.recipient instead of request.employee_name
+        # because the recipient was already validated during generation
         original_request = session.original_request
+        if original_request is None:
+            logger.error(f"[{correlation_id}] Original request not found in session")
+            return SendCardResponse(
+                success=False,
+                message="Session data is corrupted",
+                telegram_message_id=None,
+            )
+
+        # Determine if we need to include original text alongside AI text
+        original_message_text: str | None = None
+        if request.include_original_text:
+            logger.info(
+                f"[{correlation_id}] include_original_text=True, searching for original variant"
+            )
+            # Log all variants for debugging
+            for i, v in enumerate(session.text_variants):
+                logger.debug(
+                    f"[{correlation_id}] Variant {i}: style={v.style}, "
+                    f"style_type={type(v.style).__name__}, "
+                    f"is_original={v.style == TextStyle.ORIGINAL}"
+                )
+
+            # Find the original text variant (style=ORIGINAL)
+            # Use explicit enum comparison for reliability
+            original_variant = next(
+                (v for v in session.text_variants if v.style == TextStyle.ORIGINAL),
+                None
+            )
+
+            if original_variant:
+                logger.info(
+                    f"[{correlation_id}] Found original variant, "
+                    f"text preview: {original_variant.text[:50]}..."
+                )
+                if original_variant.text != selected_text.text:
+                    original_message_text = original_variant.text
+                    logger.info(
+                        f"[{correlation_id}] Including original text alongside AI text"
+                    )
+                else:
+                    logger.info(
+                        f"[{correlation_id}] Original text same as selected, not including separately"
+                    )
+            else:
+                logger.warning(
+                    f"[{correlation_id}] Original variant NOT found in session variants"
+                )
+
         try:
             message_id = await self._telegram_client.send_card(
                 image_bytes=image_data,
-                recipient=request.employee_name,
-                reason=original_request.reason if original_request else None,
+                recipient=original_request.recipient,
+                reason=original_request.reason,
                 message=selected_text.text,
-                sender=original_request.sender if original_request else None,
+                sender=original_request.sender,
                 correlation_id=correlation_id,
+                original_message=original_message_text,
             )
 
             logger.info(
-                f"[{correlation_id}] Successfully sent card for {request.employee_name}, "
+                f"[{correlation_id}] Successfully sent card for {original_request.recipient}, "
                 f"message_id={message_id}"
             )
 
@@ -507,7 +561,12 @@ class CardService:
     async def _generate_text_variants(
         self, request: CardGenerationRequest, correlation_id: str
     ) -> List[TextVariant]:
-        """Generate text variants - either AI-enhanced or original message.
+        """Generate text variants based on user preferences.
+
+        Supports three modes:
+        - enhance_text=False: Only original text
+        - enhance_text=True, keep_original_text=True: Original + AI variants
+        - enhance_text=True, keep_original_text=False: Only AI variants
 
         Args:
             request: Card generation request.
@@ -516,22 +575,34 @@ class CardService:
         Returns:
             List of TextVariant objects.
         """
+        # Prepare original text (used in multiple cases)
+        original_text = request.message or f"Поздравляю, {request.recipient}!"
+
         if not request.enhance_text:
-            # Use original message without AI enhancement
-            original_text = request.message or f"Поздравляю, {request.recipient}!"
+            # Mode 1: Only original message, no AI enhancement
             logger.debug(
                 f"[{correlation_id}] Using original message for {request.recipient}"
             )
-            return [TextVariant(text=original_text, style="original")]
+            return [TextVariant(text=original_text, style=TextStyle.ORIGINAL)]
 
-        # Generate AI-enhanced text variants
+        # AI enhancement requested
         text_style = request.text_style.value if request.text_style else "ode"
-        logger.debug(
-            f"[{correlation_id}] Generating 3 text variants for {request.recipient} "
-            f"in style: {text_style}"
-        )
+        variants: List[TextVariant] = []
 
-        # Generate 3 variants in parallel
+        # Mode 2 or 3: Include original text if requested
+        if request.keep_original_text:
+            variants.append(TextVariant(text=original_text, style=TextStyle.ORIGINAL))
+            logger.debug(
+                f"[{correlation_id}] Generating text variants for {request.recipient}: "
+                f"1 original + 3 AI-enhanced in style: {text_style}"
+            )
+        else:
+            logger.debug(
+                f"[{correlation_id}] Generating text variants for {request.recipient}: "
+                f"3 AI-enhanced only in style: {text_style}"
+            )
+
+        # Generate 3 AI-enhanced variants in parallel
         tasks = [
             self._gemini_client.generate_text(
                 prompt="",
@@ -544,13 +615,14 @@ class CardService:
         ]
         texts = await asyncio.gather(*tasks)
 
-        variants = [
-            TextVariant(text=text, style=text_style)
-            for text in texts
-        ]
+        # Add AI variants
+        for text in texts:
+            variants.append(TextVariant(text=text, style=request.text_style or TextStyle.ODE))
 
+        original_count = 1 if request.keep_original_text else 0
         logger.debug(
-            f"[{correlation_id}] Generated {len(variants)} text variants"
+            f"[{correlation_id}] Generated {len(variants)} text variants "
+            f"({original_count} original + {len(texts)} AI-enhanced)"
         )
 
         return variants
@@ -567,10 +639,10 @@ class CardService:
         Returns:
             List of 3 tuples containing (ImageVariant, image_bytes).
         """
-        image_style = request.image_style.value
+        image_style_value = request.image_style.value
         logger.debug(
             f"[{correlation_id}] Generating 3 image variants for {request.recipient} "
-            f"in style: {image_style}"
+            f"in style: {image_style_value}"
         )
 
         # Generate 3 variants in parallel
@@ -578,7 +650,7 @@ class CardService:
             self._gemini_client.generate_image(
                 recipient=request.recipient,
                 reason=request.reason,
-                style=image_style,
+                style=image_style_value,
             )
             for _ in range(3)
         ]
@@ -592,7 +664,7 @@ class CardService:
 
             variant = ImageVariant(
                 url=image_url,
-                style=image_style,
+                style=request.image_style,
                 prompt=prompt,
             )
 

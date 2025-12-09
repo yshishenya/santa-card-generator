@@ -20,6 +20,7 @@ export const useCardStore = defineStore('card', () => {
   const selectedTextId = ref<string | null>(null)
   const selectedImageId = ref<string | null>(null)
   const remainingRegenerations = ref<number>(3)
+  const includeOriginalText = ref<boolean>(false)  // When true, send both original and AI text
 
   // Loading states
   const isGenerating = ref(false)
@@ -153,7 +154,8 @@ export const useCardStore = defineStore('card', () => {
         generation_id: generationId.value,
         recipient: recipient.value,
         text_variant_id: selectedTextId.value!,
-        image_variant_id: selectedImageId.value!
+        image_variant_id: selectedImageId.value!,
+        include_original_text: includeOriginalText.value
       }
 
       await apiClient.sendCard(request)
@@ -163,6 +165,13 @@ export const useCardStore = defineStore('card', () => {
     } finally {
       isSending.value = false
     }
+  }
+
+  /**
+   * Set whether to include original text alongside AI text
+   */
+  function setIncludeOriginalText(value: boolean): void {
+    includeOriginalText.value = value
   }
 
   /**
@@ -176,6 +185,7 @@ export const useCardStore = defineStore('card', () => {
     selectedTextId.value = null
     selectedImageId.value = null
     remainingRegenerations.value = 3
+    includeOriginalText.value = false
     isGenerating.value = false
     isRegenerating.value = false
     isSending.value = false
@@ -195,6 +205,7 @@ export const useCardStore = defineStore('card', () => {
     selectedTextId,
     selectedImageId,
     remainingRegenerations,
+    includeOriginalText,
     isGenerating,
     isRegenerating,
     isSending,
@@ -212,6 +223,7 @@ export const useCardStore = defineStore('card', () => {
     regenerateText,
     regenerateImage,
     send,
+    setIncludeOriginalText,
     reset,
     clearError
   }

@@ -28,6 +28,7 @@ export interface CardGenerationRequest {
   reason?: string
   message?: string
   enhance_text: boolean
+  keep_original_text?: boolean  // When enhance_text=true, include original text as first variant
   text_style?: TextStyle
   image_style: ImageStyle
 }
@@ -36,6 +37,7 @@ export interface CardGenerationRequest {
 export interface TextVariant {
   id: string
   content: string
+  style?: string  // 'original' for user's message, or TextStyle value for AI-enhanced
 }
 
 // Image variant
@@ -71,6 +73,7 @@ export interface SendCardRequest {
   recipient: string
   text_variant_id: string
   image_variant_id: string
+  include_original_text?: boolean  // When true, send both original text and selected AI text
 }
 
 // Send card response

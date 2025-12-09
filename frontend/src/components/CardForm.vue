@@ -79,6 +79,7 @@ const handleSubmit = async (): Promise<void> => {
       reason: reason.value || undefined,
       message: message.value || undefined,
       enhance_text: enhanceText.value,
+      keep_original_text: enhanceText.value ? true : undefined,  // Always include original for choice on preview screen
       text_style: enhanceText.value ? textStyle.value : undefined,
       image_style: imageStyle.value
     })

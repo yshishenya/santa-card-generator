@@ -110,6 +110,7 @@ class TelegramClient:
         message: str,
         sender: Optional[str],
         correlation_id: Optional[str] = None,
+        original_message: Optional[str] = None,
     ) -> int:
         """Send greeting card to Telegram chat.
 
@@ -120,9 +121,10 @@ class TelegramClient:
             image_bytes: Image data as bytes (JPEG/PNG)
             recipient: Name of the card recipient
             reason: Optional reason for gratitude
-            message: The gratitude message text
+            message: The gratitude message text (or AI text if original_message provided)
             sender: Optional sender name (None for anonymous)
             correlation_id: Optional request tracking ID for logging
+            original_message: Optional original user text to include alongside AI text
 
         Returns:
             Telegram message ID of the sent message
@@ -149,6 +151,7 @@ class TelegramClient:
             reason=reason,
             message=message,
             sender=sender,
+            original_message=original_message,
         )
 
         log_extra = {
@@ -290,44 +293,22 @@ class TelegramClient:
         reason: Optional[str],
         message: str,
         sender: Optional[str],
+        original_message: Optional[str] = None,
     ) -> str:
         """Format caption for Telegram message according to specification.
 
-        Creates a structured caption with the following format:
-        ```
-        **Кому:** [recipient]
-
-        **За что:** [reason] (only if provided)
-
-        [message]
-
-        **От кого:** [sender] (only if provided, otherwise anonymous)
-        ```
+        Creates a structured caption. If original_message is provided,
+        shows both texts with labels "Слова благодарности" and "ИИ-креатив".
 
         Args:
             recipient: Name of the card recipient
             reason: Optional reason for gratitude
-            message: The gratitude message text
+            message: The gratitude message text (AI text if original_message provided)
             sender: Optional sender name (None for anonymous)
+            original_message: Optional original user text to show alongside AI text
 
         Returns:
             Formatted caption string, truncated to MAX_CAPTION_LENGTH if necessary
-
-        Example:
-            >>> caption = client._format_caption(
-            ...     recipient="Иванов Иван",
-            ...     reason="За отличную работу",
-            ...     message="Спасибо за твой вклад!",
-            ...     sender="Петров Петр"
-            ... )
-            >>> print(caption)
-            **Кому:** Иванов Иван
-            <BLANKLINE>
-            **За что:** За отличную работу
-            <BLANKLINE>
-            Спасибо за твой вклад!
-            <BLANKLINE>
-            **От кого:** Петров Петр
         """
         # Build caption parts
         parts = [f"**Кому:** {recipient}"]
@@ -335,7 +316,14 @@ class TelegramClient:
         if reason:
             parts.append(f"\n\n**За что:** {reason}")
 
-        parts.append(f"\n\n{message}")
+        # Format message section based on whether we have both texts
+        if original_message:
+            # Both original and AI text
+            parts.append(f"\n\n**Слова благодарности:**\n{original_message}")
+            parts.append(f"\n\n**ИИ-креатив:**\n{message}")
+        else:
+            # Only one message (either original or AI)
+            parts.append(f"\n\n{message}")
 
         if sender:
             parts.append(f"\n\n**От кого:** {sender}")
@@ -348,8 +336,7 @@ class TelegramClient:
             suffix = "..."
             available_length = MAX_CAPTION_LENGTH - len(suffix)
 
-            # Try to keep the structure by truncating only the message part
-            # Reconstruct with truncated message
+            # Try to keep the structure by truncating messages
             header = f"**Кому:** {recipient}"
             if reason:
                 header += f"\n\n**За что:** {reason}"
@@ -358,16 +345,38 @@ class TelegramClient:
             if sender:
                 footer = f"\n\n**От кого:** {sender}"
 
-            # Calculate available space for message
-            fixed_parts_length = len(header) + len(footer) + 4  # 4 for "\n\n" around message
-            message_max_length = available_length - fixed_parts_length
+            # Calculate available space for messages
+            fixed_parts_length = len(header) + len(footer) + 4
+            messages_max_length = available_length - fixed_parts_length
 
-            if message_max_length > 10:  # Keep at least some message
-                truncated_message = message[:message_max_length] + suffix
-                caption = f"{header}\n\n{truncated_message}{footer}"
+            if original_message:
+                # Split space between both messages
+                half_length = messages_max_length // 2 - 30  # Account for labels
+                if half_length > 20:
+                    truncated_original = (
+                        original_message[:half_length] + suffix
+                        if len(original_message) > half_length
+                        else original_message
+                    )
+                    truncated_ai = (
+                        message[:half_length] + suffix
+                        if len(message) > half_length
+                        else message
+                    )
+                    caption = (
+                        f"{header}\n\n"
+                        f"**Слова благодарности:**\n{truncated_original}\n\n"
+                        f"**ИИ-креатив:**\n{truncated_ai}"
+                        f"{footer}"
+                    )
+                else:
+                    caption = caption[:available_length] + suffix
             else:
-                # If not enough space, just truncate the whole caption
-                caption = caption[:available_length] + suffix
+                if messages_max_length > 10:
+                    truncated_message = message[:messages_max_length] + suffix
+                    caption = f"{header}\n\n{truncated_message}{footer}"
+                else:
+                    caption = caption[:available_length] + suffix
 
             logger.warning(
                 f"Caption truncated from {len(''.join(parts))} to {len(caption)} characters",

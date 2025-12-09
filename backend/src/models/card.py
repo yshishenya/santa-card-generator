@@ -56,6 +56,10 @@ class CardGenerationRequest(BaseModel):
         None, description="Custom message from sender (optional)", max_length=1000
     )
     enhance_text: bool = Field(False, description="Whether to enhance text using AI")
+    keep_original_text: bool = Field(
+        True,
+        description="When enhance_text is True, whether to keep original text as first variant"
+    )
     text_style: Optional[TextStyle] = Field(
         None, description="Style for text generation (required if enhance_text is True)"
     )
@@ -145,10 +149,14 @@ class SendCardRequest(BaseModel):
     session_id: str = Field(..., description="Session ID from generation")
     employee_name: str = Field(..., description="Employee name for the card")
     selected_text_index: int = Field(
-        ..., description="Index of selected text variant (0-2)", ge=0, le=2
+        ..., description="Index of selected text variant", ge=0
     )
     selected_image_index: int = Field(
-        ..., description="Index of selected image variant (0-2)", ge=0, le=2
+        ..., description="Index of selected image variant", ge=0
+    )
+    include_original_text: bool = Field(
+        False,
+        description="When true, include original user text alongside selected AI text"
     )
 
 

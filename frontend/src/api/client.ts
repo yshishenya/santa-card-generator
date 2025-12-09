@@ -7,7 +7,6 @@ import type {
   SendCardRequest,
   SendCardResponse,
   Employee,
-  TextStyle,
   ImageStyle
 } from '@/types'
 
@@ -21,7 +20,7 @@ interface APIResponse<T> {
 // Backend response types (different from frontend types)
 interface BackendTextVariant {
   text: string
-  style: TextStyle
+  style: string  // 'original' or TextStyle value
 }
 
 interface BackendImageVariant {
@@ -77,7 +76,8 @@ class APIClient {
       generation_id: backendData.session_id,
       text_variants: backendData.text_variants.map((tv, index) => ({
         id: `text-${index}`,
-        content: tv.text
+        content: tv.text,
+        style: tv.style
       })),
       image_variants: backendData.image_variants.map((iv, index) => ({
         id: `image-${index}`,
@@ -119,7 +119,8 @@ class APIClient {
       return {
         variant: {
           id: `text-regen-${Date.now()}`,
-          content: tv.text
+          content: tv.text,
+          style: tv.style  // AI-generated variants always have a style
         },
         remaining_regenerations: backendData.remaining_regenerations
       }
@@ -148,7 +149,8 @@ class APIClient {
       session_id: request.generation_id,
       employee_name: request.recipient,
       selected_text_index: textIndex,
-      selected_image_index: imageIndex
+      selected_image_index: imageIndex,
+      include_original_text: request.include_original_text || false
     }
 
     const response = await this.client.post<APIResponse<BackendSendCardResponse>>('/cards/send', backendRequest)
