@@ -78,17 +78,7 @@ class GeminiClient(Protocol):
         message: str | None,
         style: str,
     ) -> Tuple[bytes, str]:
-        """Generate greeting image for a recipient.
-
-        Args:
-            recipient: Name of the card recipient.
-            reason: Optional reason for gratitude.
-            message: Optional personal message (used for visual metaphor).
-            style: Style of image to generate.
-
-        Returns:
-            Tuple of (image_bytes, prompt_used).
-        """
+        """Generate a greeting image for a recipient."""
         ...
 
 
@@ -597,20 +587,17 @@ class CardService:
     async def _generate_image_variants(
         self, request: CardGenerationRequest, correlation_id: str
     ) -> List[Tuple[ImageVariant, bytes]]:
-        """Generate 4 image variants, one per style, in parallel.
-
-        Handles partial failures gracefully - if some images fail to generate,
-        returns the successful ones. At least one image must succeed.
-
+        """Generate image variants in parallel for a given card generation request.
+        
+        This function generates four image variants, one for each style defined in
+        ALL_IMAGE_STYLES, using asynchronous calls to the _gemini_client. It handles
+        partial failures gracefully, ensuring that at least one image is successfully
+        generated. If all image generations fail, an exception is raised. The function
+        logs the status of each image generation attempt, including any failures.
+        
         Args:
             request: Card generation request.
             correlation_id: Correlation ID for logging.
-
-        Returns:
-            List of tuples containing (ImageVariant, image_bytes).
-
-        Raises:
-            Exception: If all image generations fail.
         """
         logger.debug(
             f"[{correlation_id}] Generating {len(ALL_IMAGE_STYLES)} image variants for {request.recipient}"

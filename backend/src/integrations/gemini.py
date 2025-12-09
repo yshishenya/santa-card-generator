@@ -496,28 +496,26 @@ class GeminiClient:
         message: Optional[str],
         style: str,
     ) -> Tuple[bytes, str]:
-        """Generate festive image using Gemini image model.
-
+        """Generate a festive image using the Gemini image model.
+        
+        This function constructs a prompt based on the recipient's name, reason for
+        gratitude, and a personal message. It then sends a request to the Gemini image
+        model to generate an image in the specified style. The function handles various
+        exceptions, including rate limits and HTTP errors, ensuring robust error
+        management.
+        
         Args:
-            recipient: Name of the person receiving the greeting
-            reason: Reason for gratitude (used in prompt context)
-            message: Personal message from sender (used for visual metaphor)
-            style: Image style code (digital_art, pixel_art, space, movie, hyperrealism)
-
+            recipient (str): Name of the person receiving the greeting.
+            reason (Optional[str]): Reason for gratitude (used in prompt context).
+            message (Optional[str]): Personal message from sender (used for visual metaphor).
+            style (str): Image style code (digital_art, pixel_art, space, movie, hyperrealism).
+        
         Returns:
-            Tuple of (image_bytes, prompt_used) where image_bytes is PNG format
-
+            Tuple[bytes, str]: A tuple containing image_bytes in PNG format and the prompt used.
+        
         Raises:
-            GeminiImageGenerationError: If generation fails
-            GeminiRateLimitError: If rate limit is exceeded
-
-        Example:
-            >>> image_bytes, prompt = await client.generate_image(
-            ...     recipient="Петр Иванов",
-            ...     reason="инновационные идеи",
-            ...     message="Спасибо что всегда находишь выход из сложных ситуаций!",
-            ...     style="space"
-            ... )
+            GeminiImageGenerationError: If generation fails.
+            GeminiRateLimitError: If rate limit is exceeded.
         """
         if style not in IMAGE_STYLE_PROMPTS:
             raise GeminiImageGenerationError(
