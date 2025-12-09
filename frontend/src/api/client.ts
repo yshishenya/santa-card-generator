@@ -86,6 +86,11 @@ interface BackendSendCardResponse {
   telegram_message_id: number | null
 }
 
+interface BackendAuthResponse {
+  success: boolean
+  message: string
+}
+
 class APIClient {
   private client: AxiosInstance
 
@@ -222,6 +227,14 @@ class APIClient {
   async getEmployees(): Promise<Employee[]> {
     const response = await this.client.get<Employee[]>('/employees')
     return response.data
+  }
+
+  /**
+   * Verify application password
+   */
+  async verifyPassword(password: string): Promise<boolean> {
+    const response = await this.client.post<BackendAuthResponse>('/auth/verify', { password })
+    return response.data.success
   }
 }
 

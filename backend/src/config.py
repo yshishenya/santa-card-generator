@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # Rate limiting
     rate_limit_per_minute: int = 10  # Max requests per minute per IP
 
+    # Authentication
+    app_password: str = "Pr0ffes4.0"  # Password to access the application
+
     class Config:
         """Pydantic configuration."""
 
