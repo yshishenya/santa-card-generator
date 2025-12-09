@@ -43,25 +43,7 @@ async def generate_card(
     request: CardGenerationRequest,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> APIResponse[CardGenerationResponse]:
-    """Generate a new greeting card with text and image variants.
-
-    This endpoint creates a new card generation session and produces:
-    - 5 text variants (one per AI style: ode, haiku, future, standup, newspaper)
-    - 4 image variants (one per style: digital_art, space, pixel_art, movie)
-
-    The session ID returned can be used for regeneration and sending operations.
-
-    Args:
-        request: Card generation request with recipient name.
-        service: Injected CardService instance.
-
-    Returns:
-        APIResponse containing CardGenerationResponse with session ID and all variants.
-
-    Raises:
-        HTTPException 404: If employee is not found in the system.
-        HTTPException 500: If generation fails due to internal error.
-    """
+    """Generate a new greeting card with text and image variants."""
     correlation_id = str(uuid4())
     logger.info(
         f"[{correlation_id}] POST /cards/generate - recipient: {request.recipient}"
@@ -195,22 +177,16 @@ async def send_card(
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> APIResponse[SendCardResponse]:
     """Send selected card to Telegram.
-
+    
     This endpoint sends the selected text and image variant to the configured
-    Telegram chat/topic. The card is formatted as a photo message with the
-    greeting text as caption.
-
+    Telegram chat/topic. The function logs the request details and attempts to send
+    the card using the provided CardService instance. It handles various exceptions
+    related to session and variant validity, logging errors and returning
+    appropriate HTTP responses based on the outcome of the send operation.
+    
     Args:
         request: Send request with session ID and selected variant indices.
         service: Injected CardService instance.
-
-    Returns:
-        APIResponse containing SendCardResponse with success status and message ID.
-
-    Raises:
-        HTTPException 404: If session or variant is not found.
-        HTTPException 400: If session has expired.
-        HTTPException 500: If sending fails due to internal error.
     """
     correlation_id = str(uuid4())
     logger.info(

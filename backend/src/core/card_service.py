@@ -192,20 +192,13 @@ class CardService:
         self, request: CardGenerationRequest
     ) -> CardGenerationResponse:
         """Generate a new card with text and image variants.
-
-        This method performs the following operations:
-        1. Validates that the recipient exists in the employee list
-        2. Generates 5 text variants (one per AI style) in parallel
-        3. Generates 4 image variants (one per style) in parallel
-        4. Creates a session to store the variants and track regenerations
-        5. Returns the response with all variants
-
+        
         Args:
             request: Card generation request containing employee name.
-
+        
         Returns:
             CardGenerationResponse with session ID and all variants.
-
+        
         Raises:
             RecipientNotFoundError: If the employee is not found in the system.
         """
@@ -286,18 +279,16 @@ class CardService:
         )
 
     async def regenerate_text(self, session_id: str) -> RegenerateResponse:
-        """Regenerate ALL text variants and return the new variants.
-
+        """Regenerates all text variants for a given session.
+        
+        This asynchronous function retrieves the session using the provided  session_id
+        and checks for its validity, including expiration and  regeneration limits. If
+        the session is valid, it generates five new  text variants based on the
+        original request and updates the session  with these new variants. It logs the
+        process and handles any  exceptions that may arise during regeneration.
+        
         Args:
             session_id: Session ID from initial generation.
-
-        Returns:
-            RegenerateResponse with all new text variants.
-
-        Raises:
-            SessionNotFoundError: If session ID is not found.
-            SessionExpiredError: If the session has expired.
-            RegenerationLimitExceededError: If regeneration limit exceeded.
         """
         correlation_id = str(uuid.uuid4())
         logger.info(
@@ -349,18 +340,16 @@ class CardService:
             raise
 
     async def regenerate_image(self, session_id: str) -> RegenerateResponse:
-        """Regenerate ALL image variants and return the new variants.
-
+        """Regenerates all image variants for a given session.
+        
+        This asynchronous function retrieves the session using the provided session_id
+        and checks for its validity, including expiration and regeneration limits. If
+        the session is valid, it generates four new image variants based on the
+        original  request and updates the session with these new variants. The function
+        handles  exceptions and logs relevant information throughout the process.
+        
         Args:
             session_id: Session ID from initial generation.
-
-        Returns:
-            RegenerateResponse with all new image variants.
-
-        Raises:
-            SessionNotFoundError: If session ID is not found.
-            SessionExpiredError: If the session has expired.
-            RegenerationLimitExceededError: If regeneration limit exceeded.
         """
         correlation_id = str(uuid.uuid4())
         logger.info(
@@ -421,16 +410,19 @@ class CardService:
 
     async def send_card(self, request: SendCardRequest) -> SendCardResponse:
         """Send selected card to Telegram.
-
-        This method retrieves the selected text and image from the session
-        and sends them as a greeting card message to Telegram.
-
+        
+        This method retrieves the selected text and image from the session and sends
+        them as a greeting card message to Telegram. It validates the session, checks
+        for expiration, and determines the appropriate text and image to use based on
+        user input. If any required data is missing or invalid, it raises the
+        corresponding exceptions.
+        
         Args:
-            request: Request containing session ID and selected variant indices.
-
+            request (SendCardRequest): Request containing session ID and selected variant indices.
+        
         Returns:
-            SendCardResponse with success status and Telegram message ID.
-
+            SendCardResponse: Response with success status and Telegram message ID.
+        
         Raises:
             SessionNotFoundError: If session ID is not found.
             SessionExpiredError: If the session has expired.
@@ -549,12 +541,12 @@ class CardService:
     async def _generate_text_variants(
         self, request: CardGenerationRequest, correlation_id: str
     ) -> List[TextVariant]:
-        """Generate 5 text variants, one per AI style, in parallel.
-
+        """Generate 5 text variants in parallel for different AI styles.
+        
         Args:
             request: Card generation request.
             correlation_id: Correlation ID for logging.
-
+        
         Returns:
             List of 5 TextVariant objects (ode, haiku, future, standup, newspaper).
         """
@@ -592,20 +584,17 @@ class CardService:
     async def _generate_image_variants(
         self, request: CardGenerationRequest, correlation_id: str
     ) -> List[Tuple[ImageVariant, bytes]]:
-        """Generate 4 image variants, one per style, in parallel.
-
-        Handles partial failures gracefully - if some images fail to generate,
-        returns the successful ones. At least one image must succeed.
-
+        """Generate image variants in parallel for a card generation request.
+        
+        This function generates four image variants, one for each style defined in
+        ALL_IMAGE_STYLES, using asynchronous calls to the _gemini_client. It handles
+        partial failures gracefully, ensuring that at least one image must succeed.  If
+        some images fail to generate, the function logs the failures and returns  only
+        the successful ones.
+        
         Args:
             request: Card generation request.
             correlation_id: Correlation ID for logging.
-
-        Returns:
-            List of tuples containing (ImageVariant, image_bytes).
-
-        Raises:
-            Exception: If all image generations fail.
         """
         logger.debug(
             f"[{correlation_id}] Generating 4 image variants for {request.recipient}"
