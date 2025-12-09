@@ -274,31 +274,27 @@ class GeminiClient:
         sender: Optional[str] = None,
     ) -> str:
         """Generate stylized greeting text using Gemini.
-
+        
+        This function constructs a greeting message based on the provided style and
+        recipient details. It validates the style against available templates, builds a
+        full prompt, and sends a request to the Gemini API for text generation. The
+        function handles various exceptions, including rate limits and HTTP errors,
+        ensuring robust error reporting.
+        
         Args:
-            prompt: Base prompt (usually empty, style template is used)
-            style: Text style code (ode, future, haiku, newspaper, standup)
-            recipient: Name of the person receiving the greeting
-            reason: Reason for gratitude (optional)
-            message: Additional message from sender (optional)
-            sender: Name of the person sending the greeting (optional)
-
+            prompt (str): Base prompt (usually empty, style template is used).
+            style (str): Text style code (ode, future, haiku, newspaper, standup).
+            recipient (str): Name of the person receiving the greeting.
+            reason (Optional[str]): Reason for gratitude (optional).
+            message (Optional[str]): Additional message from sender (optional).
+            sender (Optional[str]): Name of the person sending the greeting (optional).
+        
         Returns:
-            Generated text content
-
+            str: Generated text content.
+        
         Raises:
-            GeminiTextGenerationError: If generation fails
-            GeminiRateLimitError: If rate limit is exceeded
-
-        Example:
-            >>> text = await client.generate_text(
-            ...     prompt="",
-            ...     style="haiku",
-            ...     recipient="Анна Смирнова",
-            ...     reason="успешный запуск нового продукта",
-            ...     message="С Новым Годом!",
-            ...     sender="Иван Петров"
-            ... )
+            GeminiTextGenerationError: If generation fails.
+            GeminiRateLimitError: If rate limit is exceeded.
         """
         if style not in TEXT_STYLE_PROMPTS:
             raise GeminiTextGenerationError(
