@@ -142,7 +142,14 @@ export const useCardStore = defineStore('card', () => {
   }
 
   /**
-   * Send selected card to Telegram
+   * Send selected card to Telegram.
+   *
+   * This function checks if the necessary values for generationId, canSend, and recipient are present before proceeding.
+   * It constructs a SendCardRequest object with the required parameters and sends it using the apiClient.
+   * In case of an error during the sending process, it sets an error message and rethrows the error, ensuring that the sending state is updated accordingly.
+   *
+   * @returns A promise that resolves when the card has been sent.
+   * @throws Error If the sending process fails.
    */
   async function send(): Promise<void> {
     if (!generationId.value || !canSend.value || !recipient.value) return
@@ -168,14 +175,14 @@ export const useCardStore = defineStore('card', () => {
   }
 
   /**
-   * Set whether to include original text alongside AI text
+   * Set whether to include original text alongside AI text.
    */
   function setIncludeOriginalText(value: boolean): void {
     includeOriginalText.value = value
   }
 
   /**
-   * Reset store to initial state
+   * Resets the store to its initial state.
    */
   function reset(): void {
     generationId.value = null
