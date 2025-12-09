@@ -113,39 +113,29 @@ class TelegramClient:
         correlation_id: Optional[str] = None,
         original_message: Optional[str] = None,
     ) -> int:
-        """Send greeting card to Telegram chat.
-
-        Sends a photo with formatted caption to the configured Telegram chat/topic.
-        Implements retry logic for transient errors.
-
+        """Send a greeting card to a Telegram chat.
+        
+        This function sends a photo with a formatted caption to the configured Telegram
+        chat or topic. It includes retry logic for transient errors and handles various
+        exceptions related to network issues, rate limits, and configuration errors.
+        
         Args:
-            image_bytes: Image data as bytes (JPEG/PNG)
-            recipient: Name of the card recipient
-            reason: Optional reason for gratitude
-            message: The gratitude message text (or AI text if original_message provided)
-            sender: Optional sender name (None for anonymous)
-            correlation_id: Optional request tracking ID for logging
-            original_message: Optional original user text to include alongside AI text
-
+            image_bytes (bytes): Image data as bytes (JPEG/PNG).
+            recipient (str): Name of the card recipient.
+            reason (Optional[str]): Optional reason for gratitude.
+            message (str): The gratitude message text (or AI text if original_message provided).
+            sender (Optional[str]): Optional sender name (None for anonymous).
+            correlation_id (Optional[str]): Optional request tracking ID for logging.
+            original_message (Optional[str]): Optional original user text to include alongside AI text.
+        
         Returns:
-            Telegram message ID of the sent message
-
+            int: Telegram message ID of the sent message.
+        
         Raises:
-            TelegramSendError: If sending fails after all retries
-            TelegramNetworkError: If network connection fails
-            TelegramRateLimitError: If rate limit is exceeded
-            TelegramConfigError: If configuration is invalid (chat/topic not found)
-
-        Example:
-            >>> client = TelegramClient(token, chat_id, topic_id)
-            >>> message_id = await client.send_card(
-            ...     image_bytes=card_data,
-            ...     recipient="Иванов Иван",
-            ...     reason="За отличную работу",
-            ...     message="Спасибо за твой вклад!",
-            ...     sender="Петров Петр"
-            ... )
-            >>> print(f"Sent: {message_id}")
+            TelegramSendError: If sending fails after all retries.
+            TelegramNetworkError: If network connection fails.
+            TelegramRateLimitError: If rate limit is exceeded.
+            TelegramConfigError: If configuration is invalid (chat/topic not found).
         """
         caption = self._format_caption(
             recipient=recipient,
