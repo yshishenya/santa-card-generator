@@ -295,22 +295,26 @@ class TelegramClient:
         sender: Optional[str],
         original_message: Optional[str] = None,
     ) -> str:
-        """Format caption for Telegram message according to specification.
-
-        Creates a structured caption. If original_message is provided,
-        shows both texts with labels "Слова благодарности" and "ИИ-креатив".
-
-        Args:
-            recipient: Name of the card recipient
-            reason: Optional reason for gratitude
-            message: The gratitude message text (AI text if original_message provided)
-            sender: Optional sender name (None for anonymous)
-            original_message: Optional original user text to show alongside AI text
-
-        Returns:
-            Formatted caption string, truncated to MAX_CAPTION_LENGTH if necessary
-        """
         # Build caption parts
+        """Format caption for Telegram message according to specification.
+        
+        This function creates a structured caption for a Telegram message,
+        incorporating various elements such as the recipient's name, a reason for
+        gratitude, and the message text. If an original_message is provided, it
+        displays both the original and AI-generated texts with appropriate labels. The
+        caption is truncated to MAX_CAPTION_LENGTH if necessary, ensuring that the
+        essential information is preserved.
+        
+        Args:
+            recipient (str): Name of the card recipient.
+            reason (Optional[str]): Optional reason for gratitude.
+            message (str): The gratitude message text (AI text if original_message provided).
+            sender (Optional[str]): Optional sender name (None for anonymous).
+            original_message (Optional[str]): Optional original user text to show alongside AI text.
+        
+        Returns:
+            str: Formatted caption string, truncated to MAX_CAPTION_LENGTH if necessary.
+        """
         parts = [f"**Кому:** {recipient}"]
 
         if reason:
