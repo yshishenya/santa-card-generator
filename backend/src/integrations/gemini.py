@@ -595,22 +595,23 @@ class GeminiClient:
 
     def _extract_image_from_response(self, data: Dict[str, Any], style: str) -> bytes:
         """Extract image bytes from API response.
-
-        Handles multiple response formats:
-        1. LiteLLM format: message.images[0]["image_url"]["url"]
-        2. Direct base64 in message content
-        3. Image URL in response
-        4. Inline data with base64 encoding
-
+        
+        This function handles multiple response formats to extract image data,
+        including LiteLLM format, direct base64 strings, image URLs, and inline data
+        with base64 encoding. It first checks for the presence of choices in the
+        response and then attempts to extract images based on the various formats
+        defined. If extraction fails, it logs detailed information for debugging and
+        raises a GeminiImageGenerationError.
+        
         Args:
-            data: API response data
-            style: Image style (for error context)
-
+            data (Dict[str, Any]): API response data.
+            style (str): Image style (for error context).
+        
         Returns:
-            Image bytes in PNG format
-
+            bytes: Image bytes in PNG format.
+        
         Raises:
-            GeminiImageGenerationError: If image extraction fails
+            GeminiImageGenerationError: If image extraction fails.
         """
         if not data.get("choices"):
             raise GeminiImageGenerationError(
