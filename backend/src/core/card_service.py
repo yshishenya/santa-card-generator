@@ -75,6 +75,7 @@ class GeminiClient(Protocol):
         self,
         recipient: str,
         reason: str | None,
+        message: str | None,
         style: str,
     ) -> Tuple[bytes, str]:
         """Generate greeting image for a recipient.
@@ -82,6 +83,7 @@ class GeminiClient(Protocol):
         Args:
             recipient: Name of the card recipient.
             reason: Optional reason for gratitude.
+            message: Optional personal message (used for visual metaphor).
             style: Style of image to generate.
 
         Returns:
@@ -611,7 +613,7 @@ class CardService:
             Exception: If all image generations fail.
         """
         logger.debug(
-            f"[{correlation_id}] Generating 4 image variants for {request.recipient}"
+            f"[{correlation_id}] Generating {len(ALL_IMAGE_STYLES)} image variants for {request.recipient}"
         )
 
         # Generate one variant per image style in parallel
@@ -619,6 +621,7 @@ class CardService:
             self._gemini_client.generate_image(
                 recipient=request.recipient,
                 reason=request.reason,
+                message=request.message,
                 style=style.value,
             )
             for style in ALL_IMAGE_STYLES
