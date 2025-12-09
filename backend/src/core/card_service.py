@@ -551,15 +551,7 @@ class CardService:
     async def _generate_text_variants(
         self, request: CardGenerationRequest, correlation_id: str
     ) -> List[TextVariant]:
-        """Generate 5 text variants, one per AI style, in parallel.
-
-        Args:
-            request: Card generation request.
-            correlation_id: Correlation ID for logging.
-
-        Returns:
-            List of 5 TextVariant objects (ode, haiku, future, standup, newspaper).
-        """
+        """Generate 5 text variants in parallel based on AI styles."""
         logger.debug(
             f"[{correlation_id}] Generating 5 text variants for {request.recipient}"
         )
