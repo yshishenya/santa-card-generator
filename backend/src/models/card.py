@@ -43,6 +43,7 @@ class ImageStyle(str, Enum):
     PIXEL_ART = "pixel_art"
     SPACE = "space"
     MOVIE = "movie"
+    HYPERREALISM = "hyperrealism"
 
 
 # All image styles
@@ -51,6 +52,7 @@ ALL_IMAGE_STYLES = [
     ImageStyle.SPACE,
     ImageStyle.PIXEL_ART,
     ImageStyle.MOVIE,
+    ImageStyle.HYPERREALISM,
 ]
 
 # Human-readable labels for image styles
@@ -59,6 +61,7 @@ IMAGE_STYLE_LABELS = {
     ImageStyle.SPACE: "Космическая фантастика",
     ImageStyle.PIXEL_ART: "Пиксель-арт",
     ImageStyle.MOVIE: "Кадр из фильма",
+    ImageStyle.HYPERREALISM: "Гиперреализм",
 }
 
 

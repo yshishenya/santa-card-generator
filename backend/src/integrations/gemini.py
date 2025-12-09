@@ -45,15 +45,16 @@ logger = logging.getLogger(__name__)
 
 
 # Text style prompts in Russian for corporate greeting cards
+# Context: "Профессионалы 4.0" platform for professional excellence recognition
 TEXT_STYLE_PROMPTS = {
-    "ode": """Перепиши это поздравление в стиле торжественной оды.
+    "ode": """Перепиши это поздравление в стиле торжественной оды для платформы «Профессионалы 4.0».
 
 Кому: {recipient}
 От кого: {sender}
 За что: {reason}
 Послание: {message}
 
-Стиль: возвышенный слог, поэтические обороты, лёгкая ирония. Как придворный поэт, но с юмором.
+Стиль: возвышенный слог, поэтические обороты, лёгкая ирония. Как придворный поэт на церемонии награждения профессионалов.
 
 Пример трансформации:
 Было: "Спасибо за помощь с отчётом"
@@ -61,7 +62,7 @@ TEXT_STYLE_PROMPTS = {
 
 Теперь перепиши в этом стиле. 400-600 символов. Упомяни {recipient}. Только текст, без комментариев.""",
 
-    "future": """Перепиши это поздравление как статью из 2030 года — будто оглядываешься на исторический момент.
+    "future": """Перепиши это поздравление как статью из 2030 года — будто оглядываешься на исторический момент для платформы «Профессионалы 4.0».
 
 Кому: {recipient}
 От кого: {sender}
@@ -76,7 +77,7 @@ TEXT_STYLE_PROMPTS = {
 
 Теперь перепиши в этом стиле. 350-500 символов. Только текст.""",
 
-    "haiku": """Вырази суть этого поздравления в 2-3 хайку.
+    "haiku": """Вырази суть этого поздравления в 2-3 хайку для платформы «Профессионалы 4.0».
 
 Кому: {recipient}
 От кого: {sender}
@@ -94,7 +95,7 @@ TEXT_STYLE_PROMPTS = {
 
 Только хайку, без комментариев.""",
 
-    "newspaper": """Перепиши это поздравление как новостную заметку для корпоративной газеты.
+    "newspaper": """Перепиши это поздравление как новостную заметку для корпоративной газеты «Профессионалы 4.0».
 
 Кому: {recipient}
 От кого: {sender}
@@ -111,7 +112,7 @@ TEXT_STYLE_PROMPTS = {
 
 Теперь напиши заметку про {reason}. 400-600 символов. Только текст.""",
 
-    "standup": """Перепиши это поздравление как дружеский стендап-монолог на корпоративе.
+    "standup": """Перепиши это поздравление как дружеский стендап-монолог на корпоративе «Профессионалы 4.0».
 
 Кому: {recipient}
 От кого: {sender}
@@ -129,62 +130,89 @@ TEXT_STYLE_PROMPTS = {
 
 
 # Image style prompts in English for Gemini image generation
+# Context: "Профессионалы 4.0" platform for professional excellence recognition
 IMAGE_STYLE_PROMPTS = {
-    "digital_art": """Create a festive digital painting symbolizing this achievement: {reason}
+    "digital_art": """Create a festive digital painting for "Professionals 4.0" platform.
+
+Achievement being celebrated: {reason}
 
 Style: Modern digital art, warm vibrant colors, professional quality.
-Scene: Winter wonderland with Christmas lights and decorations.
-The image should FEEL like celebration and gratitude.
+Scene: Winter wonderland with Christmas lights, professional excellence symbols.
+Mood: Celebration of professional achievement and gratitude.
 Colors: Rich reds, warm golds, snow whites, deep blues.
 
-Important:
-- NO text or letters in the image
+STRICT RULES:
+- ABSOLUTELY NO text, letters, numbers, or writing of any kind
 - NO realistic human faces
-- Make viewers sense the achievement through visual metaphors
+- Use visual metaphors: trophies, stars, laurels, ascending paths
 
-Create a beautiful holiday scene that captures the spirit of appreciation.""",
+Create a beautiful holiday scene celebrating professional excellence.""",
 
-    "pixel_art": """Create retro pixel art celebrating this achievement: {reason}
+    "pixel_art": """Create retro pixel art for "Professionals 4.0" platform celebration.
+
+Achievement being celebrated: {reason}
 
 Style: 8-bit/16-bit video game aesthetic, like classic NES/SNES games.
-Scene: Festive winter pixel scene with Christmas tree, snow, warm lights.
-Mood: Nostalgic, cheerful, triumphant — like completing a game level.
+Scene: Festive winter pixel scene with Christmas tree, trophy, victory elements.
+Mood: Nostalgic, triumphant — like completing a challenging level.
 Palette: 16-32 vibrant colors, clear pixel grid.
 
-Important:
-- NO text or letters in the image
-- Include holiday elements: pixelated tree, gifts, snow
-- The scene should feel like a victory screen
+STRICT RULES:
+- ABSOLUTELY NO text, letters, numbers, or writing of any kind
+- Include: pixelated trophy, stars, holiday elements
+- Victory screen aesthetic
 
-Create charming pixel art that says "achievement unlocked" visually.""",
+Create charming pixel art celebrating professional achievement.""",
 
-    "space": """Create a cosmic scene symbolizing this achievement: {reason}
+    "space": """Create a cosmic scene for "Professionals 4.0" platform.
+
+Achievement being celebrated: {reason}
 
 Style: Space fantasy, ethereal nebulae, cosmic grandeur.
-Scene: Beautiful galaxy or nebula with stars arranged like celebration lights.
-Mood: Awe-inspiring, majestic, reaching for the stars.
+Scene: Galaxy or nebula with stars forming celebration patterns.
+Mood: Awe-inspiring, reaching for the stars, unlimited potential.
 Colors: Deep purples, cosmic blues, golden starlight, nebula pinks.
 
-Important:
-- NO text in the image
+STRICT RULES:
+- ABSOLUTELY NO text, letters, numbers, or writing of any kind
 - NO human figures
-- Stars and cosmic elements should feel festive, like holiday lights in space
+- Stars should form festive, celebratory patterns
 
-Create a breathtaking cosmic scene that makes the achievement feel universal.""",
+Create a breathtaking cosmic scene symbolizing stellar achievement.""",
 
-    "movie": """Create a cinematic scene for this hero moment: {reason}
+    "movie": """Create a cinematic scene for "Professionals 4.0" hero moment.
+
+Achievement being celebrated: {reason}
 
 Style: Movie poster aesthetic, dramatic cinematic lighting.
-Genre: Feel-good drama or inspiring adventure.
-Scene: Epic moment of triumph with winter/holiday atmosphere.
+Genre: Inspiring drama about professional triumph.
+Scene: Epic moment of victory with winter/holiday atmosphere.
 Colors: Cinematic color grading — teals, warm oranges, deep blues, golden highlights.
 
-Important:
-- NO text or titles in the image
-- NO realistic human faces — use silhouettes if needed
+STRICT RULES:
+- ABSOLUTELY NO text, titles, or writing of any kind
+- NO realistic human faces — use silhouettes or abstract figures
 - Dramatic lighting: golden hour, lens flares, volumetric light
 
-Create an epic scene that makes viewers feel like witnessing a legendary moment.""",
+Create an epic scene of professional triumph.""",
+
+    "hyperrealism": """Create a hyperrealistic still life for "Professionals 4.0" platform.
+
+Achievement being celebrated: {reason}
+
+Style: Photorealistic, hyperrealism, extreme detail and texture.
+Scene: Elegant desk or podium with professional achievement symbols.
+Elements: Crystal trophy, golden medal, laurel wreath, premium materials.
+Lighting: Soft studio lighting, beautiful reflections, depth of field.
+Colors: Rich golds, deep burgundy, emerald green, pristine whites.
+
+STRICT RULES:
+- ABSOLUTELY NO text, letters, numbers, engravings, or writing of any kind
+- NO human figures or faces
+- Focus on textures: polished metal, crystal, velvet, wood grain
+- Premium, luxurious aesthetic
+
+Create a stunning hyperrealistic image of professional excellence symbols.""",
 }
 
 
