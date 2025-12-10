@@ -76,7 +76,11 @@ export const useCardStore = defineStore('card', () => {
   // Actions
 
   /**
-   * Generate new card with text and image variants (5 text + 4 image)
+   * Generate a new card with text and image variants.
+   *
+   * This function initiates the card generation process by sending a request to the API. It sets the generating state, handles potential errors, and updates various reactive values with the response data, including generation ID, recipient, original text, and variants. Additionally, it auto-selects the first text and image variants and configures the inclusion of the original text.
+   *
+   * @param request - The request object containing details for card generation.
    */
   async function generate(request: CardGenerationRequest): Promise<void> {
     try {
@@ -227,7 +231,7 @@ export const useCardStore = defineStore('card', () => {
   }
 
   /**
-   * Reset store to initial state
+   * Resets the store to its initial state.
    */
   function reset(): void {
     generationId.value = null
