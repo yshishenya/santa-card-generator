@@ -2,36 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 2025 Christmas Magic color variables */
+/*
+ * Magical Winter Night Theme - "Cozy Night Magic"
+ *
+ * Color Naming Convention:
+ * - accent: Primary highlight color (blue #3382FE)
+ * - bluelight: Ambient glow effects (blue variants)
+ *
+ * Legacy naming (deprecated but kept for compatibility):
+ * - "gold" → now refers to blue accent color
+ * - "warmlight" → now refers to blue glow colors
+ */
 :root {
-  /* Primary - Christmas Red */
-  --color-primary: #DC2626;
-  --color-primary-dark: #991B1B;
-  --color-primary-glow: #FF4444;
+  /* Primary - Warm Festive Red */
+  --color-primary: #E25555;
+  --color-primary-light: #FF7B7B;
+  --color-primary-dark: #C44545;
+  --color-primary-glow: #FF9999;
 
-  /* Secondary - Christmas Green */
-  --color-secondary: #16A34A;
-  --color-secondary-dark: #166534;
-  --color-secondary-glow: #22D955;
+  /* Secondary - Pine Green */
+  --color-secondary: #4A9F4A;
+  --color-secondary-light: #6BBF6B;
+  --color-secondary-dark: #3A7F3A;
+  --color-secondary-glow: #7FCF7F;
 
-  /* Accent - Gold */
-  --color-accent: #F59E0B;
-  --color-accent-light: #FCD34D;
-  --color-accent-glow: #FFD700;
+  /* Accent - Bright Blue (primary highlight color) */
+  --color-accent: #3382FE;
+  --color-accent-light: #5B9BFE;
+  --color-accent-dark: #1A6DE0;
+  --color-accent-glow: #7AB4FF;
 
-  /* Background - Deep Winter */
-  --color-bg-primary: #0A0E1A;
-  --color-bg-secondary: #141B2D;
-  --color-bg-glass: rgba(255, 255, 255, 0.08);
+  /* Blue Light - Ambient glow effects (legacy name: warmlight) */
+  --color-warmlight: #4D9AFF;
+  --color-warmlight-soft: #99C8FF;
 
-  /* Aurora Colors */
-  --color-aurora-purple: #A855F7;
-  --color-aurora-cyan: #22D3EE;
-  --color-aurora-pink: #EC4899;
-  --color-aurora-blue: #3B82F6;
+  /* Background - Night Sky */
+  --color-bg-primary: #0B1929;
+  --color-bg-secondary: #122640;
+  --color-bg-card: #1A3355;
+  --color-frost: #2A4A6F;
 
-  /* Snow White */
-  --color-snow: #F8FAFC;
+  /* Text colors for dark theme */
+  --color-text-primary: #F0F8FF;
+  --color-text-secondary: #B8D4F0;
+  --color-text-muted: #7BA3CC;
+  --color-snow: #E8F4FF;
+
+  /* Magic accents */
+  --color-magic-purple: #9D7BFF;
+  --color-magic-cyan: #5CC8E8;
+  --color-magic-pink: #FF8FAB;
+  --color-magic-blue: #6BA3FF;
+
+  /* Glass card colors for night theme */
+  --color-glass-bg: rgba(26, 51, 85, 0.85);
+  --color-glass-border: rgba(51, 130, 254, 0.2);
+  --color-glass-shadow: rgba(51, 130, 254, 0.15);
 }
 
 /* Global styles */
@@ -43,23 +69,25 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
-/* Glass card utility classes - 2025 enhanced */
+/* Glass card utility classes - Night Theme */
 @layer utilities {
   .glass-card {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.05) 100%
+      rgba(26, 51, 85, 0.9) 0%,
+      rgba(18, 38, 64, 0.85) 100%
     );
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(51, 130, 254, 0.15);
     border-radius: 24px;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      0 4px 24px rgba(0, 0, 0, 0.3),
+      0 0 40px rgba(51, 130, 254, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   .glass-card-hover {
@@ -69,33 +97,33 @@ body {
   .glass-card-hover:hover {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.15) 0%,
-      rgba(255, 255, 255, 0.08) 100%
+      rgba(30, 58, 95, 0.95) 0%,
+      rgba(22, 44, 75, 0.9) 100%
     );
-    border-color: rgba(255, 255, 255, 0.25);
+    border-color: rgba(51, 130, 254, 0.35);
     box-shadow:
-      0 16px 48px rgba(0, 0, 0, 0.5),
-      0 0 40px rgba(168, 85, 247, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      0 8px 40px rgba(0, 0, 0, 0.4),
+      0 0 60px rgba(51, 130, 254, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
     transform: translateY(-2px);
   }
 
-  /* Aurora glow card */
-  .glass-card-aurora {
+  /* Festive glow card */
+  .glass-card-festive {
     @apply glass-card;
     position: relative;
     overflow: hidden;
   }
 
-  .glass-card-aurora::before {
+  .glass-card-festive::before {
     content: '';
     position: absolute;
     inset: -2px;
     background: linear-gradient(
       135deg,
-      rgba(168, 85, 247, 0.3) 0%,
-      rgba(34, 211, 238, 0.3) 50%,
-      rgba(236, 72, 153, 0.3) 100%
+      rgba(77, 154, 255, 0.2) 0%,
+      rgba(51, 130, 254, 0.25) 50%,
+      rgba(77, 154, 255, 0.2) 100%
     );
     border-radius: 26px;
     z-index: -1;
@@ -103,39 +131,46 @@ body {
     transition: opacity 0.5s ease;
   }
 
-  .glass-card-aurora:hover::before {
+  .glass-card-festive:hover::before {
     opacity: 1;
   }
 
-  /* Gradient text */
+  /* Gradient text - Bright Blue */
   .text-gradient {
-    background: linear-gradient(135deg, #A855F7 0%, #22D3EE 50%, #EC4899 100%);
+    background: linear-gradient(135deg, #3382FE 0%, #5B9BFE 50%, #7AB4FF 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  .text-gradient-christmas {
-    background: linear-gradient(135deg, #DC2626 0%, #F59E0B 50%, #16A34A 100%);
+  .text-gradient-magic {
+    background: linear-gradient(135deg, #9D7BFF 0%, #5CC8E8 50%, #FF8FAB 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .text-gradient-gold {
-    background: linear-gradient(135deg, #F59E0B 0%, #FCD34D 50%, #F59E0B 100%);
+    background: linear-gradient(135deg, #1A6DE0 0%, #3382FE 50%, #5B9BFE 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  /* Magic button styles */
+  .text-gradient-festive {
+    background: linear-gradient(135deg, #E25555 0%, #3382FE 50%, #4A9F4A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Magic button styles - Night theme with blue glow */
   .btn-magic {
     position: relative;
-    background: linear-gradient(135deg, #A855F7 0%, #EC4899 100%);
+    background: linear-gradient(135deg, #4D9AFF 0%, #3382FE 100%);
     border: none;
     border-radius: 12px;
-    color: white;
+    color: #FFFFFF;
     font-weight: 600;
     overflow: hidden;
     transition: all 0.3s ease;
@@ -145,7 +180,7 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, #EC4899 0%, #A855F7 100%);
+    background: linear-gradient(135deg, #3382FE 0%, #7AB4FF 100%);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -156,17 +191,20 @@ body {
 
   .btn-magic:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 40px rgba(168, 85, 247, 0.4);
+    box-shadow:
+      0 10px 40px rgba(51, 130, 254, 0.4),
+      0 0 20px rgba(51, 130, 254, 0.3);
   }
 
-  .btn-magic span {
+  .btn-magic span,
+  .btn-magic i {
     position: relative;
     z-index: 1;
   }
 
   /* Christmas gradient button */
   .btn-christmas {
-    background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+    background: linear-gradient(135deg, #E25555 0%, #C44545 100%);
     border: none;
     border-radius: 12px;
     color: white;
@@ -175,131 +213,143 @@ body {
   }
 
   .btn-christmas:hover {
-    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    background: linear-gradient(135deg, #FF7B7B 0%, #E25555 100%);
     transform: translateY(-2px);
-    box-shadow: 0 10px 40px rgba(220, 38, 38, 0.4);
+    box-shadow: 0 10px 40px rgba(226, 85, 85, 0.4);
   }
 
-  /* Aurora background */
-  .bg-aurora {
-    background:
-      radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(34, 211, 238, 0.15) 0%, transparent 50%),
-      radial-gradient(ellipse at 40% 60%, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
-      linear-gradient(180deg, #0A0E1A 0%, #141B2D 100%);
-    background-size: 200% 200%;
-    animation: aurora 15s ease-in-out infinite;
+  /* Night theme text utilities */
+  .text-winter-snow {
+    color: var(--color-snow);
   }
 
-  /* Sparkle effect */
-  .sparkle {
-    position: relative;
-  }
-
-  .sparkle::after {
-    content: '✨';
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    font-size: 16px;
-    animation: sparkle 1.5s ease-in-out infinite;
-  }
-
-  /* Glow effects */
+  /* Glow effects for night theme */
   .glow-red {
-    box-shadow: 0 0 20px rgba(220, 38, 38, 0.5), 0 0 40px rgba(220, 38, 38, 0.3);
+    box-shadow: 0 0 20px rgba(226, 85, 85, 0.4), 0 0 40px rgba(226, 85, 85, 0.2);
   }
 
   .glow-green {
-    box-shadow: 0 0 20px rgba(22, 163, 74, 0.5), 0 0 40px rgba(22, 163, 74, 0.3);
+    box-shadow: 0 0 20px rgba(74, 159, 74, 0.4), 0 0 40px rgba(74, 159, 74, 0.2);
   }
 
+  /* Blue accent glow (legacy name: glow-gold) */
   .glow-gold {
-    box-shadow: 0 0 20px rgba(245, 158, 11, 0.5), 0 0 40px rgba(245, 158, 11, 0.3);
+    box-shadow: 0 0 20px rgba(51, 130, 254, 0.5), 0 0 40px rgba(51, 130, 254, 0.25);
   }
 
-  .glow-aurora {
+  /* Alias for semantic naming */
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(51, 130, 254, 0.5), 0 0 40px rgba(51, 130, 254, 0.25);
+  }
+
+  /* Blue ambient glow (legacy name: glow-warmlight) */
+  .glow-warmlight {
     box-shadow:
-      0 0 30px rgba(168, 85, 247, 0.4),
-      0 0 60px rgba(34, 211, 238, 0.3),
-      0 0 90px rgba(236, 72, 153, 0.2);
+      0 0 20px rgba(77, 154, 255, 0.5),
+      0 0 40px rgba(77, 154, 255, 0.3),
+      0 0 60px rgba(51, 130, 254, 0.2);
   }
 
-  /* Input styles - 2025 */
+  /* Alias for semantic naming */
+  .glow-bluelight {
+    box-shadow:
+      0 0 20px rgba(77, 154, 255, 0.5),
+      0 0 40px rgba(77, 154, 255, 0.3),
+      0 0 60px rgba(51, 130, 254, 0.2);
+  }
+
+  .glow-festive {
+    box-shadow:
+      0 0 30px rgba(77, 154, 255, 0.3),
+      0 0 60px rgba(51, 130, 254, 0.2),
+      0 0 90px rgba(226, 85, 85, 0.1);
+  }
+
+  /* Input styles - Night theme */
   .input-magic {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(26, 51, 85, 0.8);
+    border: 1px solid rgba(51, 130, 254, 0.2);
     border-radius: 12px;
-    color: var(--color-snow);
+    color: var(--color-text-primary);
     transition: all 0.3s ease;
   }
 
   .input-magic:focus {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(168, 85, 247, 0.5);
-    box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+    background: rgba(30, 58, 95, 0.9);
+    border-color: rgba(51, 130, 254, 0.5);
+    box-shadow: 0 0 20px rgba(51, 130, 254, 0.2);
     outline: none;
   }
 
   .input-magic::placeholder {
-    color: rgba(248, 250, 252, 0.4);
+    color: var(--color-text-muted);
   }
 
   /* Shimmer effect for loading states */
   .shimmer {
     background: linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.1) 50%,
-      rgba(255, 255, 255, 0) 100%
+      rgba(51, 130, 254, 0) 0%,
+      rgba(51, 130, 254, 0.2) 50%,
+      rgba(51, 130, 254, 0) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
   }
+
+  /* Frost effect - adjusted for night */
+  .frost-border {
+    border: 1px solid rgba(92, 200, 232, 0.3);
+    box-shadow:
+      inset 0 0 20px rgba(92, 200, 232, 0.1),
+      0 4px 20px rgba(0, 0, 0, 0.2);
+  }
 }
 
-/* Custom scrollbar for dark theme - 2025 style */
+/* Custom scrollbar for night theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(10, 14, 26, 0.8);
+  background: rgba(11, 25, 41, 0.8);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(168, 85, 247, 0.4) 0%, rgba(34, 211, 238, 0.4) 100%);
+  background: linear-gradient(180deg, rgba(51, 130, 254, 0.4) 0%, rgba(77, 154, 255, 0.3) 100%);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(168, 85, 247, 0.6) 0%, rgba(34, 211, 238, 0.6) 100%);
+  background: linear-gradient(180deg, rgba(51, 130, 254, 0.6) 0%, rgba(77, 154, 255, 0.5) 100%);
 }
 
-/* PrimeVue customizations - 2025 */
+/* PrimeVue customizations - Night theme */
 .p-autocomplete-panel {
-  background: rgba(20, 27, 45, 0.95);
+  background: rgba(26, 51, 85, 0.98);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(51, 130, 254, 0.2);
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(51, 130, 254, 0.1);
 }
 
 .p-autocomplete-item {
-  color: var(--color-snow);
+  color: var(--color-text-primary);
   border-radius: 8px;
   margin: 4px;
   transition: all 0.2s ease;
 }
 
 .p-autocomplete-item:hover {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(34, 211, 238, 0.2) 100%);
+  background: linear-gradient(135deg, rgba(51, 130, 254, 0.15) 0%, rgba(77, 154, 255, 0.1) 100%);
 }
 
 .p-autocomplete-item.p-highlight {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3) 0%, rgba(34, 211, 238, 0.3) 100%);
+  background: linear-gradient(135deg, rgba(51, 130, 254, 0.25) 0%, rgba(77, 154, 255, 0.2) 100%);
 }
 
 /* Animations */
@@ -343,21 +393,66 @@ body {
 
 @keyframes glowPulse {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(34, 211, 238, 0.2);
+    box-shadow: 0 0 20px rgba(51, 130, 254, 0.3), 0 0 40px rgba(77, 154, 255, 0.15);
   }
   50% {
-    box-shadow: 0 0 30px rgba(168, 85, 247, 0.6), 0 0 60px rgba(34, 211, 238, 0.4);
+    box-shadow: 0 0 30px rgba(51, 130, 254, 0.5), 0 0 60px rgba(77, 154, 255, 0.25);
+  }
+}
+
+@keyframes twinkle-gold {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px rgba(51, 130, 254, 0.5));
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 8px rgba(51, 130, 254, 0.8));
+  }
+}
+
+@keyframes warmGlow {
+  0%, 100% {
+    opacity: 0.7;
+    filter: blur(80px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(100px);
   }
 }
 
 /* Loading animation customization */
 .loading-spinner {
-  border-color: rgba(168, 85, 247, 0.3);
-  border-top-color: var(--color-aurora-purple);
+  border-color: rgba(51, 130, 254, 0.3);
+  border-top-color: var(--color-accent);
 }
 
-/* Selection ring with aurora glow */
+/* Selection ring with blue glow */
 .ring-aurora {
-  --tw-ring-color: rgba(168, 85, 247, 0.6);
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  --tw-ring-color: rgba(51, 130, 254, 0.6);
+  box-shadow: 0 0 20px rgba(51, 130, 254, 0.2);
+}
+
+/* Text opacity utilities for night theme */
+.text-winter-snow\/70 {
+  color: rgba(232, 244, 255, 0.7);
+}
+
+.text-winter-snow\/80 {
+  color: rgba(232, 244, 255, 0.8);
+}
+
+.text-winter-snow\/60 {
+  color: rgba(232, 244, 255, 0.6);
+}
+
+.text-winter-snow\/50 {
+  color: rgba(232, 244, 255, 0.5);
+}
+
+.text-winter-snow\/90 {
+  color: rgba(232, 244, 255, 0.9);
 }

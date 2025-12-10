@@ -78,36 +78,36 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
               padding="p-6"
               class="cursor-pointer transition-all card-inner"
               :class="{
-                'ring-2 ring-aurora-cyan shadow-lg shadow-aurora-cyan/20': cardStore.selectedTextIndex === index,
-                'opacity-70 hover:opacity-100': cardStore.selectedTextIndex !== index
+                'ring-2 ring-christmas-gold shadow-lg shadow-christmas-gold/20': cardStore.selectedTextIndex === index,
+                'opacity-80 hover:opacity-100': cardStore.selectedTextIndex !== index
               }"
               @click="selectVariant(index)"
             >
               <div class="space-y-4">
                 <!-- Style badge -->
                 <div class="flex items-center justify-between">
-                  <span class="badge badge-lg bg-aurora-purple/20 text-aurora-purple border-aurora-purple/30">
+                  <span class="badge badge-lg bg-christmas-gold/15 text-christmas-gold border-christmas-gold/30">
                     <i class="pi pi-sparkles mr-1"></i>
                     {{ TEXT_STYLE_LABELS[variant.style] }}
                   </span>
-                  <span class="text-winter-snow/50 text-sm">{{ index + 1 }} / {{ cardStore.textVariants.length }}</span>
+                  <span class="text-winter-text-muted text-sm">{{ index + 1 }} / {{ cardStore.textVariants.length }}</span>
                 </div>
 
                 <!-- Text content -->
                 <div class="text-content-area">
-                  <p class="text-winter-snow text-lg leading-relaxed whitespace-pre-wrap break-words">
+                  <p class="!text-winter-text-primary text-lg leading-relaxed whitespace-pre-wrap break-words">
                     {{ variant.content }}
                   </p>
                 </div>
 
                 <!-- Selection button -->
-                <div class="flex justify-center pt-3 border-t border-white/10">
+                <div class="flex justify-center pt-3 border-t border-winter-frost/30">
                   <button
                     type="button"
                     class="btn btn-sm px-6 transition-all"
                     :class="cardStore.selectedTextIndex === index
-                      ? 'bg-aurora-cyan text-white border-aurora-cyan hover:bg-aurora-cyan/80'
-                      : 'btn-ghost bg-white/5 hover:bg-aurora-purple/20 text-winter-snow hover:text-white'"
+                      ? 'bg-christmas-gold text-winter-bg-primary border-christmas-gold hover:bg-christmas-gold-light'
+                      : 'btn-ghost bg-winter-bg-secondary hover:bg-christmas-gold/10 text-winter-text-secondary hover:text-christmas-gold'"
                     @click.stop="selectVariant(index)"
                   >
                     <i v-if="cardStore.selectedTextIndex === index" class="pi pi-check mr-2"></i>
@@ -148,7 +148,7 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
     </div>
 
     <!-- Empty state -->
-    <div v-else class="text-center py-8 text-winter-snow/60">
+    <div v-else class="text-center py-8 text-winter-text-muted">
       <i class="pi pi-info-circle text-2xl mb-2"></i>
       <p>Нет вариантов текста</p>
     </div>
@@ -156,11 +156,11 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
     <!-- Loading overlay for regeneration -->
     <div
       v-if="cardStore.isRegeneratingText"
-      class="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center rounded-xl z-10"
+      class="absolute inset-0 bg-winter-bg-primary/80 backdrop-blur-sm flex items-center justify-center rounded-xl z-10"
     >
       <div class="text-center">
-        <span class="loading loading-spinner loading-lg text-aurora-purple"></span>
-        <p class="text-winter-snow/90 mt-2">Генерируем новые варианты...</p>
+        <span class="loading loading-spinner loading-lg text-christmas-gold"></span>
+        <p class="text-winter-text-secondary mt-2">Генерируем новые варианты...</p>
       </div>
     </div>
   </div>
@@ -224,51 +224,53 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
   padding-right: 4px;
 }
 
-/* Custom scrollbar for text area */
+/* Custom scrollbar for text area - Night theme */
 .text-content-area::-webkit-scrollbar {
   width: 6px;
 }
 
 .text-content-area::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(42, 74, 111, 0.3);
   border-radius: 3px;
 }
 
 .text-content-area::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(51, 130, 254, 0.4);
   border-radius: 3px;
 }
 
 .text-content-area::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(51, 130, 254, 0.6);
 }
 
-/* ===== NAVIGATION BUTTONS ===== */
+/* ===== NAVIGATION BUTTONS - Night theme ===== */
 .carousel-nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   z-index: 10;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(26, 51, 85, 0.9);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(51, 130, 254, 0.3);
   border-radius: 50%;
   width: 44px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #B8D4F0;
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .carousel-nav:hover {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3) 0%, rgba(34, 211, 238, 0.3) 100%);
-  border-color: rgba(168, 85, 247, 0.4);
+  background: linear-gradient(135deg, rgba(51, 130, 254, 0.2) 0%, rgba(77, 154, 255, 0.15) 100%);
+  border-color: rgba(51, 130, 254, 0.5);
   transform: translateY(-50%) scale(1.05);
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  box-shadow: 0 4px 16px rgba(51, 130, 254, 0.3);
+  color: #3382FE;
 }
 
 .carousel-nav:active {
@@ -288,7 +290,7 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
   height: 24px;
 }
 
-/* ===== PAGINATION DOTS ===== */
+/* ===== PAGINATION DOTS - Night theme ===== */
 .carousel-pagination {
   display: flex;
   justify-content: center;
@@ -300,7 +302,7 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(123, 163, 204, 0.4);
   border: none;
   cursor: pointer;
   padding: 0;
@@ -308,13 +310,13 @@ const canGoNext = computed(() => cardStore.textVariants.length > 1)
 }
 
 .carousel-dot:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(51, 130, 254, 0.5);
 }
 
 .carousel-dot-active {
-  background: linear-gradient(135deg, #A855F7 0%, #22D3EE 100%);
+  background: linear-gradient(135deg, #3382FE 0%, #5B9BFE 100%);
   transform: scale(1.2);
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 10px rgba(51, 130, 254, 0.5);
 }
 
 /* ===== RESPONSIVE ADJUSTMENTS ===== */

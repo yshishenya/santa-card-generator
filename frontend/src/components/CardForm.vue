@@ -69,7 +69,7 @@ const handleSubmit = async (): Promise<void> => {
     <!-- Recipient field with autocomplete -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-winter-snow text-lg font-medium">Кому <span class="text-aurora-pink">*</span></span>
+        <span class="label-text text-slate-700 text-lg font-medium">Кому <span class="text-christmas-red">*</span></span>
       </label>
       <AutoComplete
         v-model="recipient"
@@ -86,7 +86,7 @@ const handleSubmit = async (): Promise<void> => {
     <!-- Sender field -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-winter-snow text-lg font-medium">От кого <span class="text-winter-snow/40">(необязательно)</span></span>
+        <span class="label-text text-slate-700 text-lg font-medium">От кого <span class="text-slate-400">(необязательно)</span></span>
       </label>
       <input
         v-model="sender"
@@ -99,8 +99,8 @@ const handleSubmit = async (): Promise<void> => {
     <!-- Reason field -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-winter-snow text-lg font-medium">За что <span class="text-winter-snow/40">(необязательно)</span></span>
-        <span class="label-text-alt text-winter-snow/50 text-sm">Макс. 150 символов</span>
+        <span class="label-text text-slate-700 text-lg font-medium">За что <span class="text-slate-400">(необязательно)</span></span>
+        <span class="label-text-alt text-slate-400 text-sm">Макс. 150 символов</span>
       </label>
       <input
         v-model="reason"
@@ -114,8 +114,8 @@ const handleSubmit = async (): Promise<void> => {
     <!-- Message field -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-winter-snow text-lg font-medium">Сообщение <span class="text-winter-snow/40">(необязательно)</span></span>
-        <span class="label-text-alt text-winter-snow/50 text-sm">Макс. 1000 символов</span>
+        <span class="label-text text-slate-700 text-lg font-medium">Сообщение <span class="text-slate-400">(необязательно)</span></span>
+        <span class="label-text-alt text-slate-400 text-sm">Макс. 1000 символов</span>
       </label>
       <textarea
         v-model="message"
@@ -127,10 +127,10 @@ const handleSubmit = async (): Promise<void> => {
     </div>
 
     <!-- Error message -->
-    <div v-if="cardStore.error" class="glass-card bg-red-500/20 border-red-500/30 p-4 flex items-center gap-3">
-      <i class="pi pi-exclamation-triangle text-red-400 text-xl"></i>
-      <span class="flex-1 text-red-200">{{ cardStore.error }}</span>
-      <button type="button" class="text-red-300 hover:text-red-100 transition-colors" @click="cardStore.clearError()">
+    <div v-if="cardStore.error" class="glass-card bg-red-50 border-red-200 p-4 flex items-center gap-3">
+      <i class="pi pi-exclamation-triangle text-red-500 text-xl"></i>
+      <span class="flex-1 text-red-700">{{ cardStore.error }}</span>
+      <button type="button" class="text-red-400 hover:text-red-600 transition-colors" @click="cardStore.clearError()">
         <i class="pi pi-times"></i>
       </button>
     </div>

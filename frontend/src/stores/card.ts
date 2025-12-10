@@ -30,7 +30,7 @@ export const useCardStore = defineStore('card', () => {
   const selectedTextIndex = ref<number>(0)  // Index-based selection
   const selectedImageIndex = ref<number>(0)  // Index-based selection
   const useOriginalText = ref<boolean>(false)  // When true, use original text instead of AI variant
-  const includeOriginalText = ref<boolean>(false)  // When true, include original text alongside AI text
+  const includeOriginalText = ref<boolean>(true)  // When true, include original text alongside AI text (default: true)
   const remainingTextRegenerations = ref<number>(3)
   const remainingImageRegenerations = ref<number>(3)
 
@@ -96,7 +96,7 @@ export const useCardStore = defineStore('card', () => {
       selectedTextIndex.value = 0
       selectedImageIndex.value = 0
       useOriginalText.value = false
-      includeOriginalText.value = false
+      includeOriginalText.value = true  // Default to including original text with AI variant
     } catch (err) {
       error.value = getErrorMessage(err, 'Не удалось создать открытку. Попробуйте ещё раз.')
       throw err
@@ -238,7 +238,7 @@ export const useCardStore = defineStore('card', () => {
     selectedTextIndex.value = 0
     selectedImageIndex.value = 0
     useOriginalText.value = false
-    includeOriginalText.value = false
+    includeOriginalText.value = true  // Default to including original text with AI variant
     remainingTextRegenerations.value = 3
     remainingImageRegenerations.value = 3
     isGenerating.value = false

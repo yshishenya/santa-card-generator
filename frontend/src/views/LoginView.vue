@@ -24,18 +24,24 @@ async function handleSubmit() {
 
 <template>
   <div class="login-container">
-    <!-- Animated background -->
+    <!-- Blue ambient glow background -->
     <div class="login-bg">
-      <div class="aurora-orb aurora-orb-1"></div>
-      <div class="aurora-orb aurora-orb-2"></div>
-      <div class="aurora-orb aurora-orb-3"></div>
+      <div class="ambient-glow ambient-glow-1"></div>
+      <div class="ambient-glow ambient-glow-2"></div>
+      <div class="ambient-glow ambient-glow-3"></div>
+    </div>
+
+    <!-- Twinkling stars -->
+    <div class="stars">
+      <span class="star star-1">&#10022;</span>
+      <span class="star star-2">&#10022;</span>
+      <span class="star star-3">&#10022;</span>
+      <span class="star star-4">&#10022;</span>
+      <span class="star star-5">&#10022;</span>
     </div>
 
     <!-- Login card -->
     <div class="login-card">
-      <!-- Decorative elements -->
-      <div class="card-glow"></div>
-
       <!-- Header -->
       <div class="text-center mb-10">
         <div class="icon-container">
@@ -49,7 +55,7 @@ async function handleSubmit() {
         <h1 class="text-3xl font-bold text-gradient mb-3">
           Новогодняя открытка
         </h1>
-        <p class="text-winter-snow/60 text-lg">
+        <p class="text-winter-secondary text-lg">
           Введите пароль для доступа
         </p>
       </div>
@@ -59,20 +65,20 @@ async function handleSubmit() {
         <!-- Password input -->
         <div class="form-control">
           <label class="label">
-            <span class="label-text text-winter-snow/80 font-medium">Пароль</span>
+            <span class="label-text text-winter-secondary font-medium">Пароль</span>
           </label>
           <div class="relative group">
             <input
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
               placeholder="Введите пароль"
-              class="input-magic w-full h-14 px-5 pr-14 text-lg"
+              class="input-field"
               :disabled="authStore.isLoading"
               autofocus
             />
             <button
               type="button"
-              class="absolute right-4 top-1/2 -translate-y-1/2 text-winter-snow/40 hover:text-winter-snow transition-colors text-xl"
+              class="absolute right-4 top-1/2 -translate-y-1/2 text-winter-muted hover:text-winter-snow transition-colors text-xl"
               @click="showPassword = !showPassword"
             >
               <span v-if="showPassword">👁️</span>
@@ -109,7 +115,7 @@ async function handleSubmit() {
 
       <!-- Footer decoration -->
       <div class="mt-8 text-center">
-        <div class="flex items-center justify-center gap-3 text-winter-snow/30 text-sm">
+        <div class="flex items-center justify-center gap-3 text-winter-muted text-sm">
           <span>❄️</span>
           <span>С Новым Годом 2025!</span>
           <span>❄️</span>
@@ -120,6 +126,17 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
+/*
+ * LoginView.vue - Standalone login page styles
+ *
+ * Global utilities used from main.css:
+ * - .text-gradient (blue gradient text)
+ * - CSS variables (--color-*)
+ *
+ * This page has its own background/glow effects separate from App.vue
+ * to provide a unique first-impression experience.
+ */
+
 .login-container {
   min-height: 100vh;
   display: flex;
@@ -128,7 +145,7 @@ async function handleSubmit() {
   padding: 1rem;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #0A0E1A 0%, #0F1629 50%, #141B2D 100%);
+  background: linear-gradient(180deg, #050D18 0%, #0B1929 30%, #122640 60%, #1A3355 100%);
 }
 
 .login-bg {
@@ -137,43 +154,111 @@ async function handleSubmit() {
   pointer-events: none;
 }
 
-.aurora-orb {
+/* Blue ambient glow orbs - consistent naming with App.vue */
+.ambient-glow {
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px);
-  animation: floatOrb 25s ease-in-out infinite;
+  filter: blur(80px);
+  animation: ambientPulse 8s ease-in-out infinite;
 }
 
-.aurora-orb-1 {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.5) 0%, transparent 70%);
-  top: -150px;
-  left: -150px;
-}
-
-.aurora-orb-2 {
+.ambient-glow-1 {
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.4) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(51, 130, 254, 0.25) 0%, transparent 70%);
   bottom: -100px;
-  right: -100px;
-  animation-delay: -8s;
+  left: -100px;
 }
 
-.aurora-orb-3 {
+.ambient-glow-2 {
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, transparent 70%);
-  top: 50%;
-  right: 20%;
-  animation-delay: -16s;
+  background: radial-gradient(circle, rgba(77, 154, 255, 0.2) 0%, transparent 70%);
+  bottom: 20%;
+  right: -50px;
+  animation-delay: -3s;
 }
 
-@keyframes floatOrb {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(50px, -50px) scale(1.1); }
-  66% { transform: translate(-30px, 30px) scale(0.9); }
+.ambient-glow-3 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(122, 180, 255, 0.15) 0%, transparent 70%);
+  top: 20%;
+  left: 10%;
+  animation-delay: -5s;
+}
+
+@keyframes ambientPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* Twinkling stars */
+.stars {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.star {
+  position: absolute;
+  color: #FFFEF0;
+  animation: twinkleStar 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 240, 0.9));
+}
+
+.star-1 {
+  top: 10%;
+  left: 15%;
+  font-size: 14px;
+  animation-delay: 0s;
+}
+
+.star-2 {
+  top: 15%;
+  right: 20%;
+  font-size: 18px;
+  animation-delay: 0.7s;
+}
+
+.star-3 {
+  top: 5%;
+  left: 40%;
+  font-size: 12px;
+  animation-delay: 1.4s;
+}
+
+.star-4 {
+  top: 25%;
+  right: 35%;
+  font-size: 16px;
+  animation-delay: 0.3s;
+}
+
+.star-5 {
+  top: 8%;
+  right: 10%;
+  font-size: 14px;
+  animation-delay: 1s;
+}
+
+@keyframes twinkleStar {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+    filter: drop-shadow(0 0 3px rgba(255, 255, 240, 0.5));
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(255, 255, 240, 1));
+  }
 }
 
 .login-card {
@@ -183,32 +268,36 @@ async function handleSubmit() {
   padding: 3rem;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(26, 51, 85, 0.92) 0%,
+    rgba(18, 38, 64, 0.88) 100%
   );
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(51, 130, 254, 0.2);
   border-radius: 32px;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.5),
-    0 0 100px rgba(168, 85, 247, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 0 80px rgba(51, 130, 254, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.card-glow {
+/* Blue gradient border */
+.login-card::before {
+  content: '';
   position: absolute;
-  inset: -1px;
-  border-radius: 33px;
+  inset: 0;
+  border-radius: 32px;
+  padding: 1px;
   background: linear-gradient(
     135deg,
-    rgba(168, 85, 247, 0.3) 0%,
-    rgba(34, 211, 238, 0.2) 50%,
-    rgba(236, 72, 153, 0.3) 100%
+    rgba(77, 154, 255, 0.3) 0%,
+    rgba(51, 130, 254, 0.4) 50%,
+    rgba(77, 154, 255, 0.3) 100%
   );
-  z-index: -1;
-  opacity: 0.5;
-  filter: blur(20px);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 .icon-container {
@@ -251,33 +340,42 @@ async function handleSubmit() {
   50% { opacity: 1; transform: scale(1); }
 }
 
-.text-gradient {
-  background: linear-gradient(135deg, #A855F7 0%, #22D3EE 50%, #EC4899 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* NOTE: .text-gradient is defined globally in main.css */
+
+/* Page-specific text color utilities (shortcuts for tailwind classes) */
+.text-winter-secondary {
+  color: #B8D4F0;  /* Same as var(--color-text-secondary) */
 }
 
-.input-magic {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.text-winter-muted {
+  color: #7BA3CC;  /* Same as var(--color-text-muted) */
+}
+
+.input-field {
+  width: 100%;
+  height: 56px;
+  padding: 0 1.25rem;
+  padding-right: 3.5rem;
+  background: rgba(26, 51, 85, 0.8);
+  border: 1px solid rgba(51, 130, 254, 0.2);
   border-radius: 16px;
-  color: #F8FAFC;
-  transition: all 0.3s ease;
+  color: #F0F8FF;
   font-size: 1rem;
+  transition: all 0.3s ease;
 }
 
-.input-magic:focus {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(168, 85, 247, 0.5);
+.input-field:focus {
+  background: rgba(30, 58, 95, 0.9);
+  border-color: rgba(51, 130, 254, 0.5);
   outline: none;
+  box-shadow: 0 0 20px rgba(51, 130, 254, 0.2);
 }
 
-.input-magic::placeholder {
-  color: rgba(248, 250, 252, 0.35);
+.input-field::placeholder {
+  color: #7BA3CC;
 }
 
-.input-magic:disabled {
+.input-field:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -290,7 +388,7 @@ async function handleSubmit() {
   position: absolute;
   inset: -2px;
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(34, 211, 238, 0.3));
+  background: linear-gradient(135deg, rgba(51, 130, 254, 0.2), rgba(77, 154, 255, 0.15));
   z-index: -1;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -302,20 +400,20 @@ async function handleSubmit() {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(226, 85, 85, 0.15);
+  border: 1px solid rgba(226, 85, 85, 0.3);
   border-radius: 12px;
-  color: #FCA5A5;
+  color: #FF9999;
   font-size: 0.95rem;
 }
 
 .submit-btn {
   width: 100%;
   height: 56px;
-  background: linear-gradient(135deg, #A855F7 0%, #EC4899 100%);
+  background: linear-gradient(135deg, #4D9AFF 0%, #3382FE 100%);
   border: none;
   border-radius: 16px;
-  color: white;
+  color: #FFFFFF;
   font-weight: 600;
   font-size: 1.1rem;
   cursor: pointer;
@@ -326,7 +424,9 @@ async function handleSubmit() {
 
 .submit-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 15px 40px rgba(168, 85, 247, 0.4);
+  box-shadow:
+    0 15px 40px rgba(51, 130, 254, 0.4),
+    0 0 20px rgba(51, 130, 254, 0.3);
 }
 
 .submit-btn:active:not(:disabled) {
@@ -356,8 +456,8 @@ async function handleSubmit() {
 .loading-spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 2px solid rgba(11, 25, 41, 0.3);
+  border-top-color: #0B1929;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

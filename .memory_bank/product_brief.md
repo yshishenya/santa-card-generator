@@ -18,7 +18,7 @@
 - Опциональное указание отправителя (анонимная отправка по умолчанию)
 - Поля "За что" (до 150 символов) и "Слова благодарности" (до 1000 символов)
 - AI-стилизация текста с 5 стилями: Торжественная ода, Отчет из будущего, Хайку, Заметка в газете, Дружеский стендап
-- Выбор стиля изображения: Цифровая живопись, Пиксель-арт, Космическая фантастика, Кадр из фильма
+- Выбор стиля изображения: Цифровая живопись, Пиксель-арт, Космическая фантастика, Кадр из фильма, Гиперреализм
 
 ### 2. Генерация и выбор контента
 - Параллельная генерация текста и изображения через Google Gemini API
@@ -32,10 +32,10 @@
 - Конфигурируемые ID чата и ветки
 
 ### 4. Новогодний дизайн интерфейса
-- Падающие снежинки (tsParticles)
-- Glassmorphism эффекты (матовое стекло)
-- Новогодняя цветовая палитра (красный, зеленый, золотой)
-- Плавные анимации (@vueuse/motion)
+- Интерактивный снежный шар с падающими снежинками (Canvas + tsParticles)
+- Glassmorphism эффекты на тёмном фоне (Winter Night Theme)
+- Цветовая палитра: тёмно-синий фон (#0B1929), синий акцент (#3382FE), красный (#E25555), зелёный (#4A9F4A)
+- Плавные анимации и ambient-эффекты
 
 ## User Story (Main Scenario)
 
@@ -64,9 +64,10 @@
 - **Deployment**: Docker Compose
 
 ### Security & Access
-- Авторизация отсутствует для пользователей
+- Простая парольная защита на входе (переменная окружения APP_PASSWORD)
 - Ограничения на отправку отсутствуют
 - Премодерация контента не требуется
+- Rate limiting на API эндпоинтах (slowapi)
 
 ### Data Management
 - Список сотрудников: загружается разово из Excel файла
@@ -153,19 +154,20 @@
 │     │    ╰─────────────────────────────────────╯   │      │
 │     └──────────────────────────────────────────────┘      │
 │                                                            │
-│  Gradient Background: #0F172A → #1E293B (winter night)    │
+│  Gradient Background: #050D18 → #0B1929 → #1A3355         │
 └────────────────────────────────────────────────────────────┘
 ```
 
-### Color Palette
+### Color Palette (Winter Night Theme)
 | Role | Color | Usage |
 |------|-------|-------|
-| Primary | `#DC2626` (Red) | Buttons, accents |
-| Secondary | `#16A34A` (Green) | Success states, icons |
-| Accent | `#F59E0B` (Gold) | Highlights, stars |
-| Background | `#0F172A` (Dark Blue) | Main background |
-| Surface | `rgba(255,255,255,0.1)` | Glass cards |
-| Text | `#F8FAFC` (Snow White) | Primary text |
+| Accent | `#3382FE` (Blue) | Buttons, highlights, focus states |
+| Primary | `#E25555` (Red) | Festive accents |
+| Secondary | `#4A9F4A` (Green) | Pine green accents |
+| Background | `#0B1929` (Deep Night) | Main background |
+| Surface | `rgba(26,51,85,0.85)` | Glass cards |
+| Text Primary | `#F0F8FF` (Snow White) | Main text |
+| Text Secondary | `#B8D4F0` (Soft Blue) | Secondary text |
 
 ## Future Vision
 
@@ -187,6 +189,6 @@
 
 ---
 
-**Version**: 1.2
-**Last Updated**: 2023-11-26
-**Source**: SRS.md
+**Version**: 1.3
+**Last Updated**: 2025-12-11
+**Source**: CLAUDE.md

@@ -133,42 +133,68 @@ EXPOSE 80
 
 ---
 
-## Frontend Design System (Christmas Theme)
+## Frontend Design System (Winter Night Theme)
 
 ### Color Palette
 ```css
 :root {
-  /* Primary - Christmas Red */
-  --color-primary: #DC2626;      /* red-600 */
-  --color-primary-dark: #991B1B; /* red-800 */
+  /* Primary - Warm Festive Red */
+  --color-primary: #E25555;
+  --color-primary-light: #FF7B7B;
+  --color-primary-dark: #C44545;
+  --color-primary-glow: #FF9999;
 
-  /* Secondary - Christmas Green */
-  --color-secondary: #16A34A;    /* green-600 */
-  --color-secondary-dark: #166534; /* green-800 */
+  /* Secondary - Pine Green */
+  --color-secondary: #4A9F4A;
+  --color-secondary-light: #6BBF6B;
+  --color-secondary-dark: #3A7F3A;
+  --color-secondary-glow: #7FCF7F;
 
-  /* Accent - Gold */
-  --color-accent: #F59E0B;       /* amber-500 */
-  --color-accent-light: #FCD34D; /* amber-300 */
+  /* Accent - Bright Blue (main highlight color) */
+  --color-accent: #3382FE;           /* Main accent blue */
+  --color-accent-light: #5B9BFE;     /* Lighter variant for hover */
+  --color-accent-dark: #1A6DE0;      /* Darker variant for active */
+  --color-accent-glow: #7AB4FF;      /* Glow/shadow color */
 
-  /* Background - Winter */
-  --color-bg-primary: #0F172A;   /* slate-900 */
-  --color-bg-secondary: #1E293B; /* slate-800 */
-  --color-bg-glass: rgba(255, 255, 255, 0.1);
+  /* Blue Light - Ambient glow effects */
+  --color-bluelight-primary: #4D9AFF;
+  --color-bluelight-soft: #99C8FF;
 
-  /* Snow White */
-  --color-snow: #F8FAFC;         /* slate-50 */
+  /* Background - Night Sky */
+  --color-bg-primary: #0B1929;       /* Deep night sky */
+  --color-bg-secondary: #122640;     /* Slightly lighter blue */
+  --color-bg-card: #1A3355;          /* Card background */
+  --color-frost: #2A4A6F;            /* Frost accent */
+
+  /* Text colors for dark theme */
+  --color-text-primary: #F0F8FF;     /* Main text - almost white */
+  --color-text-secondary: #B8D4F0;   /* Secondary text - soft blue */
+  --color-text-muted: #7BA3CC;       /* Muted text */
+  --color-snow: #E8F4FF;             /* Snow white with blue tint */
+
+  /* Glass card colors */
+  --color-glass-bg: rgba(26, 51, 85, 0.85);
+  --color-glass-border: rgba(51, 130, 254, 0.2);
+  --color-glass-shadow: rgba(51, 130, 254, 0.15);
 }
 ```
 
-### Glassmorphism Effect
+### Glassmorphism Effect (Night Theme)
 ```css
 .glass-card {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(
+    135deg,
+    rgba(26, 51, 85, 0.9) 0%,
+    rgba(18, 38, 64, 0.85) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(51, 130, 254, 0.15);
+  border-radius: 24px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(51, 130, 254, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 ```
 
@@ -283,14 +309,37 @@ export default {
     extend: {
       colors: {
         christmas: {
-          red: '#DC2626',
-          green: '#16A34A',
-          gold: '#F59E0B',
-        }
+          red: '#E25555',
+          'red-light': '#FF7B7B',
+          green: '#4A9F4A',
+          'green-light': '#6BBF6B',
+          // Primary accent color (blue)
+          accent: '#3382FE',
+          'accent-light': '#5B9BFE',
+          'accent-dark': '#1A6DE0',
+          'accent-glow': '#7AB4FF',
+          // Legacy alias (deprecated)
+          gold: '#3382FE',
+        },
+        winter: {
+          'bg-primary': '#0B1929',
+          'bg-secondary': '#122640',
+          'bg-card': '#1A3355',
+          'frost': '#2A4A6F',
+          'text-primary': '#F0F8FF',
+          'text-secondary': '#B8D4F0',
+          'text-muted': '#7BA3CC',
+        },
+        bluelight: {
+          primary: '#4D9AFF',
+          secondary: '#3382FE',
+          soft: '#99C8FF',
+        },
       },
       animation: {
         'snow-fall': 'snowfall 10s linear infinite',
         'twinkle': 'twinkle 2s ease-in-out infinite',
+        'glow-pulse': 'glowPulse 2s ease-in-out infinite',
       }
     }
   },
@@ -310,63 +359,81 @@ export default {
 santa/
 ├── backend/
 │   ├── src/
-│   │   ├── api/                # FastAPI routers
+│   │   ├── api/                    # FastAPI routers
 │   │   │   ├── __init__.py
-│   │   │   ├── cards.py        # Card generation endpoints
-│   │   │   └── employees.py    # Employee list endpoint
-│   │   ├── core/               # Business logic
+│   │   │   ├── auth.py             # Password authentication endpoint
+│   │   │   ├── cards.py            # Card generation endpoints
+│   │   │   ├── employees.py        # Employee list endpoint
+│   │   │   └── dependencies.py     # Dependency injection (rate limiting)
+│   │   ├── core/                   # Business logic
 │   │   │   ├── __init__.py
-│   │   │   ├── card_service.py
-│   │   │   └── generation_service.py
-│   │   ├── integrations/       # External API integrations
+│   │   │   ├── card_service.py     # Main service orchestrator
+│   │   │   ├── session_manager.py  # In-memory session storage
+│   │   │   └── exceptions.py       # Service exceptions
+│   │   ├── integrations/           # External API integrations
 │   │   │   ├── __init__.py
-│   │   │   ├── gemini.py       # Google Gemini client
-│   │   │   └── telegram.py     # Telegram bot client
-│   │   ├── models/             # Pydantic models
+│   │   │   ├── gemini.py           # Google Gemini client (text & image)
+│   │   │   ├── telegram.py         # Telegram bot client
+│   │   │   └── exceptions.py       # Integration exceptions
+│   │   ├── models/                 # Pydantic models
 │   │   │   ├── __init__.py
-│   │   │   ├── card.py
-│   │   │   └── employee.py
-│   │   ├── repositories/       # Data access layer
+│   │   │   ├── card.py             # Card request/response models
+│   │   │   ├── employee.py         # Employee model
+│   │   │   └── response.py         # Generic API response
+│   │   ├── repositories/           # Data access layer
 │   │   │   ├── __init__.py
-│   │   │   └── employee_repo.py
-│   │   ├── config.py           # Settings management
-│   │   └── main.py             # FastAPI application
+│   │   │   └── employee_repo.py    # JSON file repository
+│   │   ├── config.py               # Settings management
+│   │   └── main.py                 # FastAPI application
 │   ├── tests/
 │   ├── data/
-│   │   └── employees.json      # Список сотрудников (из Excel)
+│   │   └── employees.json          # 61 employees from Excel
 │   ├── Dockerfile
 │   ├── pyproject.toml
 │   └── .env.example
 ├── frontend/
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── CardForm.vue         # Форма создания
-│   │   │   ├── GenerationPreview.vue # Превью результата
-│   │   │   ├── TextCarousel.vue     # Карусель текстов
-│   │   │   ├── ImageCarousel.vue    # Карусель изображений
-│   │   │   ├── SnowBackground.vue   # Падающий снег
-│   │   │   └── GlassCard.vue        # Стеклянная карточка
-│   │   ├── views/
-│   │   │   └── HomeView.vue
-│   │   ├── composables/
-│   │   │   └── useParticles.ts      # Настройки снега
 │   │   ├── api/
-│   │   │   └── client.ts
+│   │   │   └── client.ts           # Axios HTTP client
+│   │   ├── components/
+│   │   │   ├── CardForm.vue        # Card creation form
+│   │   │   ├── GenerationPreview.vue # Preview with carousels
+│   │   │   ├── GlassCard.vue       # Glassmorphism card wrapper
+│   │   │   ├── ImageCarousel.vue   # Image variants carousel
+│   │   │   ├── PreviewModal.vue    # Send confirmation modal
+│   │   │   ├── SnowBackground.vue  # Static tsParticles snow
+│   │   │   ├── SnowGlobe.vue       # Interactive canvas snow with hidden objects
+│   │   │   ├── SnowflakeGame.vue   # Easter egg game component
+│   │   │   └── TextCarousel.vue    # Text variants carousel
+│   │   ├── composables/
+│   │   │   └── useParticles.ts     # tsParticles configuration
+│   │   ├── router/
+│   │   │   └── index.ts            # Vue Router with auth guards
+│   │   ├── stores/
+│   │   │   ├── auth.ts             # Pinia auth store
+│   │   │   └── card.ts             # Pinia card state management
+│   │   ├── types/
+│   │   │   └── index.ts            # TypeScript types & enums
+│   │   ├── views/
+│   │   │   ├── HomeView.vue        # Main card creation page
+│   │   │   ├── LoginView.vue       # Password login page
+│   │   │   └── SuccessView.vue     # Success screen after send
 │   │   ├── assets/
 │   │   │   └── styles/
-│   │   │       ├── main.css
-│   │   │       └── christmas.css
-│   │   ├── App.vue
-│   │   └── main.ts
+│   │   │       └── main.css        # Global styles (Winter Night Theme)
+│   │   ├── App.vue                 # Root component with ambient orbs
+│   │   ├── main.ts                 # Vue initialization
+│   │   └── vite-env.d.ts           # Vite type definitions
 │   ├── Dockerfile
 │   ├── nginx.conf
 │   ├── package.json
 │   ├── tailwind.config.js
-│   └── vite.config.ts
+│   ├── vite.config.ts
+│   └── tsconfig.json
 ├── docker-compose.yml
 ├── .env.example
 ├── .memory_bank/
-└── SRS.md
+└── CLAUDE.md
 ```
 
 ---
@@ -496,11 +563,17 @@ class CardGenerationRequest(BaseModel):
 
 ## API Endpoints Structure
 
-### Public API (no auth required)
+### Authentication
+```
+POST /api/v1/auth/verify         # Password authentication
+```
+
+### Card Operations (protected routes)
 ```
 POST /api/v1/cards/generate      # Generate card (text + image)
 POST /api/v1/cards/regenerate    # Regenerate text or image
 POST /api/v1/cards/send          # Send card to Telegram
+GET  /api/v1/cards/images/{session_id}/{image_id}  # Get generated image
 GET  /api/v1/employees           # Get employee list for autocomplete
 GET  /health                     # Health check
 ```
@@ -562,7 +635,7 @@ strict = true
 
 ---
 
-**Last Updated**: 2025-12-09
+**Last Updated**: 2025-12-11
 **Python Version**: 3.11+
 **Framework**: FastAPI + Vue.js 3
 **Deployment**: Docker Compose

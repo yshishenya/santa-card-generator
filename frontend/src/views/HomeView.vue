@@ -11,7 +11,7 @@ const showPreview = computed(() => cardStore.hasGeneration)
 
 <template>
   <div class="space-y-8">
-    <!-- Page title with aurora styling -->
+    <!-- Page title with festive styling -->
     <div class="text-center mb-4">
       <div class="inline-block relative mb-4">
         <span class="text-5xl">🎄</span>
@@ -20,8 +20,8 @@ const showPreview = computed(() => cardStore.hasGeneration)
       <h1 class="text-4xl md:text-5xl font-bold text-gradient mb-3">
         Новогодняя открытка
       </h1>
-      <p class="text-lg text-winter-snow/70 max-w-md mx-auto">
-        Создайте персональное поздравление с помощью <span class="text-aurora-cyan font-medium">AI</span>
+      <p class="text-lg text-winter-text-secondary max-w-md mx-auto">
+        Создайте персональное поздравление с помощью <span class="text-christmas-gold font-semibold">AI</span>
       </p>
     </div>
 

@@ -21,7 +21,8 @@ export enum ImageStyle {
   DIGITAL_ART = 'digital_art',  // Цифровая живопись
   PIXEL_ART = 'pixel_art',      // Пиксель-арт
   SPACE = 'space',              // Космическая фантастика
-  MOVIE = 'movie'               // Кадр из фильма
+  MOVIE = 'movie',              // Кадр из фильма
+  HYPERREALISM = 'hyperrealism' // Гиперреализм
 }
 
 // Human-readable labels for image styles
@@ -30,6 +31,7 @@ export const IMAGE_STYLE_LABELS: Record<ImageStyle, string> = {
   [ImageStyle.SPACE]: 'Космическая фантастика',
   [ImageStyle.PIXEL_ART]: 'Пиксель-арт',
   [ImageStyle.MOVIE]: 'Кадр из фильма',
+  [ImageStyle.HYPERREALISM]: 'Гиперреализм',
 }
 
 // Employee data

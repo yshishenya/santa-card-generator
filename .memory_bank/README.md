@@ -55,24 +55,39 @@ santa/
 ├── backend/                    # FastAPI Backend (Docker container)
 │   ├── src/
 │   │   ├── api/               # REST API endpoints
+│   │   │   ├── auth.py        # Password authentication
 │   │   │   ├── cards.py       # Card generation endpoints
-│   │   │   └── employees.py   # Employee list endpoint
+│   │   │   ├── employees.py   # Employee list endpoint
+│   │   │   └── dependencies.py # Rate limiting
 │   │   ├── core/              # Business logic
+│   │   │   ├── card_service.py
+│   │   │   ├── session_manager.py
+│   │   │   └── exceptions.py
 │   │   ├── integrations/      # Gemini & Telegram clients
 │   │   ├── models/            # Pydantic models
 │   │   ├── repositories/      # Data access (JSON file)
 │   │   └── config.py          # Settings
 │   ├── data/
-│   │   └── employees.json     # Employee list (from Excel)
+│   │   └── employees.json     # 61 employees from Excel
 │   └── Dockerfile
 ├── frontend/                   # Vue.js Frontend (Docker container)
 │   ├── src/
 │   │   ├── components/        # Vue components
-│   │   │   ├── SnowBackground.vue
-│   │   │   ├── GlassCard.vue
 │   │   │   ├── CardForm.vue
-│   │   │   └── *Carousel.vue
+│   │   │   ├── GenerationPreview.vue
+│   │   │   ├── TextCarousel.vue
+│   │   │   ├── ImageCarousel.vue
+│   │   │   ├── PreviewModal.vue
+│   │   │   ├── SnowGlobe.vue  # Interactive canvas snow
+│   │   │   └── GlassCard.vue
+│   │   ├── stores/            # Pinia stores
+│   │   │   ├── auth.ts
+│   │   │   └── card.ts
+│   │   ├── router/
 │   │   └── views/
+│   │       ├── HomeView.vue
+│   │       ├── LoginView.vue
+│   │       └── SuccessView.vue
 │   ├── Dockerfile
 │   └── nginx.conf
 ├── docker-compose.yml          # Orchestration
@@ -88,9 +103,9 @@ santa/
 |----------|--------|-----------|
 | Admin panel | **NOT NEEDED** | Employee list loaded once from Excel |
 | Deployment | **Docker Compose** | Simple, reproducible deployment |
-| UI Theme | **Winter/Christmas** | Snow, glassmorphism, festive colors |
+| UI Theme | **Winter Night** | Blue accent, snow effects, glassmorphism |
 | Employee data | **JSON file** | No database needed for MVP |
-| Auth | **None** | Public tool for employees |
+| Auth | **Password** | Simple protection via APP_PASSWORD env var |
 
 ---
 
@@ -98,9 +113,11 @@ santa/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| POST | `/api/v1/auth/verify` | Password authentication |
 | POST | `/api/v1/cards/generate` | Generate card |
 | POST | `/api/v1/cards/regenerate` | Regenerate text/image |
 | POST | `/api/v1/cards/send` | Send to Telegram |
+| GET | `/api/v1/cards/images/{session_id}/{image_id}` | Get image |
 | GET | `/api/v1/employees` | Get employee list |
 | GET | `/health` | Health check |
 
@@ -124,23 +141,28 @@ santa/
 | `pixel_art` | Пиксель-арт |
 | `space` | Космическая фантастика |
 | `movie` | Кадр из фильма |
+| `hyperrealism` | Гиперреализм |
 
-### Christmas Color Palette
+### Winter Night Color Palette
 | Color | Hex | Usage |
 |-------|-----|-------|
-| Red | `#DC2626` | Primary, buttons |
-| Green | `#16A34A` | Success, icons |
-| Gold | `#F59E0B` | Accents |
-| Dark Blue | `#0F172A` | Background |
-| Snow White | `#F8FAFC` | Text |
+| Accent Blue | `#3382FE` | Buttons, highlights |
+| Red | `#E25555` | Festive accents |
+| Green | `#4A9F4A` | Pine green |
+| Background | `#0B1929` | Deep night sky |
+| Text Primary | `#F0F8FF` | Main text |
+| Text Secondary | `#B8D4F0` | Secondary text |
 
 ---
 
 ## Environment Variables
 
 ```bash
-# Gemini API
+# Gemini API (via LiteLLM Proxy)
 GEMINI_API_KEY=...
+GEMINI_BASE_URL=https://litellm.pro-4.ru/v1
+GEMINI_TEXT_MODEL=gemini-2.5-flash
+GEMINI_IMAGE_MODEL=gemini/gemini-2.5-flash-image-preview
 
 # Telegram
 TELEGRAM_BOT_TOKEN=...
@@ -148,6 +170,7 @@ TELEGRAM_CHAT_ID=...
 TELEGRAM_TOPIC_ID=...
 
 # Application
+APP_PASSWORD=...           # Required password for login
 DEBUG=false
 LOG_LEVEL=INFO
 MAX_REGENERATIONS=3
@@ -186,7 +209,7 @@ docker compose up --build
 
 ## Waiting For
 
-- [ ] Excel файл со списком сотрудников (от пользователя)
+- [x] ~~Excel файл со списком сотрудников~~ (61 сотрудник добавлен)
 
 ---
 
@@ -201,5 +224,5 @@ docker compose up --build
 
 ---
 
-**Last Updated**: 2023-11-26
+**Last Updated**: 2025-12-11
 **Deployment**: Docker Compose

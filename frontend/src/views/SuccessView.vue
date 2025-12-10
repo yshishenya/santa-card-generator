@@ -36,7 +36,7 @@ const createAnother = (): void => {
   <div class="text-center space-y-8 py-12">
     <!-- Success icon -->
     <div class="flex justify-center">
-      <div class="w-24 h-24 bg-gradient-to-br from-aurora-purple to-aurora-cyan rounded-full flex items-center justify-center animate-glow-pulse shadow-lg shadow-aurora-purple/30">
+      <div class="w-24 h-24 bg-gradient-to-br from-christmas-gold to-christmas-green rounded-full flex items-center justify-center animate-glow-pulse shadow-lg shadow-christmas-gold/30">
         <i class="pi pi-check text-5xl text-white"></i>
       </div>
     </div>
@@ -46,7 +46,7 @@ const createAnother = (): void => {
       <h1 class="text-4xl md:text-5xl font-bold text-gradient">
         Открытка отправлена!
       </h1>
-      <p class="text-xl text-winter-snow/70">
+      <p class="text-xl text-winter-text-secondary">
         Ваше новогоднее поздравление успешно доставлено в Telegram
       </p>
     </div>
@@ -73,7 +73,7 @@ const createAnother = (): void => {
     </div>
 
     <!-- Auto redirect message -->
-    <p class="text-sm text-winter-snow/50">
+    <p class="text-sm text-winter-text-muted">
       Автоматический переход на главную через 5 секунд...
     </p>
   </div>

@@ -142,31 +142,32 @@
 ```
 backend/
 ├── src/
-│   ├── api/                 # REST API endpoints ✅
-│   │   ├── cards.py         # POST /generate, /regenerate, /send, GET /images
-│   │   ├── employees.py     # GET /employees
-│   │   └── dependencies.py  # Dependency injection
-│   ├── core/                # Business logic ✅
-│   │   ├── card_service.py  # Main service orchestrator
-│   │   ├── session_manager.py # In-memory session storage
-│   │   └── exceptions.py    # Service exceptions
-│   ├── integrations/        # External services ✅
-│   │   ├── gemini.py        # Google Gemini AI client
-│   │   ├── telegram.py      # Telegram Bot client
-│   │   └── exceptions.py    # Integration exceptions
-│   ├── models/              # Pydantic models ✅
-│   │   ├── card.py          # Card request/response models
-│   │   ├── employee.py      # Employee model
-│   │   └── response.py      # Generic API response
-│   ├── repositories/        # Data access ✅
-│   │   └── employee_repo.py # JSON file repository
-│   ├── config.py            # Settings ✅
-│   └── main.py              # FastAPI application ✅
+│   ├── api/                    # REST API endpoints ✅
+│   │   ├── auth.py             # POST /auth/verify (password authentication)
+│   │   ├── cards.py            # POST /generate, /regenerate, /send, GET /images
+│   │   ├── employees.py        # GET /employees
+│   │   └── dependencies.py     # Dependency injection (rate limiting)
+│   ├── core/                   # Business logic ✅
+│   │   ├── card_service.py     # Main service orchestrator
+│   │   ├── session_manager.py  # In-memory session storage
+│   │   └── exceptions.py       # Service exceptions
+│   ├── integrations/           # External services ✅
+│   │   ├── gemini.py           # Google Gemini AI client (text & image)
+│   │   ├── telegram.py         # Telegram Bot client
+│   │   └── exceptions.py       # Integration exceptions
+│   ├── models/                 # Pydantic models ✅
+│   │   ├── card.py             # Card request/response models
+│   │   ├── employee.py         # Employee model
+│   │   └── response.py         # Generic API response
+│   ├── repositories/           # Data access ✅
+│   │   └── employee_repo.py    # JSON file repository
+│   ├── config.py               # Settings ✅
+│   └── main.py                 # FastAPI application ✅
 ├── data/
-│   └── employees.json       # Sample employee data ✅
-├── Dockerfile               # Production Docker image ✅
-├── pyproject.toml           # Poetry dependencies ✅
-└── .env.example             # Environment template ✅
+│   └── employees.json          # 61 employees from Excel ✅
+├── Dockerfile                  # Production Docker image ✅
+├── pyproject.toml              # Poetry dependencies ✅
+└── .env.example                # Environment template ✅
 ```
 
 ### Frontend Architecture
@@ -175,35 +176,40 @@ backend/
 frontend/
 ├── src/
 │   ├── api/
-│   │   └── client.ts        # Axios HTTP client ✅
+│   │   └── client.ts             # Axios HTTP client ✅
 │   ├── components/
-│   │   ├── SnowBackground.vue    # tsParticles snow ✅
-│   │   ├── GlassCard.vue         # Glassmorphism card ✅
-│   │   ├── CardForm.vue          # Generation form ✅
+│   │   ├── CardForm.vue          # Card creation form ✅
 │   │   ├── GenerationPreview.vue # Preview with carousels ✅
-│   │   ├── TextCarousel.vue      # Text variants carousel ✅
-│   │   └── ImageCarousel.vue     # Image variants carousel ✅
-│   ├── views/
-│   │   ├── HomeView.vue     # Main page ✅
-│   │   └── SuccessView.vue  # Success screen ✅
-│   ├── stores/
-│   │   └── card.ts          # Pinia state management ✅
-│   ├── router/
-│   │   └── index.ts         # Vue Router ✅
+│   │   ├── GlassCard.vue         # Glassmorphism card wrapper ✅
+│   │   ├── ImageCarousel.vue     # Image variants carousel ✅
+│   │   ├── PreviewModal.vue      # Send confirmation modal ✅
+│   │   ├── SnowBackground.vue    # Static tsParticles snow ✅
+│   │   ├── SnowGlobe.vue         # Interactive canvas snow with hidden objects ✅
+│   │   ├── SnowflakeGame.vue     # Easter egg game component ✅
+│   │   └── TextCarousel.vue      # Text variants carousel ✅
 │   ├── composables/
-│   │   └── useParticles.ts  # Snow config ✅
+│   │   └── useParticles.ts       # tsParticles configuration ✅
+│   ├── router/
+│   │   └── index.ts              # Vue Router with auth guards ✅
+│   ├── stores/
+│   │   ├── auth.ts               # Pinia auth store ✅
+│   │   └── card.ts               # Pinia card state management ✅
 │   ├── types/
-│   │   └── index.ts         # TypeScript types ✅
+│   │   └── index.ts              # TypeScript types & enums ✅
+│   ├── views/
+│   │   ├── HomeView.vue          # Main card creation page ✅
+│   │   ├── LoginView.vue         # Password login page ✅
+│   │   └── SuccessView.vue       # Success screen after send ✅
 │   ├── assets/
-│   │   └── styles/main.css  # Global styles ✅
-│   ├── App.vue              # Root component ✅
-│   └── main.ts              # Vue initialization ✅
-├── Dockerfile               # Multi-stage build ✅
-├── nginx.conf               # Nginx config ✅
-├── package.json             # Dependencies ✅
-├── tailwind.config.js       # Tailwind + daisyUI ✅
-├── vite.config.ts           # Vite config ✅
-└── tsconfig.json            # TypeScript config ✅
+│   │   └── styles/main.css       # Global styles (Winter Night Theme) ✅
+│   ├── App.vue                   # Root component with ambient orbs ✅
+│   └── main.ts                   # Vue initialization ✅
+├── Dockerfile                    # Multi-stage build ✅
+├── nginx.conf                    # Nginx config ✅
+├── package.json                  # Dependencies ✅
+├── tailwind.config.js            # Tailwind + daisyUI ✅
+├── vite.config.ts                # Vite config ✅
+└── tsconfig.json                 # TypeScript config ✅
 ```
 
 ### Docker Configuration
@@ -233,6 +239,7 @@ santa/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| POST | `/api/v1/auth/verify` | Password authentication |
 | POST | `/api/v1/cards/generate` | Generate card with text & image variants |
 | POST | `/api/v1/cards/regenerate` | Regenerate specific variant |
 | POST | `/api/v1/cards/send` | Send to Telegram |
@@ -271,4 +278,4 @@ docker compose up --build
 
 ---
 
-**Last Updated**: 2025-12-09
+**Last Updated**: 2025-12-11
