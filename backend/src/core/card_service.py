@@ -110,21 +110,7 @@ class TelegramClient(Protocol):
         original_message: str | None = None,
         recipient_telegram: str | None = None,
     ) -> int:
-        """Send a greeting card to Telegram.
-
-        Args:
-            image_bytes: Image data to send.
-            recipient: Name of the card recipient.
-            reason: Reason for gratitude (optional).
-            message: The greeting message text (or AI text if original_message provided).
-            sender: Name of the sender (optional, anonymous if None).
-            correlation_id: Correlation ID for logging.
-            original_message: Original user text to include alongside AI text.
-            recipient_telegram: Telegram username (@user) or user ID for mention.
-
-        Returns:
-            Telegram message ID.
-        """
+        """Send a greeting card to Telegram."""
         ...
 
 
@@ -427,16 +413,19 @@ class CardService:
 
     async def send_card(self, request: SendCardRequest) -> SendCardResponse:
         """Send selected card to Telegram.
-
-        This method retrieves the selected text and image from the session
-        and sends them as a greeting card message to Telegram.
-
+        
+        This method retrieves the selected text and image from the session, validates
+        the session state,  and sends them as a greeting card message to Telegram. It
+        handles various scenarios, including  using original text or AI-generated
+        variants, and checks for the existence of the selected image  variant before
+        sending the message.
+        
         Args:
-            request: Request containing session ID and selected variant indices.
-
+            request (SendCardRequest): Request containing session ID and selected variant indices.
+        
         Returns:
-            SendCardResponse with success status and Telegram message ID.
-
+            SendCardResponse: Response with success status and Telegram message ID.
+        
         Raises:
             SessionNotFoundError: If session ID is not found.
             SessionExpiredError: If the session has expired.
