@@ -108,6 +108,7 @@ class TelegramClient(Protocol):
         sender: str | None,
         correlation_id: str | None = None,
         original_message: str | None = None,
+        recipient_telegram: str | None = None,
     ) -> int:
         """Send a greeting card to Telegram.
 
@@ -119,6 +120,7 @@ class TelegramClient(Protocol):
             sender: Name of the sender (optional, anonymous if None).
             correlation_id: Correlation ID for logging.
             original_message: Original user text to include alongside AI text.
+            recipient_telegram: Telegram username (@user) or user ID for mention.
 
         Returns:
             Telegram message ID.
@@ -519,6 +521,15 @@ class CardService:
             )
             raise VariantNotFoundError("image", request.selected_image_index)
 
+        # Look up recipient's telegram username for mention
+        recipient_telegram: Optional[str] = None
+        employee = await self._employee_repo.get_by_name(original_request.recipient)
+        if employee and employee.telegram:
+            recipient_telegram = employee.telegram
+            logger.info(
+                f"[{correlation_id}] Found telegram for {original_request.recipient}: {recipient_telegram}"
+            )
+
         # Send to Telegram
         try:
             message_id = await self._telegram_client.send_card(
@@ -529,6 +540,7 @@ class CardService:
                 sender=original_request.sender,
                 correlation_id=correlation_id,
                 original_message=original_message_for_telegram,
+                recipient_telegram=recipient_telegram,
             )
 
             logger.info(

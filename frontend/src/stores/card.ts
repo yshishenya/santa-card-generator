@@ -24,6 +24,8 @@ export const useCardStore = defineStore('card', () => {
   // State
   const generationId = ref<string | null>(null)
   const recipient = ref<string | null>(null)
+  const sender = ref<string | null>(null)  // Sender name (От кого)
+  const reason = ref<string | null>(null)  // Reason for gratitude (За что)
   const originalText = ref<string | null>(null)  // User's original message
   const textVariants = ref<TextVariant[]>([])  // 5 AI variants (one per style)
   const imageVariants = ref<ImageVariant[]>([])  // 4 variants (one per style)
@@ -86,6 +88,8 @@ export const useCardStore = defineStore('card', () => {
 
       generationId.value = response.generation_id
       recipient.value = request.recipient
+      sender.value = request.sender ?? null
+      reason.value = request.reason ?? null
       originalText.value = response.original_text
       textVariants.value = response.text_variants
       imageVariants.value = response.image_variants
@@ -232,6 +236,8 @@ export const useCardStore = defineStore('card', () => {
   function reset(): void {
     generationId.value = null
     recipient.value = null
+    sender.value = null
+    reason.value = null
     originalText.value = null
     textVariants.value = []
     imageVariants.value = []
@@ -256,6 +262,8 @@ export const useCardStore = defineStore('card', () => {
     // State
     generationId,
     recipient,
+    sender,
+    reason,
     originalText,
     textVariants,
     imageVariants,

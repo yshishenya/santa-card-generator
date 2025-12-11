@@ -57,6 +57,22 @@ logger = logging.getLogger(__name__)
 # Telegram caption length limit
 MAX_CAPTION_LENGTH = 1024
 
+
+def escape_html(text: str) -> str:
+    """Escape special characters for Telegram HTML mode.
+
+    Args:
+        text: Text to escape
+
+    Returns:
+        Text with escaped HTML special characters
+    """
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
 # Retry configuration
 MAX_RETRY_ATTEMPTS = 3
 RETRY_MIN_WAIT_SECONDS = 2
@@ -117,6 +133,7 @@ class TelegramClient:
         sender: Optional[str],
         correlation_id: Optional[str] = None,
         original_message: Optional[str] = None,
+        recipient_telegram: Optional[str] = None,
     ) -> int:
         """Send greeting card to Telegram chat.
 
@@ -131,6 +148,7 @@ class TelegramClient:
             sender: Optional sender name (None for anonymous)
             correlation_id: Optional request tracking ID for logging
             original_message: Optional original user text to include alongside AI text
+            recipient_telegram: Optional Telegram username (@user) or user ID for mention
 
         Returns:
             Telegram message ID of the sent message
@@ -148,7 +166,8 @@ class TelegramClient:
             ...     recipient="Иванов Иван",
             ...     reason="За отличную работу",
             ...     message="Спасибо за твой вклад!",
-            ...     sender="Петров Петр"
+            ...     sender="Петров Петр",
+            ...     recipient_telegram="@ivanov"
             ... )
             >>> print(f"Sent: {message_id}")
         """
@@ -158,6 +177,7 @@ class TelegramClient:
             message=message,
             sender=sender,
             original_message=original_message,
+            recipient_telegram=recipient_telegram,
         )
 
         log_extra = {
@@ -307,7 +327,7 @@ class TelegramClient:
             "chat_id": self.chat_id,
             "photo": photo,
             "caption": caption,
-            "parse_mode": ParseMode.MARKDOWN,
+            "parse_mode": ParseMode.HTML,
         }
         if self.topic_id:
             send_kwargs["message_thread_id"] = self.topic_id
@@ -323,11 +343,16 @@ class TelegramClient:
         message: str,
         sender: Optional[str],
         original_message: Optional[str] = None,
+        recipient_telegram: Optional[str] = None,
     ) -> str:
         """Format caption for Telegram message according to specification.
 
-        Creates a structured caption. If original_message is provided,
+        Creates a structured caption using HTML formatting. If original_message is provided,
         shows both texts with labels "Слова благодарности" and "ИИ-креатив".
+
+        Supports two mention formats:
+        - @username: Direct mention (e.g., @ivanov)
+        - Numeric ID: Text mention via tg://user?id= link
 
         Args:
             recipient: Name of the card recipient
@@ -335,27 +360,47 @@ class TelegramClient:
             message: The gratitude message text (AI text if original_message provided)
             sender: Optional sender name (None for anonymous)
             original_message: Optional original user text to show alongside AI text
+            recipient_telegram: Optional Telegram username (@user) or user ID for mention
 
         Returns:
             Formatted caption string, truncated to MAX_CAPTION_LENGTH if necessary
         """
-        # Build caption parts
-        parts = [f"**Кому:** {recipient}"]
+        # Build caption parts with optional telegram mention
+        # Escape HTML special characters in user-provided content
+        escaped_recipient = escape_html(recipient)
+
+        # Format recipient with telegram mention
+        if recipient_telegram:
+            if recipient_telegram.startswith("@"):
+                # @username format - use as-is (Telegram will recognize it)
+                mention_text = f" ({recipient_telegram})"
+            else:
+                # Numeric ID - use tg://user?id= link for text mention
+                mention_text = f' (<a href="tg://user?id={recipient_telegram}">написать</a>)'
+        else:
+            mention_text = ""
+
+        parts = [f"<b>Кому:</b> {escaped_recipient}{mention_text}"]
 
         if reason:
-            parts.append(f"\n\n**За что:** {reason}")
+            escaped_reason = escape_html(reason)
+            parts.append(f"\n\n<b>За что:</b> {escaped_reason}")
 
         # Format message section based on whether we have both texts
+        # Escape user-provided messages to prevent HTML parsing errors
+        escaped_message = escape_html(message)
         if original_message:
             # Both original and AI text
-            parts.append(f"\n\n**Слова благодарности:**\n{original_message}")
-            parts.append(f"\n\n**ИИ-креатив:**\n{message}")
+            escaped_original = escape_html(original_message)
+            parts.append(f"\n\n<b>Слова благодарности:</b>\n{escaped_original}")
+            parts.append(f"\n\n<b>ИИ-креатив:</b>\n{escaped_message}")
         else:
             # Only one message (either original or AI)
-            parts.append(f"\n\n{message}")
+            parts.append(f"\n\n{escaped_message}")
 
         if sender:
-            parts.append(f"\n\n**От кого:** {sender}")
+            escaped_sender = escape_html(sender)
+            parts.append(f"\n\n<b>От кого:</b> {escaped_sender}")
 
         caption = "".join(parts)
 
@@ -366,13 +411,13 @@ class TelegramClient:
             available_length = MAX_CAPTION_LENGTH - len(suffix)
 
             # Try to keep the structure by truncating messages
-            header = f"**Кому:** {recipient}"
+            header = f"<b>Кому:</b> {escaped_recipient}{mention_text}"
             if reason:
-                header += f"\n\n**За что:** {reason}"
+                header += f"\n\n<b>За что:</b> {escaped_reason}"
 
             footer = ""
             if sender:
-                footer = f"\n\n**От кого:** {sender}"
+                footer = f"\n\n<b>От кого:</b> {escaped_sender}"
 
             # Calculate available space for messages
             fixed_parts_length = len(header) + len(footer) + 4
@@ -383,26 +428,26 @@ class TelegramClient:
                 half_length = messages_max_length // 2 - 30  # Account for labels
                 if half_length > 20:
                     truncated_original = (
-                        original_message[:half_length] + suffix
+                        escape_html(original_message[:half_length]) + suffix
                         if len(original_message) > half_length
-                        else original_message
+                        else escaped_original
                     )
                     truncated_ai = (
-                        message[:half_length] + suffix
+                        escape_html(message[:half_length]) + suffix
                         if len(message) > half_length
-                        else message
+                        else escaped_message
                     )
                     caption = (
                         f"{header}\n\n"
-                        f"**Слова благодарности:**\n{truncated_original}\n\n"
-                        f"**ИИ-креатив:**\n{truncated_ai}"
+                        f"<b>Слова благодарности:</b>\n{truncated_original}\n\n"
+                        f"<b>ИИ-креатив:</b>\n{truncated_ai}"
                         f"{footer}"
                     )
                 else:
                     caption = caption[:available_length] + suffix
             else:
                 if messages_max_length > 10:
-                    truncated_message = message[:messages_max_length] + suffix
+                    truncated_message = escape_html(message[:messages_max_length]) + suffix
                     caption = f"{header}\n\n{truncated_message}{footer}"
                 else:
                     caption = caption[:available_length] + suffix

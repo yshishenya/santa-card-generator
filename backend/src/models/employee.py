@@ -13,6 +13,10 @@ class Employee(BaseModel):
     id: str = Field(..., description="Unique employee identifier")
     name: str = Field(..., description="Full name of the employee", min_length=1)
     department: Optional[str] = Field(None, description="Department name (optional)")
+    telegram: Optional[str] = Field(
+        None,
+        description="Telegram username (@username) or user ID for mention"
+    )
 
     class Config:
         """Pydantic model configuration."""
@@ -22,5 +26,6 @@ class Employee(BaseModel):
                 "id": "1",
                 "name": "Иванов Иван Иванович",
                 "department": "IT",
+                "telegram": "@ivanov_ivan",
             }
         }

@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCardStore } from '@/stores/card'
-import { TEXT_STYLE_LABELS, IMAGE_STYLE_LABELS } from '@/types'
 import GlassCard from './GlassCard.vue'
 
 defineProps<{
@@ -16,28 +15,28 @@ const emit = defineEmits<{
 const router = useRouter()
 const cardStore = useCardStore()
 
-// Get display text - either original or AI variant
-const displayText = computed(() => {
-  if (cardStore.useOriginalText) {
-    return cardStore.originalText
-  }
-  return cardStore.selectedTextVariant?.content ?? null
-})
-
-// Get text label
-const textLabel = computed(() => {
-  if (cardStore.useOriginalText) {
-    return 'Ваш текст'
-  }
-  const variant = cardStore.selectedTextVariant
-  return variant ? TEXT_STYLE_LABELS[variant.style] : ''
-})
-
-// Get image URL and label
+// Get selected image
 const selectedImage = computed(() => cardStore.selectedImageVariant)
-const imageLabel = computed(() => {
-  return selectedImage.value ? IMAGE_STYLE_LABELS[selectedImage.value.style] : ''
+
+// Determine what text to show
+const showBothTexts = computed(() => {
+  // Show both texts when: using AI text AND including original text AND have original text
+  return !cardStore.useOriginalText && cardStore.includeOriginalText && cardStore.originalText
 })
+
+const showOnlyOriginal = computed(() => {
+  // Show only original when: using original text (user chose to not use AI)
+  return cardStore.useOriginalText
+})
+
+const showOnlyAI = computed(() => {
+  // Show only AI text when: using AI text AND NOT including original
+  return !cardStore.useOriginalText && !cardStore.includeOriginalText
+})
+
+// Get display texts
+const originalTextDisplay = computed(() => cardStore.originalText)
+const aiTextDisplay = computed(() => cardStore.selectedTextVariant?.content ?? null)
 
 // Handle send
 const handleSend = async () => {
@@ -79,7 +78,7 @@ const handleBackdropClick = (event: MouseEvent) => {
           <div class="sticky top-0 z-10 bg-winter-bg-card/95 backdrop-blur p-4 border-b border-christmas-gold/20 flex items-center justify-between">
             <h2 class="text-2xl font-bold text-gradient flex items-center gap-2">
               <i class="pi pi-eye text-christmas-gold"></i>
-              Предпросмотр открытки
+              Предпросмотр
             </h2>
             <button
               @click="handleClose"
@@ -89,59 +88,68 @@ const handleBackdropClick = (event: MouseEvent) => {
             </button>
           </div>
 
-          <!-- Content -->
-          <div class="p-6 space-y-6">
-            <!-- Recipient -->
-            <div class="text-center">
-              <span class="text-winter-text-muted">Для:</span>
-              <span class="text-christmas-gold font-bold ml-2 text-lg">{{ cardStore.recipient }}</span>
-            </div>
-
-            <!-- Selected image -->
-            <div v-if="selectedImage" class="space-y-2">
-              <div class="flex items-center gap-2">
-                <span class="badge badge-lg bg-christmas-red/15 text-christmas-red-light border-christmas-red/30">
-                  <i class="pi pi-image mr-1"></i>
-                  {{ imageLabel }}
-                </span>
-              </div>
-              <div class="aspect-[3/2] bg-winter-bg-secondary rounded-xl overflow-hidden ring-1 ring-christmas-gold/20">
+          <!-- Telegram-style preview -->
+          <div class="p-4">
+            <div class="bg-[#0e1621] rounded-2xl overflow-hidden shadow-xl max-w-md mx-auto">
+              <!-- Image -->
+              <div v-if="selectedImage" class="aspect-[3/2]">
                 <img
                   :src="selectedImage.url"
-                  :alt="imageLabel"
+                  alt="Открытка"
                   class="w-full h-full object-cover"
                 />
               </div>
+
+              <!-- Caption (Telegram style) -->
+              <div class="p-4 text-[15px] leading-relaxed text-white/90 space-y-3">
+                <!-- Кому -->
+                <p>
+                  <span class="font-semibold">Кому:</span>
+                  {{ cardStore.recipient }}
+                </p>
+
+                <!-- За что -->
+                <p v-if="cardStore.reason">
+                  <span class="font-semibold">За что:</span>
+                  {{ cardStore.reason }}
+                </p>
+
+                <!-- Text content -->
+                <template v-if="showBothTexts">
+                  <!-- Both original and AI text -->
+                  <div>
+                    <p class="font-semibold mb-1">Слова благодарности:</p>
+                    <p class="whitespace-pre-wrap">{{ originalTextDisplay }}</p>
+                  </div>
+                  <div>
+                    <p class="font-semibold mb-1">ИИ-креатив:</p>
+                    <p class="whitespace-pre-wrap">{{ aiTextDisplay }}</p>
+                  </div>
+                </template>
+
+                <template v-else-if="showOnlyOriginal">
+                  <!-- Only original text (no header) -->
+                  <p class="whitespace-pre-wrap">{{ originalTextDisplay }}</p>
+                </template>
+
+                <template v-else-if="showOnlyAI">
+                  <!-- Only AI text (no header) -->
+                  <p class="whitespace-pre-wrap">{{ aiTextDisplay }}</p>
+                </template>
+
+                <!-- От кого -->
+                <p v-if="cardStore.sender">
+                  <span class="font-semibold">От кого:</span>
+                  {{ cardStore.sender }}
+                </p>
+              </div>
             </div>
 
-            <!-- Selected text -->
-            <div v-if="displayText" class="space-y-2">
-              <div class="flex items-center gap-2">
-                <span class="badge badge-lg bg-christmas-gold/15 text-christmas-gold border-christmas-gold/30">
-                  <i class="pi pi-align-left mr-1"></i>
-                  {{ textLabel }}
-                </span>
-              </div>
-              <div class="bg-winter-bg-secondary/50 p-4 rounded-xl border border-winter-frost/30">
-                <p class="text-winter-text-primary text-lg leading-relaxed whitespace-pre-wrap">
-                  {{ displayText }}
-                </p>
-              </div>
-
-              <!-- Original text addition indicator -->
-              <div
-                v-if="!cardStore.useOriginalText && cardStore.includeOriginalText && cardStore.originalText"
-                class="bg-christmas-green/10 p-3 rounded-lg border border-christmas-green/20"
-              >
-                <p class="text-christmas-green-light text-sm mb-2">
-                  <i class="pi pi-plus-circle mr-1"></i>
-                  Также будет добавлен ваш текст:
-                </p>
-                <p class="text-winter-text-secondary text-sm whitespace-pre-wrap">
-                  {{ cardStore.originalText }}
-                </p>
-              </div>
-            </div>
+            <!-- Telegram hint -->
+            <p class="text-center text-winter-text-muted text-sm mt-3">
+              <i class="pi pi-info-circle mr-1"></i>
+              Так открытка будет выглядеть в Telegram
+            </p>
           </div>
 
           <!-- Footer -->
@@ -160,7 +168,7 @@ const handleBackdropClick = (event: MouseEvent) => {
             >
               <span v-if="cardStore.isSending" class="loading loading-spinner"></span>
               <i v-else class="pi pi-send"></i>
-              <span>{{ cardStore.isSending ? 'Отправляем...' : 'Отправить в Telegram' }}</span>
+              <span>{{ cardStore.isSending ? 'Отправляем...' : 'Отправить' }}</span>
             </button>
           </div>
         </GlassCard>

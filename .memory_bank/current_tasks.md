@@ -105,6 +105,27 @@
 
 ## Feature Additions
 
+### [FEATURE] Telegram @username mention при отправке открытки ✅
+
+**Дата**: 2025-12-11
+
+**Описание фичи**:
+При отправке открытки в Telegram теперь добавляется @username сотрудника для уведомления получателя.
+
+**Реализация**:
+- Добавлено поле `telegram` в модель `Employee` (опциональное)
+- Обновлён `employees.json` с актуальными telegram username сотрудников (49 записей)
+- Для сотрудников без username используется числовой ID (но в таком случае mention не работает в Telegram)
+- При отправке в Telegram caption формируется как: `**Кому:** Имя Фамилия (@username)`
+
+**Изменённые файлы**:
+- `backend/data/employees.json` — добавлены telegram username для всех сотрудников
+- `backend/src/models/employee.py` — добавлено поле `telegram: Optional[str]`
+- `backend/src/integrations/telegram.py` — добавлен параметр `recipient_telegram` в `send_card()` и `_format_caption()`
+- `backend/src/core/card_service.py` — поиск telegram username сотрудника и передача в Telegram клиент
+
+---
+
 ### [FEATURE] Улучшенный UX выбора текста при AI-стилизации ✅
 
 **Дата**: 2025-12-09
