@@ -57,7 +57,7 @@ export function createSnowflake(state: PhysicsState): Snowflake | null {
 }
 
 /**
- * Create a sparkle at given position
+ * Creates a sparkle at the specified position.
  */
 export function createSparkle(
   sparkles: Sparkle[],
@@ -82,7 +82,7 @@ export function createSparkle(
 }
 
 /**
- * Create silver sparkle burst for object clicks
+ * Creates a burst of silver sparkles at the specified coordinates.
  */
 export function createSilverSparkleBurst(
   sparkles: Sparkle[],
@@ -107,7 +107,12 @@ export function createSilverSparkleBurst(
 }
 
 /**
- * Update all snowflakes - physics, accumulation, removal
+ * Update all snowflakes - physics, accumulation, removal.
+ *
+ * This function iterates through each snowflake in the state, applying physics such as gravity and wind turbulence, and handling interactions with the mouse for magnetism and glow effects. It also manages the accumulation of snowflakes in the grid, ensuring that they are removed when necessary and updating their positions accordingly. Finally, it applies a natural settling effect to the accumulation grid.
+ *
+ * @param state - The current physics state containing snowflakes and their properties.
+ * @returns The number of snowflakes that have settled.
  */
 export function updateSnowflakes(state: PhysicsState): number {
   let settledCount = 0
@@ -228,7 +233,7 @@ export function updateSnowflakes(state: PhysicsState): number {
 }
 
 /**
- * Update all sparkles
+ * Update the position and state of all sparkles.
  */
 export function updateSparkles(sparkles: Sparkle[]): void {
   for (let i = sparkles.length - 1; i >= 0; i--) {

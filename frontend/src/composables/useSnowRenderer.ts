@@ -29,7 +29,7 @@ interface RenderState {
 }
 
 /**
- * Draw cursor magnetic field with silver glow
+ * Draws a cursor magnetic field with a silver glow based on the mouse state.
  */
 function drawCursorField(state: RenderState): void {
   if (!state.mouse.active) return
@@ -51,7 +51,12 @@ function drawCursorField(state: RenderState): void {
 }
 
 /**
- * Draw hidden objects (awakening glow and revealed emoji)
+ * Draws hidden objects with an awakening glow and revealed emoji.
+ *
+ * The function iterates through the hidden objects in the provided state. For each object, it checks if it should display an awakening glow based on its properties and draws a radial gradient. If the object is revealed, it adjusts the context settings and draws the emoji with potential wobble and shadow effects based on its state.
+ *
+ * @param state - The RenderState containing the context and hidden objects to be drawn.
+ * @returns void
  */
 function drawHiddenObjects(state: RenderState): void {
   for (const obj of state.hiddenObjects) {
@@ -144,7 +149,7 @@ function drawAccumulatedSnow(state: RenderState): void {
 }
 
 /**
- * Draw sparkles (both colored and silver)
+ * Draws sparkles on the canvas based on their properties.
  */
 function drawSparkles(state: RenderState): void {
   for (const s of state.sparkles) {
@@ -159,7 +164,7 @@ function drawSparkles(state: RenderState): void {
 }
 
 /**
- * Draw falling snowflakes
+ * Draws falling snowflakes on the canvas.
  */
 function drawSnowflakes(state: RenderState): void {
   for (const flake of state.snowflakes) {
@@ -181,7 +186,7 @@ function drawSnowflakes(state: RenderState): void {
 }
 
 /**
- * Draw score counter
+ * Draws the score counter on the canvas.
  */
 function drawScore(state: RenderState): void {
   state.ctx.fillStyle = 'rgba(255,255,255,0.3)'
@@ -191,7 +196,7 @@ function drawScore(state: RenderState): void {
 }
 
 /**
- * Main render function - draws entire scene
+ * Renders the entire scene by drawing various layers.
  */
 export function render(state: RenderState): void {
   state.ctx.save()
