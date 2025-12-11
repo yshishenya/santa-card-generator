@@ -1,8 +1,7 @@
 import type { ISourceOptions } from 'tsparticles-engine'
 
 /**
- * Enhanced snow particle effect configuration
- * Features: layered depth, realistic movement, subtle sparkle, mouse interaction
+ * Configures particle effects for a snow animation.
  */
 export function useParticlesConfig(): ISourceOptions {
   return {
