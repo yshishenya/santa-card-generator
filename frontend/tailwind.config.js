@@ -10,6 +10,7 @@ export default {
           'red-light': '#FF7B7B',
           'red-dark': '#C44545',
           'red-glow': '#FF9999',
+          label: '#F87171',      // Form label color (coral red)
           green: '#4A9F4A',       // Pine green
           'green-light': '#6BBF6B',
           'green-dark': '#3A7F3A',

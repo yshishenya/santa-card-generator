@@ -46,7 +46,7 @@ export function useParticlesConfig(): ISourceOptions {
       },
       move: {
         enable: true,
-        speed: { min: 0.5, max: 3 },
+        speed: { min: 0.2, max: 1.2 },
         direction: 'bottom',
         random: true,
         straight: false,
@@ -58,8 +58,8 @@ export function useParticlesConfig(): ISourceOptions {
           top: 'out'
         },
         drift: {
-          min: -0.5,
-          max: 0.5
+          min: -0.3,
+          max: 0.3
         }
       },
       wobble: {
@@ -92,13 +92,13 @@ export function useParticlesConfig(): ISourceOptions {
           frequency: 0.03,
           opacity: 1,
           color: {
-            value: '#A855F7'
+            value: '#C0C0C0'
           }
         }
       },
       shadow: {
         enable: true,
-        color: '#A855F7',
+        color: '#E8E8E8',
         blur: 8,
         offset: {
           x: 0,
@@ -119,7 +119,7 @@ export function useParticlesConfig(): ISourceOptions {
           }
         },
         onClick: {
-          enable: true,
+          enable: false,
           mode: 'push'
         },
         resize: true

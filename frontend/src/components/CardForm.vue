@@ -69,7 +69,7 @@ const handleSubmit = async (): Promise<void> => {
     <!-- Recipient field with autocomplete -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-slate-700 text-lg font-medium">Кому <span class="text-christmas-red">*</span></span>
+        <span class="label-text text-christmas-label text-lg font-medium">Кому <span class="text-christmas-red">*</span></span>
       </label>
       <AutoComplete
         v-model="recipient"
@@ -86,7 +86,7 @@ const handleSubmit = async (): Promise<void> => {
     <!-- Sender field -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-slate-700 text-lg font-medium">От кого <span class="text-slate-400">(необязательно)</span></span>
+        <span class="label-text text-christmas-label text-lg font-medium">От кого <span class="text-slate-400">(необязательно)</span></span>
       </label>
       <input
         v-model="sender"
@@ -99,7 +99,7 @@ const handleSubmit = async (): Promise<void> => {
     <!-- Reason field -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-slate-700 text-lg font-medium">За что <span class="text-slate-400">(необязательно)</span></span>
+        <span class="label-text text-christmas-label text-lg font-medium">За что <span class="text-slate-400">(необязательно)</span></span>
         <span class="label-text-alt text-slate-400 text-sm">Макс. 150 символов</span>
       </label>
       <input
@@ -114,7 +114,7 @@ const handleSubmit = async (): Promise<void> => {
     <!-- Message field -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-slate-700 text-lg font-medium">Сообщение <span class="text-slate-400">(необязательно)</span></span>
+        <span class="label-text text-christmas-label text-lg font-medium">Сообщение <span class="text-slate-400">(необязательно)</span></span>
         <span class="label-text-alt text-slate-400 text-sm">Макс. 1000 символов</span>
       </label>
       <textarea
