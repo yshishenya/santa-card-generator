@@ -210,6 +210,41 @@ class SessionManager:
 
         return session.image_regenerations_left
 
+    def set_initial_image_variants(
+        self,
+        session_id: str,
+        variants: List[ImageVariant],
+        image_data: Dict[str, bytes],
+    ) -> int:
+        """Set initial image variants for a session (does not decrement counter).
+
+        Used for initial image generation after user selects styles.
+
+        Args:
+            session_id: Session ID to update.
+            variants: Image variants to set.
+            image_data: Image data dictionary.
+
+        Returns:
+            Number of regenerations remaining.
+
+        Raises:
+            ValueError: If session not found.
+        """
+        session = self.get_session(session_id)
+        if session is None:
+            raise ValueError(f"Session not found: {session_id}")
+
+        session.image_variants = variants
+        session.image_data = image_data
+
+        logger.info(
+            f"Set initial {len(variants)} image variants in session {session_id}, "
+            f"regenerations_left={session.image_regenerations_left}"
+        )
+
+        return session.image_regenerations_left
+
     def get_image_data(self, session_id: str, image_id: str) -> Optional[bytes]:
         """Get image bytes for sending.
 

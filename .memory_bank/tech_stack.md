@@ -32,6 +32,37 @@
 - **Client**: `httpx` с OpenAI-совместимым API форматом
 - **Proxy URL**: Конфигурируется через `GEMINI_BASE_URL`
 
+#### Two-Stage Image Generation Architecture
+Изображения генерируются в два этапа для повышения качества:
+
+1. **Этап 1: Visual Concept Analysis**
+   - Анализ текста благодарности с помощью AI
+   - Извлечение структурированной визуальной концепции
+   - Результат: `VisualConcept` dataclass
+
+2. **Этап 2: Image Generation**
+   - Генерация изображений на основе визуальной концепции
+   - Параллельная генерация для всех 15 стилей
+   - Graceful degradation при ошибках
+
+#### VisualConcept Structure
+```python
+@dataclass
+class VisualConcept:
+    core_theme: str      # teamwork, innovation, leadership, support, etc.
+    visual_metaphor: str # Concrete visual description
+    key_elements: List[str]  # 3-5 elements to include
+    mood: str            # Emotional atmosphere
+
+# Fallback for error handling
+FALLBACK_VISUAL_CONCEPT = VisualConcept(
+    core_theme="appreciation",
+    visual_metaphor="A gift box with a glowing ribbon under a Christmas tree",
+    key_elements=["gift box", "ribbon", "Christmas tree", "soft glow"],
+    mood="festive and grateful",
+)
+```
+
 ### Messaging
 - **Platform**: Telegram Bot API
 - **Library**: `python-telegram-bot` (async) или `aiogram` 3.x
@@ -536,10 +567,22 @@ class TextStyle(str, Enum):
     STANDUP = "standup"      # Дружеский стендап
 
 class ImageStyle(str, Enum):
-    DIGITAL_ART = "digital_art"    # Цифровая живопись
-    PIXEL_ART = "pixel_art"        # Пиксель-арт
-    SPACE = "space"                # Космическая фантастика
-    MOVIE = "movie"                # Кадр из фильма
+    # 15 стилей изображений с two-stage generation
+    KNITTED = "knitted"              # Вязаная текстура
+    MAGIC_REALISM = "magic_realism"  # Магический реализм
+    PIXEL_ART = "pixel_art"          # Пиксель-арт 16-bit
+    VINTAGE_RUSSIAN = "vintage_russian"  # Русская открытка 1910
+    SOVIET_POSTER = "soviet_poster"  # Советский плакат
+    HYPERREALISM = "hyperrealism"    # Гиперреализм
+    DIGITAL_3D = "digital_3d"        # 3D изометрия
+    FANTASY = "fantasy"              # Эпическое фэнтези
+    COMIC_BOOK = "comic_book"        # Комикс
+    WATERCOLOR = "watercolor"        # Акварель
+    CYBERPUNK = "cyberpunk"          # Киберпанк
+    PAPER_CUTOUT = "paper_cutout"    # Бумажная аппликация
+    POP_ART = "pop_art"              # Поп-арт
+    LEGO = "lego"                    # LEGO конструктор
+    LINOCUT = "linocut"              # Линогравюра
 
 class CardGenerationRequest(BaseModel):
     """Request model for card generation."""
@@ -635,7 +678,8 @@ strict = true
 
 ---
 
-**Last Updated**: 2025-12-11
+**Last Updated**: 2025-12-18
 **Python Version**: 3.11+
 **Framework**: FastAPI + Vue.js 3
 **Deployment**: Docker Compose
+**Image Styles**: 15 (two-stage generation)

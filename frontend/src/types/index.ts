@@ -16,23 +16,62 @@ export const TEXT_STYLE_LABELS: Record<TextStyle, string> = {
   [TextStyle.NEWSPAPER]: 'Заметка в газете',
 }
 
-// Image styles for AI generation
+// Image styles for AI generation (all 15 styles matching backend)
 export enum ImageStyle {
-  DIGITAL_ART = 'digital_art',  // Цифровая живопись
-  PIXEL_ART = 'pixel_art',      // Пиксель-арт
-  SPACE = 'space',              // Космическая фантастика
-  MOVIE = 'movie',              // Кадр из фильма
-  HYPERREALISM = 'hyperrealism' // Гиперреализм
+  KNITTED = 'knitted',              // Уютный трикотаж
+  MAGIC_REALISM = 'magic_realism',  // Магический реализм
+  PIXEL_ART = 'pixel_art',          // Пиксель-арт
+  VINTAGE_RUSSIAN = 'vintage_russian', // Винтажная открытка
+  SOVIET_POSTER = 'soviet_poster',  // Советский плакат
+  HYPERREALISM = 'hyperrealism',    // Гиперреализм
+  DIGITAL_3D = 'digital_3d',        // 3D-графика
+  FANTASY = 'fantasy',              // Фэнтези
+  COMIC_BOOK = 'comic_book',        // Комикс
+  WATERCOLOR = 'watercolor',        // Акварель
+  CYBERPUNK = 'cyberpunk',          // Киберпанк
+  PAPER_CUTOUT = 'paper_cutout',    // Бумажная аппликация
+  POP_ART = 'pop_art',              // Поп-арт
+  LEGO = 'lego',                    // LEGO
+  LINOCUT = 'linocut'               // Линогравюра
 }
 
 // Human-readable labels for image styles
 export const IMAGE_STYLE_LABELS: Record<ImageStyle, string> = {
-  [ImageStyle.DIGITAL_ART]: 'Цифровая живопись',
-  [ImageStyle.SPACE]: 'Космическая фантастика',
+  [ImageStyle.KNITTED]: 'Уютный трикотаж',
+  [ImageStyle.MAGIC_REALISM]: 'Магический реализм',
   [ImageStyle.PIXEL_ART]: 'Пиксель-арт',
-  [ImageStyle.MOVIE]: 'Кадр из фильма',
+  [ImageStyle.VINTAGE_RUSSIAN]: 'Винтажная открытка',
+  [ImageStyle.SOVIET_POSTER]: 'Советский плакат',
   [ImageStyle.HYPERREALISM]: 'Гиперреализм',
+  [ImageStyle.DIGITAL_3D]: '3D-графика',
+  [ImageStyle.FANTASY]: 'Фэнтези',
+  [ImageStyle.COMIC_BOOK]: 'Комикс',
+  [ImageStyle.WATERCOLOR]: 'Акварель',
+  [ImageStyle.CYBERPUNK]: 'Киберпанк',
+  [ImageStyle.PAPER_CUTOUT]: 'Бумажная аппликация',
+  [ImageStyle.POP_ART]: 'Поп-арт',
+  [ImageStyle.LEGO]: 'LEGO',
+  [ImageStyle.LINOCUT]: 'Линогравюра',
 }
+
+// All available image styles for selection
+export const ALL_IMAGE_STYLES: ImageStyle[] = [
+  ImageStyle.KNITTED,
+  ImageStyle.MAGIC_REALISM,
+  ImageStyle.PIXEL_ART,
+  ImageStyle.VINTAGE_RUSSIAN,
+  ImageStyle.SOVIET_POSTER,
+  ImageStyle.HYPERREALISM,
+  ImageStyle.DIGITAL_3D,
+  ImageStyle.FANTASY,
+  ImageStyle.COMIC_BOOK,
+  ImageStyle.WATERCOLOR,
+  ImageStyle.CYBERPUNK,
+  ImageStyle.PAPER_CUTOUT,
+  ImageStyle.POP_ART,
+  ImageStyle.LEGO,
+  ImageStyle.LINOCUT,
+]
 
 // Employee data
 export interface Employee {
@@ -40,12 +79,18 @@ export interface Employee {
   telegram_username?: string
 }
 
-// Card generation request (simplified - all styles generated automatically)
+// Card generation request (generates text variants only)
 export interface CardGenerationRequest {
   recipient: string
   sender?: string
   reason?: string
   message?: string
+}
+
+// Generate images request (for selected styles)
+export interface GenerateImagesRequest {
+  session_id: string
+  image_styles: ImageStyle[]
 }
 
 // Text variant with style info
@@ -67,8 +112,14 @@ export interface CardGenerationResponse {
   generation_id: string
   original_text: string | null  // User's original message
   text_variants: TextVariant[]  // 5 AI variants (one per style)
-  image_variants: ImageVariant[]  // 4 variants (one per style)
+  image_variants: ImageVariant[]  // Empty until generate-images called
   remaining_text_regenerations: number
+  remaining_image_regenerations: number
+}
+
+// Generate images response
+export interface GenerateImagesResponse {
+  image_variants: ImageVariant[]
   remaining_image_regenerations: number
 }
 

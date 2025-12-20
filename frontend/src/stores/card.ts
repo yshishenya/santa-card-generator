@@ -4,7 +4,8 @@ import { apiClient, APIError } from '@/api/client'
 import type {
   CardGenerationRequest,
   TextVariant,
-  ImageVariant
+  ImageVariant,
+  ImageStyle
 } from '@/types'
 
 /**
@@ -35,9 +36,11 @@ export const useCardStore = defineStore('card', () => {
   const includeOriginalText = ref<boolean>(true)  // When true, include original text alongside AI text (default: true)
   const remainingTextRegenerations = ref<number>(3)
   const remainingImageRegenerations = ref<number>(3)
+  const selectedImageStyles = ref<ImageStyle[]>([])  // User-selected image styles for generation
 
   // Loading states
   const isGenerating = ref(false)
+  const isGeneratingImages = ref(false)  // For initial image generation
   const isRegeneratingText = ref(false)
   const isRegeneratingImages = ref(false)
   const isSending = ref(false)
@@ -47,8 +50,10 @@ export const useCardStore = defineStore('card', () => {
 
   // Computed
   const hasGeneration = computed(() => generationId.value !== null)
+  const hasImages = computed(() => imageVariants.value.length > 0)
+  const canGenerateImages = computed(() => selectedImageStyles.value.length > 0 && selectedImageStyles.value.length <= 4)
   const canRegenerateText = computed(() => remainingTextRegenerations.value > 0)
-  const canRegenerateImages = computed(() => remainingImageRegenerations.value > 0)
+  const canRegenerateImages = computed(() => remainingImageRegenerations.value > 0 && hasImages.value)
   const hasOriginalText = computed(() => originalText.value !== null && originalText.value.length > 0)
 
   const canSend = computed(() => {
@@ -141,7 +146,55 @@ export const useCardStore = defineStore('card', () => {
   }
 
   /**
-   * Regenerate ALL image variants (4 new variants, one per style)
+   * Toggle image style selection (for initial generation)
+   */
+  function toggleImageStyle(style: ImageStyle): void {
+    const index = selectedImageStyles.value.indexOf(style)
+    if (index === -1) {
+      // Only allow up to 4 styles
+      if (selectedImageStyles.value.length < 4) {
+        selectedImageStyles.value.push(style)
+      }
+    } else {
+      selectedImageStyles.value.splice(index, 1)
+    }
+  }
+
+  /**
+   * Check if an image style is selected
+   */
+  function isImageStyleSelected(style: ImageStyle): boolean {
+    return selectedImageStyles.value.includes(style)
+  }
+
+  /**
+   * Generate images for selected styles (initial generation)
+   */
+  async function generateImages(): Promise<void> {
+    if (!generationId.value || !canGenerateImages.value) return
+
+    try {
+      isGeneratingImages.value = true
+      error.value = null
+
+      const response = await apiClient.generateImages(
+        generationId.value,
+        selectedImageStyles.value
+      )
+
+      imageVariants.value = response.image_variants
+      remainingImageRegenerations.value = response.remaining_image_regenerations
+      selectedImageIndex.value = 0
+    } catch (err) {
+      error.value = getErrorMessage(err, 'Не удалось сгенерировать изображения. Попробуйте ещё раз.')
+      throw err
+    } finally {
+      isGeneratingImages.value = false
+    }
+  }
+
+  /**
+   * Regenerate ALL image variants (new variants for the same styles)
    */
   async function regenerateImages(): Promise<void> {
     if (!generationId.value || !canRegenerateImages.value) return
@@ -247,7 +300,9 @@ export const useCardStore = defineStore('card', () => {
     includeOriginalText.value = true  // Default to including original text with AI variant
     remainingTextRegenerations.value = 3
     remainingImageRegenerations.value = 3
+    selectedImageStyles.value = []  // Clear selected styles
     isGenerating.value = false
+    isGeneratingImages.value = false
     isRegeneratingText.value = false
     isRegeneratingImages.value = false
     isSending.value = false
@@ -273,7 +328,9 @@ export const useCardStore = defineStore('card', () => {
     includeOriginalText,
     remainingTextRegenerations,
     remainingImageRegenerations,
+    selectedImageStyles,
     isGenerating,
+    isGeneratingImages,
     isRegeneratingText,
     isRegeneratingImages,
     isSending,
@@ -281,6 +338,8 @@ export const useCardStore = defineStore('card', () => {
 
     // Computed
     hasGeneration,
+    hasImages,
+    canGenerateImages,
     canRegenerateText,
     canRegenerateImages,
     hasOriginalText,
@@ -291,6 +350,9 @@ export const useCardStore = defineStore('card', () => {
 
     // Actions
     generate,
+    generateImages,
+    toggleImageStyle,
+    isImageStyleSelected,
     regenerateText,
     regenerateImages,
     send,

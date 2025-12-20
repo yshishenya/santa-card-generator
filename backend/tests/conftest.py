@@ -15,6 +15,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.integrations.gemini import VisualConcept
+
 
 # ============================================================================
 # Rate Limiter Configuration for Tests
@@ -61,8 +63,8 @@ from src.models.employee import Employee
 def mock_gemini_client() -> AsyncMock:
     """Create a mock GeminiClient for testing.
 
-    The mock client provides async mocks for generate_text and generate_image
-    methods that return predictable test data.
+    The mock client provides async mocks for generate_text, analyze_for_visual,
+    and generate_image methods that return predictable test data.
 
     Returns:
         AsyncMock: Mocked GeminiClient with pre-configured return values.
@@ -73,6 +75,16 @@ def mock_gemini_client() -> AsyncMock:
     mock.generate_text = AsyncMock(
         return_value="Generated greeting text for Test Employee. "
         "Thank you for your contributions!"
+    )
+
+    # Configure analyze_for_visual to return a VisualConcept
+    mock.analyze_for_visual = AsyncMock(
+        return_value=VisualConcept(
+            core_theme="teamwork",
+            visual_metaphor="A group of hands joining together in unity, symbolizing collaboration",
+            key_elements=["joined hands", "warm glow", "team spirit"],
+            mood="warm and inspiring",
+        )
     )
 
     # Configure generate_image to return tuple of (bytes, prompt)
@@ -98,6 +110,7 @@ def mock_gemini_client_with_errors() -> AsyncMock:
     mock = AsyncMock()
 
     mock.generate_text = AsyncMock(side_effect=Exception("API Error"))
+    mock.analyze_for_visual = AsyncMock(side_effect=Exception("Analysis failed"))
     mock.generate_image = AsyncMock(side_effect=Exception("Image generation failed"))
 
     return mock
@@ -299,7 +312,7 @@ def sample_text_variants() -> List[TextVariant]:
 def sample_image_variants() -> List[ImageVariant]:
     """Create sample image variants for testing.
 
-    NEW architecture: 4 variants, one per image style.
+    Uses 4 representative styles from the 15 available.
 
     Returns:
         List[ImageVariant]: List of 4 image variants (one per style).
@@ -307,23 +320,23 @@ def sample_image_variants() -> List[ImageVariant]:
     return [
         ImageVariant(
             url="generated://img-001",
-            style=ImageStyle.DIGITAL_ART,
-            prompt="Festive digital art winter scene",
+            style=ImageStyle.HYPERREALISM,
+            prompt="Photorealistic winter scene",
         ),
         ImageVariant(
             url="generated://img-002",
-            style=ImageStyle.SPACE,
-            prompt="Cosmic celebration among stars",
-        ),
-        ImageVariant(
-            url="generated://img-003",
             style=ImageStyle.PIXEL_ART,
             prompt="Retro pixel art holiday greeting",
         ),
         ImageVariant(
+            url="generated://img-003",
+            style=ImageStyle.KNITTED,
+            prompt="Cozy knitted texture scene",
+        ),
+        ImageVariant(
             url="generated://img-004",
-            style=ImageStyle.MOVIE,
-            prompt="Cinematic movie poster greeting",
+            style=ImageStyle.WATERCOLOR,
+            prompt="Soft watercolor winter scene",
         ),
     ]
 

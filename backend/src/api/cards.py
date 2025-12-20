@@ -29,6 +29,8 @@ from src.models import (
     APIResponse,
     CardGenerationRequest,
     CardGenerationResponse,
+    GenerateImagesRequest,
+    GenerateImagesResponse,
     RegenerateRequest,
     RegenerateResponse,
     SendCardRequest,
@@ -109,6 +111,74 @@ async def generate_card(
 
     except Exception as e:
         logger.exception(f"[{correlation_id}] Unexpected error during card generation")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}",
+        )
+
+
+@router.post("/cards/generate-images", response_model=APIResponse[GenerateImagesResponse])
+@limiter.limit(get_rate_limit)
+async def generate_images(
+    request: Request,
+    body: GenerateImagesRequest,
+    service: Annotated[CardService, Depends(get_card_service)],
+) -> APIResponse[GenerateImagesResponse]:
+    """Generate images for selected styles.
+
+    This endpoint generates image variants for the selected styles.
+    Must be called after /cards/generate to have a valid session.
+
+    Args:
+        request: Starlette Request object (required for rate limiting).
+        body: Request with session ID and selected image styles (1-4 styles).
+        service: Injected CardService instance.
+
+    Returns:
+        APIResponse containing GenerateImagesResponse with generated image variants.
+
+    Raises:
+        HTTPException 404: If session is not found.
+        HTTPException 400: If session has expired.
+        HTTPException 500: If generation fails due to internal error.
+    """
+    correlation_id = str(uuid4())
+    logger.info(
+        f"[{correlation_id}] POST /cards/generate-images - session: {body.session_id}, "
+        f"styles: {[s.value for s in body.image_styles]}"
+    )
+
+    try:
+        response = await service.generate_images(body)
+        logger.info(
+            f"[{correlation_id}] Images generated successfully, "
+            f"image_variants: {len(response.image_variants)}"
+        )
+        return APIResponse(success=True, data=response, error=None)
+
+    except SessionNotFoundError as e:
+        logger.error(f"[{correlation_id}] Session not found: {e.session_id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session not found: {e.session_id}",
+        )
+
+    except SessionExpiredError as e:
+        logger.error(f"[{correlation_id}] Session expired: {e.session_id}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Session expired: {e.session_id}",
+        )
+
+    except CardServiceError as e:
+        logger.error(f"[{correlation_id}] Card service error: {e.message}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Image generation failed: {e.message}",
+        )
+
+    except Exception as e:
+        logger.exception(f"[{correlation_id}] Unexpected error during image generation")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}",

@@ -27,6 +27,8 @@ from src.models.card import (
     ALL_IMAGE_STYLES,
     CardGenerationRequest,
     CardGenerationResponse,
+    GenerateImagesRequest,
+    GenerateImagesResponse,
     ImageStyle,
     ImageVariant,
     SendCardRequest,
@@ -35,6 +37,7 @@ from src.models.card import (
     TextVariant,
 )
 from src.models.response import RegenerateResponse
+from src.integrations.gemini import VisualConcept
 from src.repositories.employee_repo import EmployeeRepository
 
 logger = logging.getLogger(__name__)
@@ -71,19 +74,33 @@ class GeminiClient(Protocol):
         """
         ...
 
-    async def generate_image(
+    async def analyze_for_visual(
         self,
         recipient: str,
         reason: str | None,
         message: str | None,
-        style: str,
-    ) -> Tuple[bytes, str]:
-        """Generate greeting image for a recipient.
+    ) -> VisualConcept:
+        """Analyze gratitude text and extract visual concepts.
 
         Args:
             recipient: Name of the card recipient.
             reason: Optional reason for gratitude.
-            message: Optional personal message (used for visual metaphor).
+            message: Optional personal message.
+
+        Returns:
+            VisualConcept with extracted visual metaphor and elements.
+        """
+        ...
+
+    async def generate_image(
+        self,
+        visual_concept: VisualConcept,
+        style: str,
+    ) -> Tuple[bytes, str]:
+        """Generate greeting image based on visual concept.
+
+        Args:
+            visual_concept: Analyzed visual concept from analyze_for_visual.
             style: Style of image to generate.
 
         Returns:
@@ -197,20 +214,19 @@ class CardService:
     async def generate_card(
         self, request: CardGenerationRequest
     ) -> CardGenerationResponse:
-        """Generate a new card with text and image variants.
+        """Generate a new card with text variants only.
 
         This method performs the following operations:
         1. Validates that the recipient exists in the employee list
         2. Generates 5 text variants (one per AI style) in parallel
-        3. Generates 4 image variants (one per style) in parallel
-        4. Creates a session to store the variants and track regenerations
-        5. Returns the response with all variants
+        3. Creates a session to store the variants and track regenerations
+        4. Returns the response with text variants (images generated separately)
 
         Args:
             request: Card generation request containing employee name.
 
         Returns:
-            CardGenerationResponse with session ID and all variants.
+            CardGenerationResponse with session ID and text variants.
 
         Raises:
             RecipientNotFoundError: If the employee is not found in the system.
@@ -235,46 +251,31 @@ class CardService:
         # Store original text from user
         original_text = request.message
 
-        # Generate text and image variants in parallel
+        # Generate text variants only (images are generated separately)
         try:
             logger.info(
-                f"[{correlation_id}] Generating 5 text variants and 4 image variants"
+                f"[{correlation_id}] Generating 5 text variants"
             )
 
-            # Generate all text variants (5 AI styles) and image variants (4 styles)
-            text_task = self._generate_text_variants(
+            text_variants = await self._generate_text_variants(
                 request=request, correlation_id=correlation_id
             )
-            image_task = self._generate_image_variants(
-                request=request, correlation_id=correlation_id
-            )
-
-            text_variants, image_results = await asyncio.gather(text_task, image_task)
-
-            # Unpack image results (variants and raw data)
-            image_variants: List[ImageVariant] = []
-            image_data: Dict[str, bytes] = {}
-
-            for variant, image_bytes in image_results:
-                image_variants.append(variant)
-                image_data[variant.url] = image_bytes
 
             logger.info(
-                f"[{correlation_id}] Generated {len(text_variants)} text variants "
-                f"and {len(image_variants)} image variants"
+                f"[{correlation_id}] Generated {len(text_variants)} text variants"
             )
 
         except Exception as e:
-            logger.exception(f"[{correlation_id}] Error generating variants: {e}")
+            logger.exception(f"[{correlation_id}] Error generating text variants: {e}")
             raise
 
-        # Create session for regeneration tracking
+        # Create session for regeneration tracking (no images yet)
         session_id = self._session_manager.create_session(
             request=request,
             original_text=original_text,
             text_variants=text_variants,
-            image_variants=image_variants,
-            image_data=image_data,
+            image_variants=[],
+            image_data={},
         )
 
         logger.info(
@@ -286,10 +287,81 @@ class CardService:
             recipient=request.recipient,
             original_text=original_text,
             text_variants=text_variants,
-            image_variants=image_variants,
+            image_variants=[],
             remaining_text_regenerations=self._max_regenerations,
             remaining_image_regenerations=self._max_regenerations,
         )
+
+    async def generate_images(
+        self, request: GenerateImagesRequest
+    ) -> GenerateImagesResponse:
+        """Generate images for selected styles.
+
+        This method generates images for the styles selected by the user.
+        Must be called after generate_card to have a valid session.
+
+        Args:
+            request: Request with session ID and selected image styles.
+
+        Returns:
+            GenerateImagesResponse with generated image variants.
+
+        Raises:
+            SessionNotFoundError: If session ID is not found.
+            SessionExpiredError: If the session has expired.
+        """
+        correlation_id = str(uuid.uuid4())
+        logger.info(
+            f"[{correlation_id}] Generating images for session: {request.session_id}, "
+            f"styles: {[s.value for s in request.image_styles]}"
+        )
+
+        # Get session
+        session = self._session_manager.get_session(request.session_id)
+        if session is None:
+            logger.error(f"[{correlation_id}] Session not found: {request.session_id}")
+            raise SessionNotFoundError(request.session_id)
+
+        if session.is_expired(self._session_ttl_minutes):
+            logger.error(f"[{correlation_id}] Session expired: {request.session_id}")
+            raise SessionExpiredError(request.session_id)
+
+        original_request = session.original_request
+
+        # Generate images for selected styles
+        try:
+            image_results = await self._generate_image_variants_for_styles(
+                request=original_request,
+                styles=request.image_styles,
+                correlation_id=correlation_id,
+            )
+
+            # Unpack results
+            image_variants: List[ImageVariant] = []
+            image_data: Dict[str, bytes] = {}
+
+            for variant, image_bytes in image_results:
+                image_variants.append(variant)
+                image_data[variant.url] = image_bytes
+
+            # Set images in session (does not decrement regeneration counter)
+            remaining = self._session_manager.set_initial_image_variants(
+                request.session_id, image_variants, image_data
+            )
+
+            logger.info(
+                f"[{correlation_id}] Generated {len(image_variants)} image variants, "
+                f"remaining_regenerations={remaining}"
+            )
+
+            return GenerateImagesResponse(
+                image_variants=image_variants,
+                remaining_image_regenerations=remaining,
+            )
+
+        except Exception as e:
+            logger.exception(f"[{correlation_id}] Error generating images: {e}")
+            raise
 
     async def regenerate_text(self, session_id: str) -> RegenerateResponse:
         """Regenerate ALL text variants and return the new variants.
@@ -609,10 +681,10 @@ class CardService:
     async def _generate_image_variants(
         self, request: CardGenerationRequest, correlation_id: str
     ) -> List[Tuple[ImageVariant, bytes]]:
-        """Generate 4 image variants, one per style, in parallel.
+        """Generate image variants for all available styles.
 
-        Handles partial failures gracefully - if some images fail to generate,
-        returns the successful ones. At least one image must succeed.
+        This is a convenience method that delegates to _generate_image_variants_for_styles
+        with all available image styles. Used for regeneration.
 
         Args:
             request: Card generation request.
@@ -624,19 +696,63 @@ class CardService:
         Raises:
             Exception: If all image generations fail.
         """
-        logger.debug(
-            f"[{correlation_id}] Generating {len(ALL_IMAGE_STYLES)} image variants for {request.recipient}"
+        return await self._generate_image_variants_for_styles(
+            request=request,
+            styles=list(ALL_IMAGE_STYLES),
+            correlation_id=correlation_id,
         )
 
-        # Generate one variant per image style in parallel
+    async def _generate_image_variants_for_styles(
+        self,
+        request: CardGenerationRequest,
+        styles: List[ImageStyle],
+        correlation_id: str,
+    ) -> List[Tuple[ImageVariant, bytes]]:
+        """Generate image variants for specific styles using two-stage approach.
+
+        Two-stage generation:
+        1. Analyze gratitude text to extract visual concept (once)
+        2. Generate images for each style using the visual concept (parallel)
+
+        Handles partial failures gracefully - if some images fail to generate,
+        returns the successful ones. At least one image must succeed.
+
+        Args:
+            request: Card generation request.
+            styles: List of image styles to generate.
+            correlation_id: Correlation ID for logging.
+
+        Returns:
+            List of tuples containing (ImageVariant, image_bytes).
+
+        Raises:
+            Exception: If all image generations fail.
+        """
+        logger.debug(
+            f"[{correlation_id}] Generating {len(styles)} image variants for {request.recipient}, "
+            f"styles: {[s.value for s in styles]}"
+        )
+
+        # Stage 1: Analyze gratitude text to extract visual concept (once for all styles)
+        logger.info(f"[{correlation_id}] Stage 1: Analyzing text for visual concept")
+        visual_concept = await self._gemini_client.analyze_for_visual(
+            recipient=request.recipient,
+            reason=request.reason,
+            message=request.message,
+        )
+        logger.info(
+            f"[{correlation_id}] Visual concept extracted: theme={visual_concept.core_theme}, "
+            f"mood={visual_concept.mood}"
+        )
+
+        # Stage 2: Generate images for each style using the visual concept (parallel)
+        logger.info(f"[{correlation_id}] Stage 2: Generating {len(styles)} images in parallel")
         tasks = [
             self._gemini_client.generate_image(
-                recipient=request.recipient,
-                reason=request.reason,
-                message=request.message,
+                visual_concept=visual_concept,
                 style=style.value,
             )
-            for style in ALL_IMAGE_STYLES
+            for style in styles
         ]
 
         # Use return_exceptions=True to handle partial failures
@@ -645,7 +761,7 @@ class CardService:
         variants: List[Tuple[ImageVariant, bytes]] = []
         failed_styles: List[str] = []
 
-        for result, style in zip(image_results, ALL_IMAGE_STYLES):
+        for result, style in zip(image_results, styles):
             if isinstance(result, Exception):
                 # Log the failure but continue with other images
                 logger.warning(

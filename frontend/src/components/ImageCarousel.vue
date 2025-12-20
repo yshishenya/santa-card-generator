@@ -145,11 +145,11 @@ const selectVariant = (index: number) => {
   font-weight: bold;
 }
 
-/* Image container - 3:2 aspect ratio for horizontal A6 postcard */
+/* Image container - 2:3 aspect ratio for vertical A6 postcard */
 .image-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 2 / 3;
   background: #F1F5F9;
   border-radius: 10px;
   overflow: hidden;

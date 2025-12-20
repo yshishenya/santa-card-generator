@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useCardStore } from '@/stores/card'
 import TextCarousel from './TextCarousel.vue'
 import ImageCarousel from './ImageCarousel.vue'
+import ImageStyleSelector from './ImageStyleSelector.vue'
 import PreviewModal from './PreviewModal.vue'
 
 const cardStore = useCardStore()
@@ -85,30 +86,44 @@ const closePreview = () => {
       <TextCarousel />
     </div>
 
-    <!-- Section 3: Image variants carousel -->
+    <!-- Section 3: Image style selection OR Image variants carousel -->
     <div class="glass-card p-6">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-        <h3 class="text-xl font-semibold text-christmas-gold flex items-center gap-2">
-          <i class="pi pi-image text-christmas-red-light"></i>
-          Варианты изображения
-          <span class="text-sm font-normal text-winter-text-muted">(5 стилей)</span>
-        </h3>
-        <div class="flex items-center gap-3">
-          <span class="text-sm text-winter-text-secondary">
-            Регенераций: <span class="font-bold text-christmas-green-light">{{ cardStore.remainingImageRegenerations }}</span>
-          </span>
-          <button
-            @click="cardStore.regenerateImages()"
-            :disabled="!cardStore.canRegenerateImages || cardStore.isRegeneratingImages"
-            class="btn btn-sm bg-christmas-red/15 hover:bg-christmas-red/25 border-christmas-red/40 text-christmas-red-light hover:text-christmas-red-light transition-all disabled:opacity-40"
-          >
-            <span v-if="cardStore.isRegeneratingImages" class="loading loading-spinner loading-xs"></span>
-            <i v-else class="pi pi-refresh"></i>
-            Перегенерировать
-          </button>
+      <!-- Before images generated: Style selector -->
+      <template v-if="!cardStore.hasImages">
+        <div class="flex items-center gap-2 mb-4">
+          <h3 class="text-xl font-semibold text-christmas-gold flex items-center gap-2">
+            <i class="pi pi-palette text-christmas-red-light"></i>
+            Выберите стили изображений
+          </h3>
         </div>
-      </div>
-      <ImageCarousel />
+        <ImageStyleSelector />
+      </template>
+
+      <!-- After images generated: Image carousel with regeneration -->
+      <template v-else>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+          <h3 class="text-xl font-semibold text-christmas-gold flex items-center gap-2">
+            <i class="pi pi-image text-christmas-red-light"></i>
+            Варианты изображения
+            <span class="text-sm font-normal text-winter-text-muted">({{ cardStore.imageVariants.length }} стилей)</span>
+          </h3>
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-winter-text-secondary">
+              Регенераций: <span class="font-bold text-christmas-green-light">{{ cardStore.remainingImageRegenerations }}</span>
+            </span>
+            <button
+              @click="cardStore.regenerateImages()"
+              :disabled="!cardStore.canRegenerateImages || cardStore.isRegeneratingImages"
+              class="btn btn-sm bg-christmas-red/15 hover:bg-christmas-red/25 border-christmas-red/40 text-christmas-red-light hover:text-christmas-red-light transition-all disabled:opacity-40"
+            >
+              <span v-if="cardStore.isRegeneratingImages" class="loading loading-spinner loading-xs"></span>
+              <i v-else class="pi pi-refresh"></i>
+              Перегенерировать
+            </button>
+          </div>
+        </div>
+        <ImageCarousel />
+      </template>
     </div>
 
     <!-- Error message -->

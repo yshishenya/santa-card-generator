@@ -33,7 +33,7 @@
 - [x] [AI-01] Интегрировать Google Gemini API для генерации текста
 - [x] [AI-02] Интегрировать Google Gemini API для генерации изображений (placeholder - requires Imagen API)
 - [x] [AI-03] Создать промпты для 5 стилей текста
-- [x] [AI-04] Создать промпты для 4 стилей изображений
+- [x] [AI-04] Создать промпты для 15 стилей изображений (two-stage generation)
 
 ### Telegram Integration ✅
 - [x] [TG-01] Реализовать клиент для Telegram Bot API (см. specs/telegram_integration.md)
@@ -123,6 +123,47 @@
 - `backend/src/models/employee.py` — добавлено поле `telegram: Optional[str]`
 - `backend/src/integrations/telegram.py` — добавлен параметр `recipient_telegram` в `send_card()` и `_format_caption()`
 - `backend/src/core/card_service.py` — поиск telegram username сотрудника и передача в Telegram клиент
+
+---
+
+### [FEATURE] Two-Stage Image Generation (Visual Concept Analysis) ✅
+
+**Дата**: 2025-12-18
+
+**Описание фичи**:
+Реализована двухэтапная генерация изображений для улучшения качества и релевантности:
+
+1. **Этап 1: Анализ текста благодарности** — AI анализирует текст и извлекает визуальную концепцию (тема, метафора, ключевые элементы, настроение)
+2. **Этап 2: Генерация изображений** — Изображения генерируются на основе визуальной концепции, а не буквального текста
+
+**Проблема, которую решает**:
+- Ранее изображения генерировались на основе буквального текста благодарности
+- Это приводило к появлению текста на изображениях или нерелевантным результатам
+- Новый подход создает визуальные метафоры, отражающие смысл благодарности
+
+**Техническая реализация**:
+- Добавлен dataclass `VisualConcept` с полями: `core_theme`, `visual_metaphor`, `key_elements`, `mood`
+- Добавлена константа `FALLBACK_VISUAL_CONCEPT` для graceful degradation
+- Добавлен метод `analyze_for_visual()` с @retry декоратором и специфичной обработкой ошибок
+- Обновлён метод `generate_image()` — принимает `VisualConcept` вместо текста
+- 15 стилей изображений используют placeholders `{visual_metaphor}`, `{key_elements}`, `{mood}`
+
+**Изменённые файлы**:
+- `backend/src/integrations/gemini.py` — VisualConcept, VISUAL_ANALYSIS_PROMPT, analyze_for_visual(), generate_image()
+- `backend/src/core/card_service.py` — Protocol обновлён, _generate_image_variants_for_styles() использует двухэтапный подход
+- `backend/tests/conftest.py` — добавлен mock для analyze_for_visual
+- `backend/tests/test_gemini.py` — тесты обновлены для VisualConcept
+- `backend/tests/test_card_service.py` — тесты обновлены для двухэтапной генерации
+
+**Пример VisualConcept**:
+```python
+VisualConcept(
+    core_theme="innovation",
+    visual_metaphor="A golden key unlocking a treasure chest in the snow",
+    key_elements=["golden key", "treasure chest", "snow", "soft glow"],
+    mood="discovery and achievement"
+)
+```
 
 ---
 
@@ -299,4 +340,4 @@ docker compose up --build
 
 ---
 
-**Last Updated**: 2025-12-11
+**Last Updated**: 2025-12-18

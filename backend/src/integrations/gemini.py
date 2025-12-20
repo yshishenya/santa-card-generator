@@ -5,7 +5,9 @@ through LiteLLM proxy to generate stylized greeting card text and festive images
 
 Features:
 - 5 text styles (ode, future, haiku, newspaper, standup)
-- 4 image styles (digital_art, pixel_art, space, movie)
+- 15 image styles (knitted, magic_realism, pixel_art, vintage_russian,
+  soviet_poster, hyperrealism, digital_3d, fantasy, comic_book, watercolor,
+  cyberpunk, paper_cutout, pop_art, lego, linocut)
 - Text generation via gemini-2.5-flash
 - Image generation via gemini-2.5-flash-image-preview
 - Automatic retry on transient errors
@@ -13,9 +15,12 @@ Features:
 - Structured logging
 """
 
+import json
 import logging
 import base64
-from typing import Optional, Any, Dict, Tuple
+import random
+from dataclasses import dataclass
+from typing import Optional, Any, Dict, List, Tuple
 
 import httpx
 from tenacity import (
@@ -29,7 +34,9 @@ from tenacity import (
 HTTP_TIMEOUT_SECONDS = 120.0
 TEXT_MAX_TOKENS = 8192
 IMAGE_MAX_TOKENS = 4096
+ANALYSIS_MAX_TOKENS = 1024
 TEXT_TEMPERATURE = 0.8
+ANALYSIS_TEMPERATURE = 0.3  # Lower temperature for more consistent analysis
 MAX_RETRY_ATTEMPTS = 3
 RETRY_MIN_WAIT = 2
 RETRY_MAX_WAIT = 10
@@ -44,6 +51,195 @@ from .exceptions import (
 logger = logging.getLogger(__name__)
 
 
+# ============================================================================
+# Visual Concept Analysis
+# ============================================================================
+
+
+@dataclass
+class VisualConcept:
+    """Result of analyzing gratitude text for visual representation.
+
+    This structured data is used to generate images that represent
+    the meaning of gratitude rather than literal text.
+
+    Extended with Nano Banana principles for better image generation:
+    - composition: camera angle and shot type for compositional control
+    - lighting: specific light source and quality for mood
+    """
+
+    core_theme: str  # Main theme: teamwork, innovation, leadership, support, etc.
+    visual_metaphor: str  # Concrete visual description (Subject + Action + Environment)
+    key_elements: List[str]  # 5 specific elements to include in the image
+    mood: str  # Emotional atmosphere
+    composition: str = "medium shot, eye level"  # Camera angle and framing
+    lighting: str = "soft natural winter daylight"  # Light source and quality
+
+
+# Pool of diverse fallback concepts to avoid repetition
+# Each represents a different metaphor category
+FALLBACK_VISUAL_CONCEPTS = [
+    VisualConcept(
+        core_theme="appreciation",
+        visual_metaphor="A vintage brass telescope pointing at the winter night sky from a snow-covered observatory dome, stars reflecting in its polished surface as aurora borealis dances on the horizon",
+        key_elements=["brass telescope", "observatory dome", "snow", "aurora borealis", "starry sky"],
+        mood="wonder and discovery",
+        composition="low angle, medium shot",
+        lighting="aurora glow from horizon, cool starlight from above",
+    ),
+    VisualConcept(
+        core_theme="gratitude",
+        visual_metaphor="An ancient oak tree in a snowy meadow with roots visible above ground, intertwining with smaller saplings it shelters, red winter berries dotting its branches",
+        key_elements=["ancient oak", "visible roots", "young saplings", "winter berries", "snowy meadow"],
+        mood="nurturing and enduring",
+        composition="wide establishing shot, eye level",
+        lighting="soft overcast winter daylight, diffused shadows",
+    ),
+    VisualConcept(
+        core_theme="celebration",
+        visual_metaphor="A collection of vintage hourglasses of different sizes arranged on a frosted windowsill, their golden sand frozen mid-flow, with snowflakes visible through the glass panes behind them",
+        key_elements=["vintage hourglasses", "frozen golden sand", "frosted windowsill", "snowflakes", "glass panes"],
+        mood="timeless achievement",
+        composition="close-up with shallow depth of field",
+        lighting="soft window light from behind, warm interior glow",
+    ),
+    VisualConcept(
+        core_theme="excellence",
+        visual_metaphor="A master blacksmith's anvil in a snow-dusted workshop, with freshly forged iron pieces cooling nearby, steam rising where hot metal meets cold air, tools arranged with precision",
+        key_elements=["iron anvil", "forged pieces", "rising steam", "blacksmith tools", "snow-dusted workshop"],
+        mood="craftsmanship and dedication",
+        composition="medium shot, slightly low angle",
+        lighting="warm forge glow contrasting with cool winter light from window",
+    ),
+    VisualConcept(
+        core_theme="teamwork",
+        visual_metaphor="Multiple paper origami cranes in different colors suspended mid-flight in a spiral formation above a snow-covered Japanese garden, their shadows creating patterns on the white ground",
+        key_elements=["origami cranes", "spiral formation", "Japanese garden", "snow", "shadow patterns"],
+        mood="harmony and collective beauty",
+        composition="bird's eye view transitioning to medium",
+        lighting="bright winter sun creating sharp shadows",
+    ),
+]
+
+def get_fallback_visual_concept() -> VisualConcept:
+    """Get a random fallback visual concept for diversity."""
+    return random.choice(FALLBACK_VISUAL_CONCEPTS)
+
+
+# Legacy constant for backwards compatibility
+FALLBACK_VISUAL_CONCEPT = FALLBACK_VISUAL_CONCEPTS[0]
+
+
+# ============================================================================
+# Visual Concept Analysis Prompt
+# Designed with Nano Banana principles for diverse, high-quality image generation
+# ============================================================================
+
+# Categories of visual metaphors for diversity (model picks from different semantic fields)
+METAPHOR_CATEGORIES = """
+METAPHOR CATEGORIES (choose ONE category, then create a specific scene):
+
+1. NATURE TRANSFORMATIONS - ice melting, seeds sprouting in snow, frozen waterfall, aurora borealis
+2. MECHANICAL/CLOCKWORK - gears interlocking, compass pointing north, vintage clock mechanisms, brass instruments
+3. ARCHITECTURAL - bridges connecting cliffs, arched doorways with light, spiral staircases, snow-covered towers
+4. CRAFTSMANSHIP - hands shaping pottery (silhouette), weaving on a loom, blacksmith's anvil, origami birds
+5. NAVIGATION/JOURNEY - maps with routes, ships in harbor, mountain paths, footprints in snow leading forward
+6. MUSICAL - orchestral instruments in snow, music notes as snowflakes, grand piano in forest clearing
+7. BOTANICAL - greenhouse with rare flowers, bonsai tree, winter garden, roots intertwining underground
+8. CELESTIAL - constellation patterns, moon phases, northern lights, planets aligning
+9. ELEMENTAL - fire and ice meeting, wind carrying autumn leaves into snow, crystal formations
+10. SYMBOLIC OBJECTS - hourglasses, scales in balance, keys and locks, vintage books with bookmarks
+"""
+
+# Prompt for analyzing gratitude and extracting visual concepts
+VISUAL_ANALYSIS_PROMPT = """You are an expert visual concept designer specializing in corporate greeting cards.
+Your task: transform gratitude into a UNIQUE, CREATIVE visual metaphor for image generation.
+
+═══════════════════════════════════════════════════════════════════════════════
+INPUT DATA:
+═══════════════════════════════════════════════════════════════════════════════
+Recipient: {recipient}
+Reason for gratitude: {reason}
+Personal message: {message}
+
+═══════════════════════════════════════════════════════════════════════════════
+YOUR TASK: Create a visual concept following this process:
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP 1 - IDENTIFY CORE THEME:
+Analyze the gratitude and select ONE primary theme:
+• teamwork (collaboration, unity, joint effort)
+• innovation (new ideas, breakthroughs, creative solutions)
+• leadership (guidance, vision, inspiring others)
+• support (helping, being there, reliability)
+• perseverance (overcoming obstacles, determination)
+• creativity (artistic thinking, original approaches)
+• dedication (commitment, going above and beyond)
+• problem_solving (finding solutions, analytical thinking)
+• mentorship (teaching, sharing knowledge)
+• excellence (high quality, outstanding results)
+
+STEP 2 - SELECT METAPHOR CATEGORY:
+""" + METAPHOR_CATEGORIES + """
+
+STEP 3 - CREATE SPECIFIC SCENE:
+Design a concrete, filmable scene with:
+• SUBJECT: The main object/element (be specific: "brass astrolabe" not "instrument")
+• ACTION: What is happening (dynamic verb: "rotating", "unfolding", "emerging")
+• ENVIRONMENT: Where it takes place (specific setting with winter/festive elements)
+• LIGHTING: Light source and quality (e.g., "warm golden hour backlight", "cool moonlight from above")
+
+STEP 4 - DEFINE COMPOSITION:
+Specify camera framing:
+• ANGLE: low angle / eye level / bird's eye / dutch angle
+• SHOT: extreme close-up / close-up / medium / wide / establishing
+• DEPTH: shallow DoF with bokeh / deep focus / layered foreground-background
+
+═══════════════════════════════════════════════════════════════════════════════
+CRITICAL CONSTRAINTS:
+═══════════════════════════════════════════════════════════════════════════════
+✗ NO text, words, letters, numbers, or written symbols
+✗ NO realistic human faces (silhouettes and hands from behind are OK)
+✗ NO cliché light sources: lanterns, lighthouses, candles, torches, glowing orbs
+✗ NO generic "magical glow" - be specific about light source
+✓ YES winter/New Year/festive imagery when natural
+✓ YES specific, concrete objects (not abstract concepts)
+✓ YES dynamic elements suggesting movement or transformation
+
+═══════════════════════════════════════════════════════════════════════════════
+OUTPUT FORMAT (JSON only, no markdown, no explanation):
+═══════════════════════════════════════════════════════════════════════════════
+{{"core_theme": "theme_name", "visual_metaphor": "Complete scene description in one paragraph: subject + action + environment + lighting", "key_elements": ["element1", "element2", "element3", "element4", "element5"], "mood": "emotional atmosphere", "composition": "camera angle and shot type", "lighting": "specific light source and quality"}}
+
+═══════════════════════════════════════════════════════════════════════════════
+EXAMPLES (notice the diversity in metaphor categories):
+═══════════════════════════════════════════════════════════════════════════════
+
+Input: reason="внедрение новой CRM системы", message="Спасибо за инициативу и упорство"
+Category: MECHANICAL/CLOCKWORK
+Output: {{"core_theme": "innovation", "visual_metaphor": "A complex brass orrery mechanism emerging from fresh snow, its polished gears beginning to turn as the first ray of winter sunrise catches the metal, tiny snowflakes suspended mid-air around the rotating planetary spheres", "key_elements": ["brass orrery", "interlocking gears", "planetary spheres", "fresh snow drift", "sunrise reflections"], "mood": "awakening and precision", "composition": "low angle close-up, shallow depth of field", "lighting": "warm sunrise from the right, golden hour quality"}}
+
+Input: reason="поддержку команды в сложный квартал", message="Ты был надёжной опорой"
+Category: ARCHITECTURAL
+Output: {{"core_theme": "support", "visual_metaphor": "An ancient stone bridge arching over a frozen river gorge, its weathered pillars standing firm as snow falls gently, a warm amber glow visible from windows of a small cabin on the far side", "key_elements": ["stone arch bridge", "frozen river", "snow-covered pillars", "distant cabin", "falling snow"], "mood": "steadfast reliability and safe passage", "composition": "wide establishing shot, eye level", "lighting": "overcast diffused daylight with warm accent from cabin windows"}}
+
+Input: reason="креативные идеи для маркетинга", message="Твои идеи всегда вдохновляют"
+Category: BOTANICAL
+Output: {{"core_theme": "creativity", "visual_metaphor": "A vintage glass greenhouse in a snow-covered garden, inside which impossible flowers bloom in winter - roses made of ice crystals, tulips with petals of aurora colors, all tended by gardening tools left mid-work", "key_elements": ["Victorian greenhouse", "crystal ice roses", "aurora-colored tulips", "vintage watering can", "snow outside"], "mood": "wonder and cultivation", "composition": "medium shot through frosted glass, layered depth", "lighting": "soft diffused winter daylight filtering through glass panels"}}
+
+Input: reason="обучение новых сотрудников", message="Благодаря тебе команда стала сильнее"
+Category: NAVIGATION/JOURNEY
+Output: {{"core_theme": "mentorship", "visual_metaphor": "An antique brass compass resting on a weathered leather map case atop a snow-dusted mountain summit cairn, the needle pointing toward distant peaks bathed in alpenglow, with a trail of bootprints visible in the snow below", "key_elements": ["brass compass", "leather map case", "stone cairn", "mountain peaks", "bootprints in snow"], "mood": "guidance and achievement", "composition": "close-up with deep background, slight low angle", "lighting": "alpenglow from distant peaks, cool shadows in foreground"}}
+
+Input: reason="успешное закрытие года", message="Отличная работа всей команды"
+Category: MUSICAL
+Output: {{"core_theme": "teamwork", "visual_metaphor": "A grand piano covered in a light dusting of snow stands in a forest clearing, its lid open to reveal keys that shimmer like ice, while sheet music pages flutter frozen mid-air, each page a different part of the same symphony", "key_elements": ["grand piano", "ice-like keys", "floating sheet music", "forest clearing", "snow dust"], "mood": "harmony and celebration", "composition": "wide shot, slightly elevated angle", "lighting": "soft overcast with subtle rim light on piano edges"}}
+
+═══════════════════════════════════════════════════════════════════════════════
+Now analyze the input above and respond with JSON only:"""
+
+
+# ============================================================================
 # Text style prompts in Russian for corporate greeting cards
 # Best practices: concise, persona-first, few-shot examples, structured input
 TEXT_STYLE_PROMPTS = {
@@ -165,108 +361,370 @@ Output: "{recipient}, слушай, я тут посчитал — ты геро
 }
 
 
-# Image style prompts for Gemini - narrative style, camera language, subject-action-scene
-# Best practices: describe scene narratively, use photographic terms, be specific
+# ============================================================================
+# Image style prompts for Gemini - using VisualConcept structured data
+# Redesigned with Nano Banana principles:
+# - Natural language descriptions (not keyword soup)
+# - Structured: Subject + Action + Environment + Lighting
+# - Composition control via {composition} placeholder
+# - Lighting control via {lighting} placeholder
+# - Clear negative constraints
+# ============================================================================
+
 IMAGE_STYLE_PROMPTS = {
-    "digital_art": """Generate an image of a symbolic scene that represents this gratitude:
-"{reason}" — "{message}"
+    "knitted": """Generate a cozy holiday greeting card image in knitted wool texture style.
 
-The scene should be a visual metaphor. Think: what OBJECT or SCENE captures this feeling?
-- Saving a project → a lighthouse beam cutting through stormy seas, guiding ships to safety
-- Patience → an ancient oak tree standing serene amid swirling snow
-- Creative ideas → a garden where flowers made of light bloom through fresh snow
-- Support → a stone bridge arching gracefully over a misty chasm
-- Leadership → a bright star at the center of a constellation, other stars orbiting it
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
 
-Style: Modern digital painting with magical realism aesthetic. Warm, vibrant colors with rich saturation. Think concept art for a Pixar film.
+YOUR CREATIVE TASK:
+Create a UNIQUE scene that expresses the theme of "{core_theme}" through the knitted wool aesthetic.
+You must REINTERPRET the inspiration into something that works perfectly for knitted texture -
+think of cozy winter objects, holiday decorations, or festive scenes that would look beautiful as knitted art.
 
-Composition: Wide shot establishing the full scene. Dramatic lighting from a warm source (firelight, sunset, magic glow). Winter atmosphere with falling snow or frost.
+STYLE SPECIFICATIONS:
+Render the entire scene as if made from knitted wool fabric. Every object should have the texture of hand-knitted yarn with visible stitches, fuzzy fibers, and yarn loops. Think of a premium Christmas sweater or knitted ornament come to life.
 
-Color palette: Deep midnight blues, warm amber and gold, pure snow white, touches of festive red.
+TECHNICAL REQUIREMENTS:
+- Macro photography quality, 8K resolution
+- Realistic wool texture with individual yarn fibers visible
+- Shallow depth of field with soft bokeh on edges
+- Warm, cozy color palette: deep red, cream white, forest green, touches of gold thread
+- Soft directional lighting creating gentle shadows in the knit texture
 
-Technical: High detail, painterly brushstrokes visible, atmospheric perspective with soft background.
+FORBIDDEN: No text, letters, numbers, words, or any written symbols woven into the fabric.""",
 
-CRITICAL: No text, letters, numbers, or writing of any kind. No realistic human faces. The image tells the story through symbols, not words.""",
+    "magic_realism": """Generate a dreamlike magic realism greeting card illustration.
 
-    "pixel_art": """Generate an image of a retro video game victory scene representing:
-"{reason}" — "{message}"
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
 
-Design this like a triumphant moment in a classic 16-bit RPG. What achievement does this gratitude represent?
-- Teamwork → tiny pixel heroes standing together atop a completed castle they built
-- Problem solving → a maze with the exit revealed, treasure chest glowing at the end
-- Mentorship → a small sprite following a glowing guide star through a snowy forest
-- Hard work → pixel character planting a victory flag on a snow-covered mountain peak
-- Innovation → a pixelated rocket launching from a festive winter launchpad, stars twinkling
+YOUR CREATIVE TASK:
+Create a UNIQUE scene that expresses "{core_theme}" through magic realism.
+Reimagine the inspiration as something surreal - objects behaving impossibly, dreamlike physics,
+the ordinary made extraordinary. Choose subjects that work for this mystical, cinematic style.
 
-Style: Authentic 16-bit SNES/Genesis era pixel art. Clean pixel grid, no anti-aliasing. Think Final Fantasy VI or Chrono Trigger victory screens.
+STYLE SPECIFICATIONS:
+Reality bends subtly. Objects have photorealistic textures but behave impossibly - things float, scale shifts, physics is dreamlike. The style of Gabriel García Márquez visualized.
 
-Composition: Classic game scene framing. Centered subject with decorative border of snow and holiday lights. Pixel-perfect symmetry where appropriate.
+TECHNICAL REQUIREMENTS:
+- Cinematic quality, film grain optional
+- Hyperdetailed textures on key objects
+- Deep atmospheric perspective with layered depth
+- Color palette: midnight blues, bioluminescent cyans, warm golds, deep violet shadows
+- Volumetric lighting with visible light rays
 
-Color palette: Limited to 32 colors maximum. Warm glowing yellows, cool snow blues, festive reds and greens, pixel-perfect gradients.
+FORBIDDEN: No text or letters. No realistic human faces (silhouettes acceptable). No generic "magical sparkles" - magic should feel grounded.""",
 
-Technical: Each pixel intentionally placed. Clear silhouettes. Animated feel even in still image — sparkles, snow particles.
+    "pixel_art": """Generate a nostalgic 16-bit pixel art greeting card scene.
 
-CRITICAL: No text, UI elements, health bars, or letters. Pure visual storytelling through pixel art.""",
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
 
-    "space": """Generate an image of a cosmic scene that symbolizes this gratitude:
-"{reason}" — "{message}"
+YOUR CREATIVE TASK:
+Create a UNIQUE pixel art scene expressing "{core_theme}" as a classic video game would.
+Transform the inspiration into charming 16-bit sprites - think of what objects and scenes
+work best as pixel art: treasure chests, crystals, holiday trees, cozy cabins, snowy landscapes.
 
-Transform the gratitude into celestial phenomena. What would this thank-you look like written in the stars?
-- Guidance → a constellation that forms the shape of a compass, golden stars connected by ethereal lines
-- Bright ideas → a supernova explosion in warm gold and white, creative energy radiating outward
-- Being a star → a beautiful nebula in the act of birthing new stars, cosmic creation
-- Reaching goals → a spacecraft approaching a golden planet, rings of stardust like celebration confetti
-- Connecting people → two galaxies gracefully spiraling toward each other, their arms intertwining
+STYLE SPECIFICATIONS:
+Authentic Super Nintendo / Sega Genesis era pixel art. Clean pixel grid with deliberate placement. Isometric or side-scroller framing. The charm of retro gaming.
 
-Style: Space fantasy art with ethereal, painterly quality. Think NASA imagery meets fantasy illustration. Luminous and awe-inspiring.
+TECHNICAL REQUIREMENTS:
+- Limited 32-color palette, carefully chosen
+- Crisp pixels with NO anti-aliasing or smoothing
+- Dithering patterns for gradients and shadows
+- Vibrant saturated colors: festive reds, greens, ice blues
+- Decorative pixel-snow border frame optional
 
-Composition: Deep space vista shot. Subject celestial object in golden ratio position. Depth created by distant galaxies and nearby cosmic dust.
+FORBIDDEN: No text, UI elements, health bars, score displays, or any alphanumeric characters.""",
 
-Color palette: Deep space purples and blues, nebula pinks and magentas, stardust gold, icy comet whites.
+    "vintage_russian": """Generate a vintage Russian postcard illustration circa 1905-1915.
 
-Technical: Volumetric nebula clouds, point-light stars with subtle glow, cosmic scale with tiny details that reward close viewing.
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
 
-CRITICAL: No text, constellations forming letters, or writing. No human figures. Pure cosmic visual poetry.""",
+YOUR CREATIVE TASK:
+Create a UNIQUE scene expressing "{core_theme}" as a turn-of-century Russian artist would paint it.
+Reimagine the inspiration using period-appropriate imagery: troikas, samovars, birch forests,
+Ded Moroz, winter villages, ornate decorations, folk motifs.
 
-    "movie": """Generate an image of a cinematic scene capturing the emotion of:
-"{reason}" — "{message}"
+STYLE SPECIFICATIONS:
+Pre-revolutionary Russian postcard aesthetic. Art Nouveau influence with flowing organic lines. Hand-drawn feel with delicate linework.
 
-Frame this like the key visual from an inspiring film. What dramatic moment represents this gratitude?
-- Courage → silhouette standing at cliff edge, facing a brilliant sunrise breaking through storm clouds
-- Perseverance → lone figure reaching a snow-covered mountain summit, arms raised, golden light flooding the scene
-- Protection → a shield catching warm light while storm rages in the background, safe glow within
-- Breakthrough → massive doors swinging open to reveal blinding golden light, snow swirling through
-- Inspiration → phoenix made of golden light rising against a winter night sky, embers like stars
+TECHNICAL REQUIREMENTS:
+- Aged paper texture with visible grain
+- Subtle scratches, foxing spots, slight color fading
+- Ornate decorative border in Art Nouveau style
+- Color palette: muted pastels, sepia undertones, faded gold leaf, dusty rose, soft spruce green
+- Soft, diffused lighting as if painted from memory
 
-Style: Hollywood blockbuster cinematography. Think Roger Deakins lighting meets epic adventure film. Every frame a painting.
+FORBIDDEN: No text, Cyrillic letters, dates, typography, or any written elements.""",
 
-Camera: Wide establishing shot or dramatic low angle. 35mm anamorphic lens feel with subtle lens flares. Golden hour or magic hour lighting.
+    "soviet_poster": """Generate a Soviet Constructivist propaganda-style greeting card poster.
 
-Color grading: Teal and orange contrast, deep shadows with warm highlights, cinematic color science.
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
 
-Technical: Volumetric light rays, atmospheric haze, shallow depth of field on edges, film grain texture.
+YOUR CREATIVE TASK:
+Create a UNIQUE graphic composition expressing "{core_theme}" through bold Soviet aesthetics.
+Transform the inspiration into geometric shapes, dynamic diagonals, heroic symbolism.
+Think: industrial progress, collective achievement, bold graphic forms.
 
-CRITICAL: No text, titles, credits, or writing. No realistic human faces — use silhouettes, distant figures, or symbolic representations only.""",
+STYLE SPECIFICATIONS:
+Bold Soviet Constructivism meets Rodchenko and El Lissitzky. Geometric abstraction, dynamic diagonals, flat shapes. Heroic optimism through pure graphic design.
 
-    "hyperrealism": """Generate an image of a photorealistic still life symbolizing:
-"{reason}" — "{message}"
+TECHNICAL REQUIREMENTS:
+- Flat vector illustration style
+- Strong geometric shapes, clean hard edges
+- Dynamic diagonal composition, strong perspective
+- Color palette: dominant red (Kumach), teal/cyan, cream, black, occasional gold
+- Grainy lithograph print texture overlay
+- High contrast, minimal gradients
 
-Compose this like a high-end product photograph where objects tell the story. What tangible things represent this gratitude?
-- Guidance → vintage brass compass lying on an aged leather map, needle pointing toward a golden destination marked with warm light
-- Unlocking potential → ornate antique key with delicate frost crystals forming on the metal, resting on velvet
-- Time and patience → elegant crystal hourglass with golden sand suspended mid-flow, surrounded by frost
-- Clarity → cut crystal prism splitting a beam of winter light into a rainbow across fresh snow
-- Warmth → steaming ceramic cup of cocoa with cinnamon stick, condensation on the cup, cozy knit fabric beneath
+FORBIDDEN: No text, slogans, Cyrillic lettering, or any typographic elements. Pure graphic symbolism.""",
 
-Style: Hyperrealistic photography. The viewer should question if this is a photograph. Commercial product photography quality.
+    "hyperrealism": """Generate a hyperrealistic winter still life photograph for a greeting card.
 
-Camera setup: 85mm portrait lens, f/2.8 aperture for creamy bokeh. Soft studio lighting with one warm key light. Shallow depth of field.
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
 
-Technical details: Extreme texture detail — visible metal grain, fabric weave, water droplet reflections. Subtle dust particles in light beams.
+YOUR CREATIVE TASK:
+Create a UNIQUE photorealistic still life expressing "{core_theme}" through tangible objects.
+Choose subjects that photograph beautifully with extreme detail: frost-covered objects,
+metallic surfaces, glass, ice crystals, natural textures, winter materials.
 
-Color palette: Rich warm golds, deep burgundy velvet, cool frost blues, pristine whites. Premium luxury aesthetic.
+STYLE SPECIFICATIONS:
+National Geographic or high-end commercial photography quality. Every surface tells a story through texture. Winter stillness captured with scientific precision.
 
-CRITICAL: Absolutely no text, engravings, labels, numbers, or writing on any object. No human hands, faces, or figures. Objects alone tell the story.""",
+TECHNICAL REQUIREMENTS:
+- 8K resolution, extreme sharpness on focal point
+- Macro lens perspective with creamy bokeh background
+- Obsessive detail: ice crystals, frost patterns, material textures
+- Color palette: icy whites, cool blues, silver, with one warm accent (gold or red)
+- Caustic light patterns, realistic reflections, subsurface scattering
+
+FORBIDDEN: No text, labels, engravings, or watermarks. No human faces. Objects and textures only.""",
+
+    "digital_3d": """Generate a cute 3D isometric render for a holiday greeting card.
+
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
+
+YOUR CREATIVE TASK:
+Create a UNIQUE isometric 3D scene expressing "{core_theme}" with toylike charm.
+Transform the inspiration into cute, chunky 3D objects: miniature buildings, holiday decorations,
+stylized nature, whimsical machines - things that look delightful as clay or plastic models.
+
+STYLE SPECIFICATIONS:
+Modern 3D digital art (Blender/Cinema4D style). Claymorphism aesthetic with soft, tactile materials. Product visualization meets toy-like charm.
+
+TECHNICAL REQUIREMENTS:
+- Clean isometric or slight isometric-offset view
+- Floating elements on clean gradient background
+- Soft plastic or clay material with subsurface scattering
+- Color palette: soft pastels, matte finish - pink, baby blue, mint, cream, lavender
+- Soft global illumination, ambient occlusion, smooth rounded edges
+
+FORBIDDEN: No text, numbers, interface elements, or UI components. Pure sculptural form.""",
+
+    "fantasy": """Generate an epic high fantasy illustration for a greeting card.
+
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
+
+YOUR CREATIVE TASK:
+Create a UNIQUE fantasy scene expressing "{core_theme}" with epic grandeur.
+Reimagine the inspiration as something from a fantasy world: enchanted forests, mystical artifacts,
+ancient towers, magical creatures (silhouettes), legendary items, snowy kingdoms.
+
+STYLE SPECIFICATIONS:
+Lord of the Rings concept art meets classic fantasy illustration. Epic scope with intimate detail. Oil painting quality with visible brushwork. Magic feels ancient and earned.
+
+TECHNICAL REQUIREMENTS:
+- Painterly brushstrokes, visible texture
+- Wide cinematic composition, rule of thirds
+- Dramatic atmospheric perspective with depth haze
+- Color palette: deep shadows, metallic gold/silver, mystical blues, firelight orange
+- Volumetric lighting, god rays through clouds or trees
+- Epic sense of scale
+
+FORBIDDEN: No text, readable runes, or letter-like symbols. No photorealistic human faces.""",
+
+    "comic_book": """Generate a dynamic comic book panel for a holiday greeting card.
+
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
+
+YOUR CREATIVE TASK:
+Create a UNIQUE comic book scene expressing "{core_theme}" with explosive energy.
+Transform the inspiration into dynamic action: objects in motion, dramatic reveals,
+heroic moments, visual explosions of celebration. What would make a great splash page?
+
+STYLE SPECIFICATIONS:
+Modern American comic book aesthetic. Bold confident ink lines, dramatic cel-shading. The energy of a splash page that makes you hear the action.
+
+TECHNICAL REQUIREMENTS:
+- Bold black outlines, confident linework
+- Flat colors with cel-shading and dramatic shadows
+- CMYK-style vibrant colors, slight halftone dot texture
+- Dynamic composition: Dutch angles, forced perspective, action lines
+- High contrast with deep black shadows
+- Visual energy effects (speed lines, impact marks) where appropriate
+
+FORBIDDEN: No text, speech bubbles, sound effects, or any lettering. Pure visual storytelling.""",
+
+    "watercolor": """Generate a soft watercolor painting for a greeting card.
+
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
+
+YOUR CREATIVE TASK:
+Create a UNIQUE watercolor scene expressing "{core_theme}" with delicate beauty.
+Reimagine the inspiration as something that flows beautifully in watercolor: winter landscapes,
+delicate flowers, soft winter light, birds, snowfall, peaceful nature scenes.
+
+STYLE SPECIFICATIONS:
+Authentic wet-on-wet watercolor technique. Beautiful unpredictability of pigment meeting water. Loose, expressive, emotionally evocative.
+
+TECHNICAL REQUIREMENTS:
+- Visible cold-pressed paper texture
+- Translucent color layers with natural bleeding and blooming
+- Deliberate white space (paper showing through)
+- Color palette: soft pastels, watery blues, indigo, violet, touches of warm ochre
+- Organic soft edges, occasional controlled hard edges for contrast
+- Paint drips, splashes, and happy accidents
+
+FORBIDDEN: No text, sharp digital lines, or perfect geometric shapes. Must feel hand-painted.""",
+
+    "cyberpunk": """Generate a futuristic cyberpunk scene for a holiday greeting card.
+
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
+
+YOUR CREATIVE TASK:
+Create a UNIQUE cyberpunk scene expressing "{core_theme}" in a neon-drenched future.
+Transform the inspiration into high-tech imagery: holographic displays, chrome machinery,
+neon-lit streets with snow, futuristic decorations, sci-fi reimaginings of holiday objects.
+
+STYLE SPECIFICATIONS:
+Blade Runner meets Snow Crash meets a neon-drenched holiday. High-tech low-life aesthetic where advanced technology coexists with gritty urban decay.
+
+TECHNICAL REQUIREMENTS:
+- Night scene with rain or snow falling
+- Neon glow effects with bloom and chromatic aberration
+- Reflections on wet surfaces, puddles, chrome
+- Color palette: hot neon pink, electric cyan, acid green, deep black shadows
+- Holographic elements, scan lines, subtle digital glitches
+- Atmospheric haze and volumetric lighting
+
+FORBIDDEN: No readable text, binary code, alphanumeric data, or legible signage.""",
+
+    "paper_cutout": """Generate a layered paper cutout diorama for a greeting card.
+
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
+
+YOUR CREATIVE TASK:
+Create a UNIQUE paper diorama expressing "{core_theme}" through layered silhouettes.
+Transform the inspiration into paper craft: winter scenes with depth, forest silhouettes,
+architectural elements, snowflakes, holiday decorations - things that work as cut paper layers.
+
+STYLE SPECIFICATIONS:
+Exquisite paper craft in kirigami tradition. Multiple layers creating depth and dimension. Premium pop-up book or museum installation quality.
+
+TECHNICAL REQUIREMENTS:
+- 5-7 distinct paper layers creating parallax depth
+- Realistic paper texture: slight fiber visibility, clean cut edges
+- Dramatic shadows between layers from side lighting
+- Color palette: premium paper - white, cream, gold foil, silver, royal blue, deep red
+- Sharp scissor/laser-cut edges on each layer
+- Subtle paper curl and dimensional quality
+
+FORBIDDEN: No printed text, words, or letters. Imagery through cut shapes and silhouettes only.""",
+
+    "pop_art": """Generate a Pop Art poster for a holiday greeting card.
+
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
+
+YOUR CREATIVE TASK:
+Create a UNIQUE pop art composition expressing "{core_theme}" as Warhol would.
+Transform the inspiration into bold graphic icons: everyday objects made iconic,
+holiday items as consumer culture, bold repetition, striking simple shapes.
+
+STYLE SPECIFICATIONS:
+Classic Pop Art in Andy Warhol and Roy Lichtenstein tradition. Bold, iconic, reproducible. Advertising language as fine art.
+
+TECHNICAL REQUIREMENTS:
+- Bold flat colors with hard edges
+- Ben-Day dots / halftone pattern visible
+- Slight CMYK registration offset for silkscreen effect
+- Color palette: clashing brights - hot pink, electric yellow, cyan, black, white
+- Iconic central subject, possibly repeated in grid
+- High contrast, minimal gradients
+
+FORBIDDEN: No text, brand names, or lettering of any kind. Pure graphic iconography.""",
+
+    "lego": """Generate a scene built entirely from plastic toy bricks for a greeting card.
+
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
+
+YOUR CREATIVE TASK:
+Create a UNIQUE brick-built scene expressing "{core_theme}" as a master builder would.
+Transform the inspiration into brick constructions: miniature holiday villages, vehicles,
+characters (minifig style), winter landscapes - anything that could be built from toy bricks.
+
+STYLE SPECIFICATIONS:
+Everything is awesome in interlocking plastic bricks. Miniature world of toy blocks photographed with loving macro attention.
+
+TECHNICAL REQUIREMENTS:
+- Every object constructed from recognizable brick shapes with studs
+- Macro photography perspective with tilt-shift blur effect
+- Shiny ABS plastic texture with subsurface scattering
+- Color palette: primary colors (red, blue, yellow) plus white, green, black
+- Visible brick studs and connection points
+- Miniature world scale with dramatic depth of field
+
+FORBIDDEN: No printed graphics or text on any brick surface. Pure brick construction only.""",
+
+    "linocut": """Generate a linocut print for a holiday greeting card.
+
+THEME TO INTERPRET: {core_theme}
+INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
+MOOD TO CONVEY: {mood}
+
+YOUR CREATIVE TASK:
+Create a UNIQUE linocut expressing "{core_theme}" through bold carved shapes.
+Transform the inspiration into high-contrast graphics: simplified winter scenes,
+folk art animals, decorative patterns, strong silhouettes - things that carve beautifully.
+
+STYLE SPECIFICATIONS:
+Traditional relief printmaking aesthetic. Hand-carved linoleum transferred to paper. Folk art meets fine art. Bold, graphic, with subtle imperfections.
+
+TECHNICAL REQUIREMENTS:
+- High contrast with strong negative/positive space interplay
+- Visible carving marks and gouge textures
+- Slightly uneven ink coverage (authentic print quality)
+- Color options: black ink on cream/white paper, OR two-color (black + red/blue)
+- Bold simplified shapes, no fine detail smaller than a carving tool could make
+- Paper texture visible in unprinted areas
+
+FORBIDDEN: No text, letters, or legible symbols. Carved shapes and ink texture only.""",
 }
 
 
@@ -340,6 +798,165 @@ class GeminiClient:
                 timeout=HTTP_TIMEOUT_SECONDS,
             )
         return self._http_client
+
+    @retry(
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
+        wait=wait_exponential(multiplier=1, min=RETRY_MIN_WAIT, max=RETRY_MAX_WAIT),
+    )
+    async def analyze_for_visual(
+        self,
+        recipient: str,
+        reason: Optional[str] = None,
+        message: Optional[str] = None,
+    ) -> VisualConcept:
+        """Analyze gratitude text and extract visual concepts for image generation.
+
+        This method transforms user's gratitude text into structured visual concepts
+        that can be used to generate meaningful images without literal text.
+
+        Args:
+            recipient: Name of the person receiving the greeting
+            reason: Reason for gratitude (optional)
+            message: Personal message from sender (optional)
+
+        Returns:
+            VisualConcept with theme, metaphor, elements, and mood
+
+        Raises:
+            GeminiTextGenerationError: If analysis fails
+            GeminiRateLimitError: If rate limit is exceeded
+        """
+        # Build the analysis prompt
+        full_prompt = VISUAL_ANALYSIS_PROMPT.format(
+            recipient=recipient,
+            reason=reason or "профессиональные достижения",
+            message=message or "Спасибо за отличную работу!",
+        )
+
+        logger.debug(
+            "Analyzing gratitude for visual concept",
+            extra={
+                "recipient": recipient,
+                "has_reason": bool(reason),
+                "has_message": bool(message),
+            },
+        )
+
+        try:
+            client = await self._get_client()
+
+            response = await client.post(
+                "/chat/completions",
+                json={
+                    "model": self._text_model,
+                    "messages": [
+                        {"role": "user", "content": full_prompt}
+                    ],
+                    "max_tokens": ANALYSIS_MAX_TOKENS,
+                    "temperature": ANALYSIS_TEMPERATURE,
+                },
+            )
+
+            if response.status_code == 429:
+                raise GeminiRateLimitError(original_error=Exception("Rate limit exceeded"))
+
+            response.raise_for_status()
+            data = response.json()
+
+            if not data.get("choices"):
+                raise GeminiTextGenerationError(
+                    message="Gemini API вернул пустой ответ при анализе",
+                    details={"recipient": recipient},
+                )
+
+            response_text = data["choices"][0]["message"]["content"].strip()
+
+            # Parse JSON response
+            try:
+                # Handle potential markdown code blocks
+                if response_text.startswith("```"):
+                    # Extract JSON from code block
+                    lines = response_text.split("\n")
+                    json_lines = []
+                    in_json = False
+                    for line in lines:
+                        if line.startswith("```") and not in_json:
+                            in_json = True
+                            continue
+                        elif line.startswith("```") and in_json:
+                            break
+                        elif in_json:
+                            json_lines.append(line)
+                    response_text = "\n".join(json_lines)
+
+                parsed = json.loads(response_text)
+
+                # Extract all fields with sensible defaults
+                visual_concept = VisualConcept(
+                    core_theme=parsed.get("core_theme", "gratitude"),
+                    visual_metaphor=parsed.get(
+                        "visual_metaphor",
+                        "A vintage compass on weathered map in snowy setting"
+                    ),
+                    key_elements=parsed.get(
+                        "key_elements",
+                        ["compass", "map", "snow", "warm tones", "adventure"]
+                    ),
+                    mood=parsed.get("mood", "discovery and appreciation"),
+                    composition=parsed.get("composition", "medium shot, eye level"),
+                    lighting=parsed.get("lighting", "soft natural winter daylight"),
+                )
+
+                logger.info(
+                    f"Visual concept analyzed: theme='{visual_concept.core_theme}', "
+                    f"elements={len(visual_concept.key_elements)}, "
+                    f"composition='{visual_concept.composition}'",
+                    extra={
+                        "core_theme": visual_concept.core_theme,
+                        "mood": visual_concept.mood,
+                        "composition": visual_concept.composition,
+                        "lighting": visual_concept.lighting,
+                    },
+                )
+
+                return visual_concept
+
+            except json.JSONDecodeError as e:
+                logger.warning(
+                    f"Failed to parse visual analysis JSON: {e}, using random fallback",
+                    extra={"response_text": response_text[:200]},
+                )
+                # Use random fallback for diversity
+                return get_fallback_visual_concept()
+
+        except GeminiRateLimitError:
+            raise
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"HTTP error during visual analysis: {e}",
+                extra={"status_code": e.response.status_code},
+                exc_info=True,
+            )
+            raise GeminiTextGenerationError(
+                message=f"HTTP ошибка при анализе: {e.response.status_code}",
+                details={"recipient": recipient},
+                original_error=e,
+            )
+        except (httpx.RequestError, httpx.TimeoutException) as e:
+            # Network errors that weren't caught by retry - use random fallback
+            logger.warning(
+                f"Network error during visual analysis: {e}, using random fallback",
+                extra={"recipient": recipient, "error_type": type(e).__name__},
+            )
+            return get_fallback_visual_concept()
+        except (KeyError, TypeError, ValueError) as e:
+            # Data parsing errors - use random fallback
+            logger.warning(
+                f"Data parsing error during visual analysis: {e}, using random fallback",
+                extra={"recipient": recipient, "error_type": type(e).__name__},
+            )
+            return get_fallback_visual_concept()
 
     @retry(
         retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
@@ -491,18 +1108,17 @@ class GeminiClient:
     )
     async def generate_image(
         self,
-        recipient: str,
-        reason: Optional[str],
-        message: Optional[str],
+        visual_concept: VisualConcept,
         style: str,
     ) -> Tuple[bytes, str]:
         """Generate festive image using Gemini image model.
 
+        Uses structured VisualConcept data instead of raw text to avoid
+        literal text appearing in images.
+
         Args:
-            recipient: Name of the person receiving the greeting
-            reason: Reason for gratitude (used in prompt context)
-            message: Personal message from sender (used for visual metaphor)
-            style: Image style code (digital_art, pixel_art, space, movie, hyperrealism)
+            visual_concept: Analyzed visual concept with metaphor and elements
+            style: Image style code (knitted, pixel_art, fantasy, etc.)
 
         Returns:
             Tuple of (image_bytes, prompt_used) where image_bytes is PNG format
@@ -512,12 +1128,15 @@ class GeminiClient:
             GeminiRateLimitError: If rate limit is exceeded
 
         Example:
-            >>> image_bytes, prompt = await client.generate_image(
-            ...     recipient="Петр Иванов",
-            ...     reason="инновационные идеи",
-            ...     message="Спасибо что всегда находишь выход из сложных ситуаций!",
-            ...     style="space"
+            >>> concept = VisualConcept(
+            ...     core_theme="innovation",
+            ...     visual_metaphor="A brass orrery mechanism emerging from snow",
+            ...     key_elements=["orrery", "gears", "snow", "sunrise"],
+            ...     mood="awakening and precision",
+            ...     composition="low angle close-up, shallow depth of field",
+            ...     lighting="warm sunrise from the right, golden hour quality"
             ... )
+            >>> image_bytes, prompt = await client.generate_image(concept, "fantasy")
         """
         if style not in IMAGE_STYLE_PROMPTS:
             raise GeminiImageGenerationError(
@@ -525,19 +1144,23 @@ class GeminiClient:
                 details={"style": style, "available_styles": list(IMAGE_STYLE_PROMPTS.keys())},
             )
 
-        # Build the prompt from template
+        # Build the prompt from template using VisualConcept
+        # Key change: pass core_theme so each style can REINTERPRET the concept creatively
+        # This creates diversity - same theme, different visual interpretations per style
         style_template = IMAGE_STYLE_PROMPTS[style]
         full_prompt = style_template.format(
-            recipient=recipient,
-            reason=reason or "профессиональные достижения",
-            message=message or "Спасибо за отличную работу!",
+            core_theme=visual_concept.core_theme,
+            visual_metaphor=visual_concept.visual_metaphor,
+            key_elements=", ".join(visual_concept.key_elements),
+            mood=visual_concept.mood,
         )
 
         logger.debug(
-            f"Generating image with style '{style}' for recipient",
+            f"Generating image with style '{style}'",
             extra={
                 "style": style,
-                "has_reason": bool(reason),
+                "core_theme": visual_concept.core_theme,
+                "mood": visual_concept.mood,
             },
         )
 
@@ -546,7 +1169,7 @@ class GeminiClient:
 
             # Request image generation via chat completions
             # Gemini image models use modalities parameter for image generation
-            # Using 3:2 aspect ratio for horizontal A6 postcard format (148x105mm)
+            # Using 2:3 aspect ratio for vertical A6 postcard format (105x148mm)
             response = await client.post(
                 "/chat/completions",
                 json={
@@ -561,7 +1184,7 @@ class GeminiClient:
                     "modalities": ["image", "text"],
                     "extra_body": {
                         "imageConfig": {
-                            "aspectRatio": "3:2"
+                            "aspectRatio": "2:3"
                         }
                     },
                 },
@@ -606,7 +1229,7 @@ class GeminiClient:
                 f"Image generation failed: {e}",
                 extra={
                     "style": style,
-                    "recipient": recipient,
+                    "core_theme": visual_concept.core_theme,
                     "error_type": type(e).__name__,
                 },
                 exc_info=True,

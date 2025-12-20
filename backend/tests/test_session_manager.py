@@ -415,10 +415,10 @@ class TestSessionManagerReplaceImageVariants:
             image_data=sample_image_data,
         )
         new_variants = [
-            ImageVariant(url="generated://new-1", style=ImageStyle.DIGITAL_ART, prompt="New 1"),
-            ImageVariant(url="generated://new-2", style=ImageStyle.SPACE, prompt="New 2"),
-            ImageVariant(url="generated://new-3", style=ImageStyle.PIXEL_ART, prompt="New 3"),
-            ImageVariant(url="generated://new-4", style=ImageStyle.MOVIE, prompt="New 4"),
+            ImageVariant(url="generated://new-1", style=ImageStyle.HYPERREALISM, prompt="New 1"),
+            ImageVariant(url="generated://new-2", style=ImageStyle.PIXEL_ART, prompt="New 2"),
+            ImageVariant(url="generated://new-3", style=ImageStyle.KNITTED, prompt="New 3"),
+            ImageVariant(url="generated://new-4", style=ImageStyle.WATERCOLOR, prompt="New 4"),
         ]
         new_image_data = {v.url: f"new_bytes_{i}".encode() for i, v in enumerate(new_variants)}
 
@@ -488,7 +488,7 @@ class TestSessionManagerReplaceImageVariants:
 
         # Create new variants
         new_variants = [
-            ImageVariant(url="generated://new-img", style=ImageStyle.SPACE, prompt="test")
+            ImageVariant(url="generated://new-img", style=ImageStyle.WATERCOLOR, prompt="test")
         ]
         new_image_data = {"generated://new-img": b"new_data"}
 

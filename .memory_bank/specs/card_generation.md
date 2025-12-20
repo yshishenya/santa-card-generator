@@ -71,14 +71,24 @@
   5. `standup` - Дружеский стендап
 
 #### FR-01.6: Опция "Стиль изображения"
-- **Тип**: Группа из 5 радиокнопок (single choice)
-- **Валидация**: Обязательный выбор
-- **Стили изображения**:
-  1. `digital_art` - Цифровая живопись
-  2. `pixel_art` - Пиксель-арт
-  3. `space` - Космическая фантастика
-  4. `movie` - Кадр из фильма
-  5. `hyperrealism` - Гиперреализм
+- **Тип**: Галерея стилей (15 вариантов)
+- **Валидация**: Обязательный выбор (или генерация всех стилей)
+- **Стили изображения** (15 стилей с two-stage generation):
+  1. `knitted` - Вязаная текстура
+  2. `magic_realism` - Магический реализм
+  3. `pixel_art` - Пиксель-арт 16-bit
+  4. `vintage_russian` - Русская открытка 1910
+  5. `soviet_poster` - Советский плакат
+  6. `hyperrealism` - Гиперреализм
+  7. `digital_3d` - 3D изометрия
+  8. `fantasy` - Эпическое фэнтези
+  9. `comic_book` - Комикс
+  10. `watercolor` - Акварель
+  11. `cyberpunk` - Киберпанк
+  12. `paper_cutout` - Бумажная аппликация
+  13. `pop_art` - Поп-арт
+  14. `lego` - LEGO конструктор
+  15. `linocut` - Линогравюра
 
 #### FR-01.7: Кнопка "Сгенерировать открытку"
 - **Доступность**: Активна только если:
@@ -114,10 +124,37 @@
   - Пользователь выбирает между своим текстом и AI-вариантами
 - Входные данные: reason, message, text_style
 
-#### FR-02.2: Генерация изображения
-- Отправка запроса к Gemini API для создания изображения
-- Входные данные: recipient, reason (опционально), image_style
-- Результат: Изображение в формате PNG/JPEG
+#### FR-02.2: Генерация изображения (Two-Stage)
+
+**Архитектура двухэтапной генерации:**
+
+**Этап 1: Visual Concept Analysis**
+- Анализ текста благодарности с помощью AI
+- Входные данные: `recipient`, `reason`, `message`
+- Результат: `VisualConcept` со структурированными данными:
+  - `core_theme` - основная тема (teamwork, innovation, leadership, etc.)
+  - `visual_metaphor` - конкретная визуальная метафора
+  - `key_elements` - 3-5 ключевых элементов для изображения
+  - `mood` - эмоциональная атмосфера
+- Fallback: при ошибке используется `FALLBACK_VISUAL_CONCEPT`
+
+**Этап 2: Image Generation**
+- Генерация изображений на основе `VisualConcept`
+- Промпты используют placeholders: `{visual_metaphor}`, `{key_elements}`, `{mood}`
+- Параллельная генерация для всех 15 стилей
+- Graceful degradation: при частичных ошибках возвращаются успешные результаты
+
+**Пример VisualConcept:**
+```json
+{
+  "core_theme": "innovation",
+  "visual_metaphor": "A golden key unlocking a treasure chest in the snow",
+  "key_elements": ["golden key", "treasure chest", "snow", "soft glow"],
+  "mood": "discovery and achievement"
+}
+```
+
+- Результат: Изображения в формате PNG для каждого стиля
 
 #### FR-02.3: Параллельная генерация
 - Текст и изображение должны генерироваться параллельно (asyncio.gather)
@@ -354,6 +391,7 @@ class ImageVariant(BaseModel):
 
 ---
 
-**Version**: 1.1
-**Last Updated**: 2025-12-11
+**Version**: 1.2
+**Last Updated**: 2025-12-18
 **Status**: Implemented
+**Image Styles**: 15 (two-stage generation)

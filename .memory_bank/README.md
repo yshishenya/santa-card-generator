@@ -134,14 +134,24 @@ santa/
 | `newspaper` | Заметка в газете |
 | `standup` | Дружеский стендап |
 
-### Image Styles (AI)
+### Image Styles (AI) — 15 стилей с Two-Stage Generation
 | Code | Name |
 |------|------|
-| `digital_art` | Цифровая живопись |
-| `pixel_art` | Пиксель-арт |
-| `space` | Космическая фантастика |
-| `movie` | Кадр из фильма |
+| `knitted` | Вязаная текстура |
+| `magic_realism` | Магический реализм |
+| `pixel_art` | Пиксель-арт 16-bit |
+| `vintage_russian` | Русская открытка 1910 |
+| `soviet_poster` | Советский плакат |
 | `hyperrealism` | Гиперреализм |
+| `digital_3d` | 3D изометрия |
+| `fantasy` | Эпическое фэнтези |
+| `comic_book` | Комикс |
+| `watercolor` | Акварель |
+| `cyberpunk` | Киберпанк |
+| `paper_cutout` | Бумажная аппликация |
+| `pop_art` | Поп-арт |
+| `lego` | LEGO конструктор |
+| `linocut` | Линогравюра |
 
 ### Winter Night Color Palette
 | Color | Hex | Usage |
@@ -224,5 +234,6 @@ docker compose up --build
 
 ---
 
-**Last Updated**: 2025-12-11
+**Last Updated**: 2025-12-18
 **Deployment**: Docker Compose
+**Image Styles**: 15 (two-stage generation)

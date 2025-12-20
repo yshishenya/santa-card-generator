@@ -24,6 +24,7 @@ from src.integrations.gemini import (
     HTTP_TIMEOUT_SECONDS,
     TEXT_MAX_TOKENS,
     IMAGE_MAX_TOKENS,
+    VisualConcept,
 )
 from src.integrations.exceptions import (
     GeminiTextGenerationError,
@@ -314,6 +315,16 @@ class TestGenerateImage:
         return GeminiClient(api_key="test-api-key")
 
     @pytest.fixture
+    def sample_visual_concept(self) -> VisualConcept:
+        """Create a sample VisualConcept for testing."""
+        return VisualConcept(
+            core_theme="teamwork",
+            visual_metaphor="Hands joining together in unity, symbolizing collaboration",
+            key_elements=["joined hands", "warm glow", "team spirit"],
+            mood="warm and inspiring",
+        )
+
+    @pytest.fixture
     def mock_image_response(self) -> dict:
         """Create a mock successful image generation response with base64 PNG."""
         # Create a minimal valid PNG (1x1 transparent pixel)
@@ -336,11 +347,11 @@ class TestGenerateImage:
 
     @pytest.mark.asyncio
     async def test_generate_image_returns_tuple(
-        self, gemini_client: GeminiClient, mock_image_response: dict
+        self, gemini_client: GeminiClient, mock_image_response: dict, sample_visual_concept: VisualConcept
     ) -> None:
         """Test that image generation returns tuple of (bytes, prompt).
 
-        NEW architecture: generate_image returns Tuple[bytes, str].
+        NEW architecture: generate_image accepts VisualConcept and returns Tuple[bytes, str].
         """
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -353,9 +364,8 @@ class TestGenerateImage:
             mock_get_client.return_value = mock_client
 
             result = await gemini_client.generate_image(
-                recipient="Test User",
-                reason="testing",
-                style="digital_art",
+                visual_concept=sample_visual_concept,
+                style="knitted",
             )
 
             # Verify tuple structure
@@ -370,7 +380,7 @@ class TestGenerateImage:
 
     @pytest.mark.asyncio
     async def test_generate_image_with_all_styles(
-        self, gemini_client: GeminiClient, mock_image_response: dict
+        self, gemini_client: GeminiClient, mock_image_response: dict, sample_visual_concept: VisualConcept
     ) -> None:
         """Test that all image styles can be used without error."""
         mock_response = MagicMock()
@@ -385,8 +395,7 @@ class TestGenerateImage:
                 mock_get_client.return_value = mock_client
 
                 result = await gemini_client.generate_image(
-                    recipient="Test User",
-                    reason="testing",
+                    visual_concept=sample_visual_concept,
                     style=style,
                 )
 
@@ -397,13 +406,12 @@ class TestGenerateImage:
 
     @pytest.mark.asyncio
     async def test_generate_image_invalid_style_raises_error(
-        self, gemini_client: GeminiClient
+        self, gemini_client: GeminiClient, sample_visual_concept: VisualConcept
     ) -> None:
         """Test that invalid image style raises GeminiImageGenerationError."""
         with pytest.raises(GeminiImageGenerationError) as exc_info:
             await gemini_client.generate_image(
-                recipient="Test User",
-                reason="testing",
+                visual_concept=sample_visual_concept,
                 style="invalid_style",
             )
 
@@ -411,7 +419,7 @@ class TestGenerateImage:
 
     @pytest.mark.asyncio
     async def test_generate_image_handles_rate_limit(
-        self, gemini_client: GeminiClient
+        self, gemini_client: GeminiClient, sample_visual_concept: VisualConcept
     ) -> None:
         """Test that rate limit is properly handled for image generation."""
         mock_response = MagicMock()
@@ -424,14 +432,13 @@ class TestGenerateImage:
 
             with pytest.raises(GeminiRateLimitError):
                 await gemini_client.generate_image(
-                    recipient="Test User",
-                    reason="testing",
-                    style="digital_art",
+                    visual_concept=sample_visual_concept,
+                    style="knitted",
                 )
 
     @pytest.mark.asyncio
     async def test_generate_image_empty_response_raises_error(
-        self, gemini_client: GeminiClient
+        self, gemini_client: GeminiClient, sample_visual_concept: VisualConcept
     ) -> None:
         """Test that empty response raises appropriate error."""
         mock_response = MagicMock()
@@ -446,9 +453,8 @@ class TestGenerateImage:
 
             with pytest.raises(GeminiImageGenerationError):
                 await gemini_client.generate_image(
-                    recipient="Test User",
-                    reason="testing",
-                    style="digital_art",
+                    visual_concept=sample_visual_concept,
+                    style="knitted",
                 )
 
 
@@ -598,12 +604,17 @@ class TestImageStylePrompts:
 
     def test_all_image_styles_have_prompts(self) -> None:
         """Test that all expected image styles have associated prompts."""
-        expected_styles = ["digital_art", "pixel_art", "space", "movie"]
+        # Updated to check for new visual concept placeholders
+        expected_styles = ["knitted", "pixel_art", "watercolor", "hyperrealism"]
 
         for style in expected_styles:
             assert style in IMAGE_STYLE_PROMPTS, f"Missing image style: {style}"
             prompt = IMAGE_STYLE_PROMPTS[style]
-            assert "{reason}" in prompt, f"Missing {{reason}} in {style}"
+            # New architecture: each style REINTERPRETS the theme creatively
+            # Required placeholders: core_theme, visual_metaphor, mood
+            assert "{core_theme}" in prompt, f"Missing {{core_theme}} in {style}"
+            assert "{visual_metaphor}" in prompt, f"Missing {{visual_metaphor}} in {style}"
+            assert "{mood}" in prompt, f"Missing {{mood}} in {style}"
 
     def test_image_prompts_are_non_empty_strings(self) -> None:
         """Test that all image style prompts are non-empty strings."""

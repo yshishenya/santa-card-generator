@@ -37,31 +37,64 @@ TEXT_STYLE_LABELS = {
 
 
 class ImageStyle(str, Enum):
-    """Image generation styles for greeting cards."""
+    """Image generation styles for greeting cards.
 
-    DIGITAL_ART = "digital_art"
+    All 15 styles matching IMAGE_STYLE_PROMPTS in gemini.py.
+    """
+
+    KNITTED = "knitted"
+    MAGIC_REALISM = "magic_realism"
     PIXEL_ART = "pixel_art"
-    SPACE = "space"
-    MOVIE = "movie"
+    VINTAGE_RUSSIAN = "vintage_russian"
+    SOVIET_POSTER = "soviet_poster"
     HYPERREALISM = "hyperrealism"
+    DIGITAL_3D = "digital_3d"
+    FANTASY = "fantasy"
+    COMIC_BOOK = "comic_book"
+    WATERCOLOR = "watercolor"
+    CYBERPUNK = "cyberpunk"
+    PAPER_CUTOUT = "paper_cutout"
+    POP_ART = "pop_art"
+    LEGO = "lego"
+    LINOCUT = "linocut"
 
 
 # All image styles
 ALL_IMAGE_STYLES = [
-    ImageStyle.DIGITAL_ART,
-    ImageStyle.SPACE,
+    ImageStyle.KNITTED,
+    ImageStyle.MAGIC_REALISM,
     ImageStyle.PIXEL_ART,
-    ImageStyle.MOVIE,
+    ImageStyle.VINTAGE_RUSSIAN,
+    ImageStyle.SOVIET_POSTER,
     ImageStyle.HYPERREALISM,
+    ImageStyle.DIGITAL_3D,
+    ImageStyle.FANTASY,
+    ImageStyle.COMIC_BOOK,
+    ImageStyle.WATERCOLOR,
+    ImageStyle.CYBERPUNK,
+    ImageStyle.PAPER_CUTOUT,
+    ImageStyle.POP_ART,
+    ImageStyle.LEGO,
+    ImageStyle.LINOCUT,
 ]
 
 # Human-readable labels for image styles
 IMAGE_STYLE_LABELS = {
-    ImageStyle.DIGITAL_ART: "Цифровая живопись",
-    ImageStyle.SPACE: "Космическая фантастика",
+    ImageStyle.KNITTED: "Уютный трикотаж",
+    ImageStyle.MAGIC_REALISM: "Магический реализм",
     ImageStyle.PIXEL_ART: "Пиксель-арт",
-    ImageStyle.MOVIE: "Кадр из фильма",
+    ImageStyle.VINTAGE_RUSSIAN: "Винтажная открытка",
+    ImageStyle.SOVIET_POSTER: "Советский плакат",
     ImageStyle.HYPERREALISM: "Гиперреализм",
+    ImageStyle.DIGITAL_3D: "3D-графика",
+    ImageStyle.FANTASY: "Фэнтези",
+    ImageStyle.COMIC_BOOK: "Комикс",
+    ImageStyle.WATERCOLOR: "Акварель",
+    ImageStyle.CYBERPUNK: "Киберпанк",
+    ImageStyle.PAPER_CUTOUT: "Бумажная аппликация",
+    ImageStyle.POP_ART: "Поп-арт",
+    ImageStyle.LEGO: "LEGO",
+    ImageStyle.LINOCUT: "Линогравюра",
 }
 
 
@@ -83,7 +116,7 @@ class ImageVariant(BaseModel):
 class CardGenerationRequest(BaseModel):
     """Request model for card generation.
 
-    Simplified model - all text styles and all image styles are generated automatically.
+    Generates text variants. Images are generated separately via /cards/generate-images.
     """
 
     recipient: str = Field(
@@ -118,6 +151,18 @@ class CardGenerationRequest(BaseModel):
         return v.strip()
 
 
+class GenerateImagesRequest(BaseModel):
+    """Request model for generating images for selected styles."""
+
+    session_id: str = Field(..., description="Session ID from initial generation")
+    image_styles: List[ImageStyle] = Field(
+        ...,
+        description="List of image styles to generate (1-4 styles)",
+        min_length=1,
+        max_length=4,
+    )
+
+
 class CardGenerationResponse(BaseModel):
     """Response model for card generation."""
 
@@ -130,10 +175,22 @@ class CardGenerationResponse(BaseModel):
         ..., description="List of generated text variants (5 styles)", min_length=1
     )
     image_variants: List[ImageVariant] = Field(
-        ..., description="List of generated image variants (4 styles)", min_length=1
+        default_factory=list,
+        description="List of generated image variants (empty until generate-images called)",
     )
     remaining_text_regenerations: int = Field(
         ..., description="Number of text regenerations remaining"
+    )
+    remaining_image_regenerations: int = Field(
+        ..., description="Number of image regenerations remaining"
+    )
+
+
+class GenerateImagesResponse(BaseModel):
+    """Response model for image generation."""
+
+    image_variants: List[ImageVariant] = Field(
+        ..., description="List of generated image variants", min_length=1
     )
     remaining_image_regenerations: int = Field(
         ..., description="Number of image regenerations remaining"

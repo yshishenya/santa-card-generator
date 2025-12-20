@@ -91,8 +91,8 @@ const handleBackdropClick = (event: MouseEvent) => {
           <!-- Telegram-style preview -->
           <div class="p-4">
             <div class="bg-[#0e1621] rounded-2xl overflow-hidden shadow-xl max-w-md mx-auto">
-              <!-- Image -->
-              <div v-if="selectedImage" class="aspect-[3/2]">
+              <!-- Image (vertical A6 format) -->
+              <div v-if="selectedImage" class="aspect-[2/3]">
                 <img
                   :src="selectedImage.url"
                   alt="Открытка"

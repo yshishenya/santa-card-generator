@@ -98,7 +98,7 @@ def sample_text_variants() -> List[TextVariant]:
 def sample_image_variants() -> List[ImageVariant]:
     """Create sample image variants for testing.
 
-    NEW architecture: 4 variants, one per image style.
+    Uses 4 representative styles from the 15 available.
 
     Returns:
         List of 4 ImageVariant objects.
@@ -106,23 +106,23 @@ def sample_image_variants() -> List[ImageVariant]:
     return [
         ImageVariant(
             url="generated://image-001",
-            style=ImageStyle.DIGITAL_ART,
-            prompt="A festive digital art greeting"
+            style=ImageStyle.HYPERREALISM,
+            prompt="Photorealistic winter scene"
         ),
         ImageVariant(
             url="generated://image-002",
-            style=ImageStyle.SPACE,
-            prompt="Cosmic celebration among stars"
-        ),
-        ImageVariant(
-            url="generated://image-003",
             style=ImageStyle.PIXEL_ART,
             prompt="Retro pixel art holiday greeting"
         ),
         ImageVariant(
+            url="generated://image-003",
+            style=ImageStyle.KNITTED,
+            prompt="Cozy knitted texture scene"
+        ),
+        ImageVariant(
             url="generated://image-004",
-            style=ImageStyle.MOVIE,
-            prompt="Cinematic movie poster greeting"
+            style=ImageStyle.WATERCOLOR,
+            prompt="Soft watercolor winter scene"
         ),
     ]
 

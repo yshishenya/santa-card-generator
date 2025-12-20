@@ -2,6 +2,7 @@ import axios, { type AxiosInstance, type AxiosError } from 'axios'
 import type {
   CardGenerationRequest,
   CardGenerationResponse,
+  GenerateImagesResponse,
   RegenerateRequest,
   RegenerateResponse,
   SendCardRequest,
@@ -80,6 +81,16 @@ interface BackendRegenerateResponse {
   remaining_regenerations: number
 }
 
+interface BackendGenerateImagesRequest {
+  session_id: string
+  image_styles: string[]  // ImageStyle values
+}
+
+interface BackendGenerateImagesResponse {
+  image_variants: BackendImageVariant[]
+  remaining_image_regenerations: number
+}
+
 interface BackendSendCardResponse {
   success: boolean
   message: string
@@ -93,12 +104,14 @@ interface BackendAuthResponse {
 
 class APIClient {
   private client: AxiosInstance
+  private baseURL: string
 
   constructor() {
-    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    // Use relative URL for production, env variable for development
+    this.baseURL = import.meta.env.VITE_API_URL || ''
 
     this.client = axios.create({
-      baseURL: `${baseURL}/api/v1`,
+      baseURL: `${this.baseURL}/api/v1`,
       headers: {
         'Content-Type': 'application/json'
       },
@@ -157,10 +170,35 @@ class APIClient {
   private transformImageUrl(sessionId: string, url: string): string {
     if (url.startsWith('generated://')) {
       const imageId = url.replace('generated://', '')
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-      return `${baseURL}/api/v1/cards/images/${sessionId}/${imageId}`
+      return `${this.baseURL}/api/v1/cards/images/${sessionId}/${imageId}`
     }
     return url
+  }
+
+  /**
+   * Generate images for selected styles
+   */
+  async generateImages(sessionId: string, imageStyles: ImageStyle[]): Promise<GenerateImagesResponse> {
+    const backendRequest: BackendGenerateImagesRequest = {
+      session_id: sessionId,
+      image_styles: imageStyles
+    }
+
+    const response = await this.client.post<APIResponse<BackendGenerateImagesResponse>>(
+      '/cards/generate-images',
+      backendRequest
+    )
+
+    const backendData = response.data.data
+
+    return {
+      image_variants: backendData.image_variants.map((iv, index) => ({
+        id: `image-${index}`,
+        url: this.transformImageUrl(sessionId, iv.url),
+        style: iv.style as ImageStyle
+      })),
+      remaining_image_regenerations: backendData.remaining_image_regenerations
+    }
   }
 
   /**

@@ -3,6 +3,8 @@
 from src.models.card import (
     CardGenerationRequest,
     CardGenerationResponse,
+    GenerateImagesRequest,
+    GenerateImagesResponse,
     ImageStyle,
     ImageVariant,
     RegenerateRequest,
@@ -19,6 +21,8 @@ __all__ = [
     "ImageStyle",
     "CardGenerationRequest",
     "CardGenerationResponse",
+    "GenerateImagesRequest",
+    "GenerateImagesResponse",
     "TextVariant",
     "ImageVariant",
     "RegenerateRequest",
