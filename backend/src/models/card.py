@@ -80,7 +80,7 @@ ALL_IMAGE_STYLES = [
 
 # Human-readable labels for image styles
 IMAGE_STYLE_LABELS = {
-    ImageStyle.KNITTED: "Уютный трикотаж",
+    ImageStyle.KNITTED: "Трикотаж",
     ImageStyle.MAGIC_REALISM: "Магический реализм",
     ImageStyle.PIXEL_ART: "Пиксель-арт",
     ImageStyle.VINTAGE_RUSSIAN: "Винтажная открытка",

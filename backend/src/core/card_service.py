@@ -92,6 +92,31 @@ class GeminiClient(Protocol):
         """
         ...
 
+    async def analyze_for_visual_batch(
+        self,
+        recipient: str,
+        reason: str | None,
+        message: str | None,
+        count: int = 4,
+        styles: list[str] | None = None,
+    ) -> list[VisualConcept]:
+        """Analyze gratitude and generate MULTIPLE diverse visual concepts.
+
+        Uses multi-agent ultrathink approach to generate N distinct concepts,
+        each from a different metaphor category for maximum thematic diversity.
+
+        Args:
+            recipient: Name of the card recipient.
+            reason: Optional reason for gratitude.
+            message: Optional personal message.
+            count: Number of diverse concepts to generate.
+            styles: Optional list of image style codes for style-aware fallback.
+
+        Returns:
+            List of VisualConcept objects, each from a different metaphor category.
+        """
+        ...
+
     async def generate_image(
         self,
         visual_concept: VisualConcept,
@@ -102,6 +127,27 @@ class GeminiClient(Protocol):
         Args:
             visual_concept: Analyzed visual concept from analyze_for_visual.
             style: Style of image to generate.
+
+        Returns:
+            Tuple of (image_bytes, prompt_used).
+        """
+        ...
+
+    async def generate_image_direct(
+        self,
+        style: str,
+        reason: str | None = None,
+        message: str | None = None,
+    ) -> Tuple[bytes, str]:
+        """Generate unique image directly with built-in randomization.
+
+        This is the primary method for image generation - uses randomization
+        pools to ensure every image is unique, even with identical input.
+
+        Args:
+            style: Image style code (knitted, pixel_art, fantasy, etc.)
+            reason: Optional reason for gratitude (used for semantic theming).
+            message: Optional personal message (used for semantic theming).
 
         Returns:
             Tuple of (image_bytes, prompt_used).
@@ -346,7 +392,7 @@ class CardService:
 
             # Set images in session (does not decrement regeneration counter)
             remaining = self._session_manager.set_initial_image_variants(
-                request.session_id, image_variants, image_data
+                request.session_id, image_variants, image_data, request.image_styles
             )
 
             logger.info(
@@ -462,11 +508,25 @@ class CardService:
             )
             raise RegenerationLimitExceededError("image", self._max_regenerations)
 
-        # Generate all 4 new image variants
+        # Generate new image variants for the SAME styles as originally selected
         try:
             original_request = session.original_request
-            image_results = await self._generate_image_variants(
-                request=original_request, correlation_id=correlation_id
+            selected_styles = session.selected_image_styles
+            
+            if not selected_styles:
+                logger.error(
+                    f"[{correlation_id}] No selected styles found in session {session_id}"
+                )
+                raise ValueError("No image styles selected in session")
+            
+            logger.info(
+                f"[{correlation_id}] Regenerating images for styles: {[s.value for s in selected_styles]}"
+            )
+            
+            image_results = await self._generate_image_variants_for_styles(
+                request=original_request,
+                styles=selected_styles,
+                correlation_id=correlation_id,
             )
 
             # Unpack results
@@ -708,11 +768,15 @@ class CardService:
         styles: List[ImageStyle],
         correlation_id: str,
     ) -> List[Tuple[ImageVariant, bytes]]:
-        """Generate image variants for specific styles using two-stage approach.
+        """Generate image variants using direct one-stage generation with randomization.
 
-        Two-stage generation:
-        1. Analyze gratitude text to extract visual concept (once)
-        2. Generate images for each style using the visual concept (parallel)
+        Uses the new direct generation approach where each image:
+        1. Gets unique random variations (subject, atmosphere, composition, etc.)
+        2. Uses semantic theme extraction from gratitude reason/message
+        3. Applies style-specific rendering requirements
+
+        This ensures MAXIMUM DIVERSITY - even with identical input,
+        each image will be completely unique due to randomization pools.
 
         Handles partial failures gracefully - if some images fail to generate,
         returns the successful ones. At least one image must succeed.
@@ -728,29 +792,18 @@ class CardService:
         Raises:
             Exception: If all image generations fail.
         """
-        logger.debug(
-            f"[{correlation_id}] Generating {len(styles)} image variants for {request.recipient}, "
+        logger.info(
+            f"[{correlation_id}] Generating {len(styles)} UNIQUE images with direct randomization for {request.recipient}, "
             f"styles: {[s.value for s in styles]}"
         )
 
-        # Stage 1: Analyze gratitude text to extract visual concept (once for all styles)
-        logger.info(f"[{correlation_id}] Stage 1: Analyzing text for visual concept")
-        visual_concept = await self._gemini_client.analyze_for_visual(
-            recipient=request.recipient,
-            reason=request.reason,
-            message=request.message,
-        )
-        logger.info(
-            f"[{correlation_id}] Visual concept extracted: theme={visual_concept.core_theme}, "
-            f"mood={visual_concept.mood}"
-        )
-
-        # Stage 2: Generate images for each style using the visual concept (parallel)
-        logger.info(f"[{correlation_id}] Stage 2: Generating {len(styles)} images in parallel")
+        # Direct generation - each image gets its own random variation
+        # No intermediate analysis step needed!
         tasks = [
-            self._gemini_client.generate_image(
-                visual_concept=visual_concept,
+            self._gemini_client.generate_image_direct(
                 style=style.value,
+                reason=request.reason,
+                message=request.message,
             )
             for style in styles
         ]
@@ -782,6 +835,10 @@ class CardService:
             )
 
             variants.append((variant, image_bytes))
+            
+            logger.debug(
+                f"[{correlation_id}] Style {style.value} generated with unique randomization"
+            )
 
         # If all images failed, raise an error
         if not variants:
@@ -795,8 +852,8 @@ class CardService:
                 f"{len(failed_styles)} failed (styles: {failed_styles})"
             )
 
-        logger.debug(
-            f"[{correlation_id}] Generated {len(variants)} image variants "
+        logger.info(
+            f"[{correlation_id}] Generated {len(variants)} UNIQUE image variants "
             f"(styles: {[v.style.value for v, _ in variants]})"
         )
 

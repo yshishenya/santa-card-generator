@@ -397,18 +397,15 @@ class TestCardServiceRegenerateImage:
         await service.generate_images(images_request)
 
         # Reset mock call counts
-        mock_gemini_client.generate_image.reset_mock()
-        mock_gemini_client.analyze_for_visual.reset_mock()
+        mock_gemini_client.generate_image_direct.reset_mock()
 
         # Act
         regen_response = await service.regenerate_image(session_id)
 
-        # Assert - Should call analyze_for_visual once, then generate new images for all styles
-        assert mock_gemini_client.analyze_for_visual.call_count == 1
-        # regenerate_image generates for ALL available styles
-        assert mock_gemini_client.generate_image.call_count == len(ALL_IMAGE_STYLES)
+        # Assert - Should call generate_image_direct for each style (direct generation with randomization)
+        assert mock_gemini_client.generate_image_direct.call_count == len(selected_styles)
         assert regen_response.image_variants is not None
-        assert len(regen_response.image_variants) == len(ALL_IMAGE_STYLES)
+        assert len(regen_response.image_variants) == len(selected_styles)
         assert regen_response.remaining_regenerations == 2  # 3 max - 1 used
 
     @pytest.mark.asyncio
@@ -841,8 +838,7 @@ class TestCardServiceConcurrentGeneration:
         session_id = gen_response.session_id
 
         # Reset mocks
-        mock_gemini_client.analyze_for_visual.reset_mock()
-        mock_gemini_client.generate_image.reset_mock()
+        mock_gemini_client.generate_image_direct.reset_mock()
 
         # Generate images for 4 styles
         selected_styles = list(ALL_IMAGE_STYLES)[:4]
@@ -854,11 +850,9 @@ class TestCardServiceConcurrentGeneration:
         # Act
         await service.generate_images(images_request)
 
-        # Assert - Two-stage generation:
-        # Stage 1: analyze_for_visual called once
-        assert mock_gemini_client.analyze_for_visual.call_count == 1
-        # Stage 2: generate_image called for each style
-        assert mock_gemini_client.generate_image.call_count == 4
+        # Assert - Single-stage direct generation with randomization:
+        # generate_image_direct called once per style (each with unique randomization)
+        assert mock_gemini_client.generate_image_direct.call_count == 4
 
 
 class TestCardServiceInitialization:
@@ -978,8 +972,8 @@ class TestCardServiceRegenerationLimitsIndependent:
 
         # Assert
         assert image_response.image_variants is not None
-        # regenerate_image generates for ALL available styles
-        assert len(image_response.image_variants) == len(ALL_IMAGE_STYLES)
+        # regenerate_image generates for the SAME styles as originally selected (4 styles)
+        assert len(image_response.image_variants) == len(selected_styles)
         assert image_response.remaining_regenerations == max_regenerations - 1
 
     @pytest.mark.asyncio

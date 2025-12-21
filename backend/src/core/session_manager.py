@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
-from src.models.card import CardGenerationRequest, ImageVariant, TextVariant
+from src.models.card import CardGenerationRequest, ImageStyle, ImageVariant, TextVariant
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ class GenerationSession:
     text_variants: List[TextVariant]
     image_variants: List[ImageVariant]
     image_data: Dict[str, bytes] = field(default_factory=dict)
+    selected_image_styles: List[ImageStyle] = field(default_factory=list)  # Styles selected by user
     text_regenerations_left: int = 3
     image_regenerations_left: int = 3
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -215,6 +216,7 @@ class SessionManager:
         session_id: str,
         variants: List[ImageVariant],
         image_data: Dict[str, bytes],
+        selected_styles: List[ImageStyle],
     ) -> int:
         """Set initial image variants for a session (does not decrement counter).
 
@@ -224,6 +226,7 @@ class SessionManager:
             session_id: Session ID to update.
             variants: Image variants to set.
             image_data: Image data dictionary.
+            selected_styles: List of image styles selected by user.
 
         Returns:
             Number of regenerations remaining.
@@ -237,9 +240,11 @@ class SessionManager:
 
         session.image_variants = variants
         session.image_data = image_data
+        session.selected_image_styles = selected_styles
 
         logger.info(
             f"Set initial {len(variants)} image variants in session {session_id}, "
+            f"styles={[s.value for s in selected_styles]}, "
             f"regenerations_left={session.image_regenerations_left}"
         )
 

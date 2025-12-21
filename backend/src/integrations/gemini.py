@@ -76,54 +76,211 @@ class VisualConcept:
     lighting: str = "soft natural winter daylight"  # Light source and quality
 
 
-# Pool of diverse fallback concepts to avoid repetition
-# Each represents a different metaphor category
+# ============================================================================
+# Diverse Fallback Concepts Pool
+# 15 concepts organized by metaphor category for maximum diversity
+# Each category is mapped to specific image styles for deterministic fallback
+# ============================================================================
+
 FALLBACK_VISUAL_CONCEPTS = [
+    # Category 1: CELESTIAL - for ethereal styles
     VisualConcept(
         core_theme="appreciation",
-        visual_metaphor="A vintage brass telescope pointing at the winter night sky from a snow-covered observatory dome, stars reflecting in its polished surface as aurora borealis dances on the horizon",
-        key_elements=["brass telescope", "observatory dome", "snow", "aurora borealis", "starry sky"],
-        mood="wonder and discovery",
-        composition="low angle, medium shot",
-        lighting="aurora glow from horizon, cool starlight from above",
+        visual_metaphor="A vintage brass orrery with crystalline planetary spheres catching the light of a winter sunset, gears frozen mid-rotation as frost patterns form on its polished surfaces",
+        key_elements=["brass orrery", "crystal spheres", "frost patterns", "winter sunset", "intricate gears"],
+        mood="wonder and cosmic harmony",
+        composition="low angle, medium shot with shallow DoF",
+        lighting="warm sunset glow from behind, cool ambient fill",
     ),
+    # Category 2: BOTANICAL - for organic, natural styles
     VisualConcept(
         core_theme="gratitude",
-        visual_metaphor="An ancient oak tree in a snowy meadow with roots visible above ground, intertwining with smaller saplings it shelters, red winter berries dotting its branches",
-        key_elements=["ancient oak", "visible roots", "young saplings", "winter berries", "snowy meadow"],
-        mood="nurturing and enduring",
-        composition="wide establishing shot, eye level",
-        lighting="soft overcast winter daylight, diffused shadows",
+        visual_metaphor="A Victorian glass terrarium filled with impossible winter flowers - crystalline roses and frost-petaled lilies growing from snow-dusted soil, condensation on the curved glass walls",
+        key_elements=["glass terrarium", "crystal roses", "frost lilies", "snow soil", "condensation droplets"],
+        mood="delicate nurturing beauty",
+        composition="close-up, eye level, layered depth",
+        lighting="soft diffused daylight through glass, subtle internal glow",
     ),
+    # Category 3: MECHANICAL/CLOCKWORK - for precision styles
     VisualConcept(
-        core_theme="celebration",
-        visual_metaphor="A collection of vintage hourglasses of different sizes arranged on a frosted windowsill, their golden sand frozen mid-flow, with snowflakes visible through the glass panes behind them",
-        key_elements=["vintage hourglasses", "frozen golden sand", "frosted windowsill", "snowflakes", "glass panes"],
-        mood="timeless achievement",
-        composition="close-up with shallow depth of field",
-        lighting="soft window light from behind, warm interior glow",
+        core_theme="innovation",
+        visual_metaphor="An antique astronomical clock emerging from fresh snowdrift, its exposed golden mechanisms turning as moonlight catches each precisely crafted gear and celestial indicator",
+        key_elements=["astronomical clock", "golden gears", "moonlight", "snowdrift", "celestial dials"],
+        mood="precision and timeless ingenuity",
+        composition="medium shot, slight dutch angle",
+        lighting="cool moonlight from above, warm brass reflections",
     ),
+    # Category 4: ARCHITECTURAL - for grand, structural styles
+    VisualConcept(
+        core_theme="support",
+        visual_metaphor="A magnificent stone viaduct with graceful arches spanning a frozen valley, snow resting on its ancient stones while a distant train creates a plume of steam against the twilight sky",
+        key_elements=["stone viaduct", "frozen valley", "graceful arches", "steam plume", "twilight sky"],
+        mood="enduring strength and connection",
+        composition="wide establishing shot, eye level",
+        lighting="golden twilight with blue shadows, warm steam accent",
+    ),
+    # Category 5: CRAFTSMANSHIP - for artisanal styles
     VisualConcept(
         core_theme="excellence",
-        visual_metaphor="A master blacksmith's anvil in a snow-dusted workshop, with freshly forged iron pieces cooling nearby, steam rising where hot metal meets cold air, tools arranged with precision",
-        key_elements=["iron anvil", "forged pieces", "rising steam", "blacksmith tools", "snow-dusted workshop"],
-        mood="craftsmanship and dedication",
-        composition="medium shot, slightly low angle",
-        lighting="warm forge glow contrasting with cool winter light from window",
+        visual_metaphor="A master glassblower's workshop with a half-formed crystal ornament glowing orange on the end of a blowpipe, snow visible through frosted windows, tools arranged with reverent precision",
+        key_elements=["glowing glass", "blowpipe", "crystal ornament", "frosted windows", "artisan tools"],
+        mood="focused mastery and creation",
+        composition="medium shot, warm-cool contrast",
+        lighting="orange furnace glow vs cool window light",
     ),
+    # Category 6: NAVIGATION/JOURNEY - for adventure styles
+    VisualConcept(
+        core_theme="mentorship",
+        visual_metaphor="An ancient mariner's sextant and star charts spread on a captain's desk, the brass instrument catching lamplight while snow falls past the cabin's porthole, distant constellations visible",
+        key_elements=["brass sextant", "star charts", "captain's desk", "snow porthole", "constellations"],
+        mood="guidance through unknown waters",
+        composition="close-up with deep background",
+        lighting="warm oil lamp glow, cool starlight accent",
+    ),
+    # Category 7: MUSICAL - for harmonious, elegant styles
     VisualConcept(
         core_theme="teamwork",
-        visual_metaphor="Multiple paper origami cranes in different colors suspended mid-flight in a spiral formation above a snow-covered Japanese garden, their shadows creating patterns on the white ground",
-        key_elements=["origami cranes", "spiral formation", "Japanese garden", "snow", "shadow patterns"],
-        mood="harmony and collective beauty",
-        composition="bird's eye view transitioning to medium",
-        lighting="bright winter sun creating sharp shadows",
+        visual_metaphor="A string quartet's instruments arranged in a snow-dusted gazebo at dusk - violin, viola, cello, and bass forming a perfect constellation, sheet music pages frozen mid-flutter in the still air",
+        key_elements=["string instruments", "snow gazebo", "frozen sheet music", "dusk light", "perfect arrangement"],
+        mood="harmony frozen in a perfect moment",
+        composition="wide shot, slightly elevated",
+        lighting="golden dusk rim light, blue ambient shadows",
+    ),
+    # Category 8: ELEMENTAL - for dramatic, dynamic styles
+    VisualConcept(
+        core_theme="perseverance",
+        visual_metaphor="A cascade of autumn leaves suspended mid-transformation into snowflakes, the moment of change frozen in time above a forest floor carpeted in both colors",
+        key_elements=["autumn leaves", "snowflake transformation", "frozen moment", "forest floor", "mixed carpet"],
+        mood="beautiful metamorphosis",
+        composition="medium shot, eye level, magical realism",
+        lighting="soft diffused light, subtle sparkle on transitions",
+    ),
+    # Category 9: SYMBOLIC OBJECTS - for meaningful, intimate styles
+    VisualConcept(
+        core_theme="dedication",
+        visual_metaphor="A perfectly balanced antique scale with snowflakes on one plate and golden autumn leaves on the other, both sides in perfect equilibrium on a frost-covered marble pedestal",
+        key_elements=["antique scale", "snowflakes", "golden leaves", "perfect balance", "marble pedestal"],
+        mood="harmony through balance",
+        composition="close-up, centered, symmetrical",
+        lighting="soft even lighting, subtle highlights on metal",
+    ),
+    # Category 10: NATURE TRANSFORMATIONS - for organic change styles
+    VisualConcept(
+        core_theme="creativity",
+        visual_metaphor="A frozen waterfall with streams of ice crystals suspended mid-cascade, prismatic light dancing through the formations as morning sun hits the sculptural ice",
+        key_elements=["frozen waterfall", "ice crystals", "prismatic light", "morning sun", "sculptural ice"],
+        mood="nature's frozen artistry",
+        composition="low angle looking up, dramatic",
+        lighting="backlit morning sun, rainbow refractions",
+    ),
+    # Category 11: TEXTILE/CRAFT - specifically for knitted style
+    VisualConcept(
+        core_theme="warmth",
+        visual_metaphor="A cozy reading nook with hand-knitted blankets draped over an antique armchair, a steaming mug of cocoa on the side table, snow falling past the frosted window creating a soft glow",
+        key_elements=["knitted blankets", "antique armchair", "cocoa mug", "frosted window", "falling snow"],
+        mood="comfort and cherished moments",
+        composition="medium shot, inviting warmth",
+        lighting="warm interior glow, cool blue from window",
+    ),
+    # Category 12: RETRO/NOSTALGIC - for vintage styles
+    VisualConcept(
+        core_theme="celebration",
+        visual_metaphor="A vintage gramophone with its brass horn pointed toward a snowy window, vinyl records stacked nearby, musical notes seeming to materialize as frost patterns on the glass",
+        key_elements=["brass gramophone", "vinyl records", "frost patterns", "snowy window", "musical traces"],
+        mood="nostalgia and timeless joy",
+        composition="medium shot, warm nostalgic tones",
+        lighting="soft afternoon light, warm brass highlights",
+    ),
+    # Category 13: TECHNOLOGICAL/FUTURISTIC - for modern styles
+    VisualConcept(
+        core_theme="innovation",
+        visual_metaphor="A holographic snowflake projection floating above a sleek crystalline surface, its geometric patterns constantly shifting while real snow falls around it, blending digital and natural",
+        key_elements=["holographic snowflake", "crystalline surface", "shifting patterns", "real snow", "digital-natural blend"],
+        mood="future meets tradition",
+        composition="close-up, centered, high-tech aesthetic",
+        lighting="cool blue holographic glow, soft ambient",
+    ),
+    # Category 14: MINIATURE/DIORAMA - for cute/playful styles
+    VisualConcept(
+        core_theme="joy",
+        visual_metaphor="A miniature winter village inside a snow globe, tiny houses with warm windows, a frozen pond with skating figures, all viewed from an intimate macro perspective as if we've shrunk down",
+        key_elements=["snow globe", "miniature village", "warm windows", "frozen pond", "skating figures"],
+        mood="whimsical enchantment",
+        composition="macro close-up, inside looking out",
+        lighting="warm village glow, cool surrounding snow",
+    ),
+    # Category 15: PRINTMAKING/GRAPHIC - for bold graphic styles
+    VisualConcept(
+        core_theme="strength",
+        visual_metaphor="A majestic winter stag standing proud on a snowy ridge, antlers silhouetted against a full moon, forest of pine trees creating dramatic negative space in the composition",
+        key_elements=["winter stag", "antler silhouette", "full moon", "snowy ridge", "pine forest"],
+        mood="noble strength and solitude",
+        composition="wide shot, high contrast, graphic",
+        lighting="strong moonlight backlight, deep shadows",
     ),
 ]
+
+# Style-to-fallback mapping for deterministic diversity
+# Each image style gets a specific fallback concept from a different category
+STYLE_FALLBACK_MAPPING = {
+    "knitted": 10,        # TEXTILE/CRAFT - cozy reading nook
+    "magic_realism": 7,   # ELEMENTAL - leaves to snowflakes transformation
+    "pixel_art": 13,      # MINIATURE/DIORAMA - snow globe village
+    "vintage_russian": 11, # RETRO/NOSTALGIC - gramophone
+    "soviet_poster": 14,  # PRINTMAKING/GRAPHIC - winter stag
+    "hyperrealism": 9,    # NATURE TRANSFORMATIONS - frozen waterfall
+    "digital_3d": 13,     # MINIATURE/DIORAMA - snow globe village
+    "fantasy": 0,         # CELESTIAL - brass orrery
+    "comic_book": 7,      # ELEMENTAL - leaves transformation
+    "watercolor": 1,      # BOTANICAL - terrarium flowers
+    "cyberpunk": 12,      # TECHNOLOGICAL - holographic snowflake
+    "paper_cutout": 3,    # ARCHITECTURAL - viaduct
+    "pop_art": 8,         # SYMBOLIC OBJECTS - balanced scale
+    "lego": 13,           # MINIATURE/DIORAMA - snow globe village
+    "linocut": 14,        # PRINTMAKING/GRAPHIC - winter stag
+}
+
 
 def get_fallback_visual_concept() -> VisualConcept:
     """Get a random fallback visual concept for diversity."""
     return random.choice(FALLBACK_VISUAL_CONCEPTS)
+
+
+def get_fallback_visual_concept_for_style(style: str) -> VisualConcept:
+    """Get a deterministic fallback concept based on image style.
+    
+    This ensures that even in fallback scenarios, each image style
+    receives a different visual concept from an appropriate category.
+    
+    Args:
+        style: Image style code (e.g., 'knitted', 'pixel_art')
+        
+    Returns:
+        VisualConcept appropriate for the given style
+    """
+    index = STYLE_FALLBACK_MAPPING.get(style, random.randint(0, len(FALLBACK_VISUAL_CONCEPTS) - 1))
+    return FALLBACK_VISUAL_CONCEPTS[index]
+
+
+def get_diverse_fallback_concepts(count: int = 4) -> List[VisualConcept]:
+    """Get a set of diverse fallback concepts ensuring no duplicates.
+    
+    Uses stratified sampling to ensure concepts come from different
+    metaphor categories.
+    
+    Args:
+        count: Number of diverse concepts needed
+        
+    Returns:
+        List of VisualConcept objects from different categories
+    """
+    if count >= len(FALLBACK_VISUAL_CONCEPTS):
+        return FALLBACK_VISUAL_CONCEPTS[:count]
+    
+    # Use stratified sampling - pick from evenly spaced indices
+    step = len(FALLBACK_VISUAL_CONCEPTS) // count
+    indices = [i * step for i in range(count)]
+    return [FALLBACK_VISUAL_CONCEPTS[i] for i in indices]
 
 
 # Legacy constant for backwards compatibility
@@ -156,11 +313,14 @@ VISUAL_ANALYSIS_PROMPT = """You are an expert visual concept designer specializi
 Your task: transform gratitude into a UNIQUE, CREATIVE visual metaphor for image generation.
 
 ═══════════════════════════════════════════════════════════════════════════════
-INPUT DATA:
+INPUT DATA / ВХОДНЫЕ ДАННЫЕ:
 ═══════════════════════════════════════════════════════════════════════════════
-Recipient: {recipient}
-Reason for gratitude: {reason}
-Personal message: {message}
+Кому (Recipient): {recipient}
+За что (Reason for gratitude): {reason}
+Послание (Personal message): {message}
+
+IMPORTANT: The "За что" (reason) field is CRITICAL - it describes the specific achievement
+or contribution being celebrated. Use it to inform the emotional theme and visual metaphor.
 
 ═══════════════════════════════════════════════════════════════════════════════
 YOUR TASK: Create a visual concept following this process:
@@ -237,6 +397,141 @@ Output: {{"core_theme": "teamwork", "visual_metaphor": "A grand piano covered in
 
 ═══════════════════════════════════════════════════════════════════════════════
 Now analyze the input above and respond with JSON only:"""
+
+
+# ============================================================================
+# Multi-Agent Ultrathink Batch Visual Concept Generation
+# Generates N diverse concepts in a single pass using chain-of-thought reasoning
+# Each concept uses a DIFFERENT metaphor category for maximum thematic diversity
+# ============================================================================
+
+BATCH_VISUAL_ANALYSIS_PROMPT = """You are an elite multi-agent visual concept system. Your task is to generate {count} COMPLETELY DIFFERENT visual concepts that all represent the same core gratitude, but through ENTIRELY DIFFERENT visual metaphors.
+
+═══════════════════════════════════════════════════════════════════════════════
+INPUT DATA / ВХОДНЫЕ ДАННЫЕ
+═══════════════════════════════════════════════════════════════════════════════
+Кому (Recipient): {recipient}
+За что (Reason for gratitude): {reason}
+Послание (Personal message): {message}
+
+IMPORTANT: The "За что" (reason) field is CRITICAL - it describes the specific achievement
+or contribution being celebrated. Use it to inform the emotional theme and visual metaphor.
+
+═══════════════════════════════════════════════════════════════════════════════
+MULTI-AGENT REASONING PROCESS (think through each step)
+═══════════════════════════════════════════════════════════════════════════════
+
+<AGENT_1: THEME_ANALYST>
+First, identify the CORE emotional theme from the gratitude:
+- teamwork, innovation, leadership, support, perseverance, creativity,
+- dedication, problem_solving, mentorship, excellence, celebration, growth
+Select ONE theme that best captures the essence.
+</AGENT_1>
+
+<AGENT_2: CATEGORY_DISTRIBUTOR>
+Assign EXACTLY ONE unique metaphor category to each of the {count} concepts.
+You MUST use {count} DIFFERENT categories from this list (no repeats!):
+
+1. CELESTIAL - orreries, astrolabes, star charts, moon phases, constellations
+2. BOTANICAL - terrariums, greenhouses, winter gardens, impossible flowers, bonsai
+3. MECHANICAL - clockwork, gears, astronomical clocks, precision instruments
+4. ARCHITECTURAL - viaducts, arched bridges, towers, spiral staircases, doorways
+5. CRAFTSMANSHIP - glassblowing, pottery, weaving, metalwork, woodcarving
+6. NAVIGATION - sextants, compasses, maps, ships, mountain paths, cairns
+7. MUSICAL - string instruments, pianos, sheet music, orchestras, gramophones
+8. ELEMENTAL - transformation moments, fire-ice meeting, crystal formations
+9. SYMBOLIC - scales, hourglasses, keys, vintage books, snow globes
+10. NATURE - frozen waterfalls, ancient trees, migrating birds, seasons changing
+
+Distribution for {count} concepts:
+{category_assignments}
+</AGENT_2>
+
+<AGENT_3: UNIQUENESS_VALIDATOR>
+Before generating, verify:
+✗ NO two concepts share similar subjects (e.g., no "compass" AND "sextant" - both navigation)
+✗ NO overlapping key elements between concepts
+✗ NO repeated lighting setups - each must have distinct lighting
+✓ Each concept must feel like it belongs to a completely different world
+</AGENT_3>
+
+<AGENT_4: SCENE_GENERATORS - one per concept>
+For EACH assigned category, create a unique scene with:
+• SUBJECT: Specific named object ("Victorian brass orrery" not "instrument")
+• ACTION: Dynamic state ("emerging", "transforming", "awakening")
+• ENVIRONMENT: Unique winter setting with distinct characteristics
+• LIGHTING: Specific, different light source for each (no repeats!)
+• COMPOSITION: Varied camera angles (mix of: low angle, eye level, bird's eye, close-up, wide)
+</AGENT_4>
+
+<AGENT_5: COHERENCE_CHECKER>
+Verify all concepts:
+✓ Share the SAME core_theme (connecting thread)
+✓ Have DIFFERENT visual_metaphor subjects
+✓ Have DIFFERENT moods within the same emotional family
+✓ Would each make a beautiful, distinct greeting card image
+</AGENT_5>
+
+═══════════════════════════════════════════════════════════════════════════════
+CRITICAL CONSTRAINTS (apply to ALL concepts)
+═══════════════════════════════════════════════════════════════════════════════
+✗ NO text, words, letters, numbers, or written symbols in any concept
+✗ NO realistic human faces (silhouettes and hands are OK)
+✗ NO lanterns, lighthouses, candles, torches, or generic glowing orbs
+✗ NO concept should share more than 1 key element with another concept
+✓ YES winter/New Year/festive imagery naturally integrated
+✓ YES specific, concrete, visually distinct objects
+✓ YES each concept should work beautifully in its own artistic style
+
+═══════════════════════════════════════════════════════════════════════════════
+OUTPUT FORMAT (JSON array, no markdown, no explanation)
+═══════════════════════════════════════════════════════════════════════════════
+[
+  {{"core_theme": "shared_theme", "visual_metaphor": "Scene 1 description", "key_elements": ["el1", "el2", "el3", "el4", "el5"], "mood": "mood1", "composition": "composition1", "lighting": "lighting1"}},
+  {{"core_theme": "shared_theme", "visual_metaphor": "Scene 2 description", "key_elements": ["el1", "el2", "el3", "el4", "el5"], "mood": "mood2", "composition": "composition2", "lighting": "lighting2"}},
+  ... ({count} total, each from a DIFFERENT category)
+]
+
+═══════════════════════════════════════════════════════════════════════════════
+EXAMPLE: 4 diverse concepts for "teamwork on a project"
+═══════════════════════════════════════════════════════════════════════════════
+[
+  {{"core_theme": "teamwork", "visual_metaphor": "A Victorian brass orrery with four interlocking planetary rings, each sphere a different precious metal, rotating in synchronized dance above a snow-dusted velvet display", "key_elements": ["brass orrery", "planetary rings", "precious metal spheres", "velvet base", "synchronized motion"], "mood": "precision harmony", "composition": "low angle, medium shot, shallow DoF", "lighting": "warm spotlight from above, cool ambient fill"}},
+  {{"core_theme": "teamwork", "visual_metaphor": "Four distinct instruments - violin, cello, flute, and harp - arranged in a snow-covered bandstand, each casting musical note-shaped shadows that interweave on the white ground", "key_elements": ["four instruments", "snow bandstand", "interweaving shadows", "musical note shapes", "winter dusk"], "mood": "harmonic unity", "composition": "wide shot, slightly elevated, symmetrical", "lighting": "golden dusk sidelight, long purple shadows"}},
+  {{"core_theme": "teamwork", "visual_metaphor": "A greenhouse atrium where four different vine species have grown together to form a living arch, their leaves touching at the peak, frost patterns decorating the glass walls", "key_elements": ["living vine arch", "four plant species", "frosted glass", "greenhouse atrium", "intertwined growth"], "mood": "organic collaboration", "composition": "medium shot, eye level, through the arch", "lighting": "soft diffused winter daylight, green leaf glow"}},
+  {{"core_theme": "teamwork", "visual_metaphor": "An ancient stone bridge with four distinctive arches, each built in a slightly different masonry style yet forming one unified span across a frozen mountain stream", "key_elements": ["four-arch bridge", "varied masonry", "frozen stream", "mountain setting", "unified structure"], "mood": "diverse strength", "composition": "wide establishing shot, eye level, centered", "lighting": "overcast soft light, blue ice reflections"}}
+]
+
+═══════════════════════════════════════════════════════════════════════════════
+Now generate {count} MAXIMALLY DIVERSE concepts. Output JSON array only:"""
+
+
+def _build_category_assignments(count: int) -> str:
+    """Build category assignment instructions based on count."""
+    if count == 4:
+        return """Concept 1: CELESTIAL or MECHANICAL (precision/cosmic)
+Concept 2: MUSICAL or CRAFTSMANSHIP (artistry/creation)
+Concept 3: BOTANICAL or NATURE (organic/growth)
+Concept 4: ARCHITECTURAL or NAVIGATION (structure/journey)"""
+    elif count == 3:
+        return """Concept 1: CELESTIAL, MECHANICAL, or SYMBOLIC
+Concept 2: MUSICAL, CRAFTSMANSHIP, or BOTANICAL
+Concept 3: ARCHITECTURAL, NATURE, or NAVIGATION"""
+    elif count == 2:
+        return """Concept 1: CELESTIAL, MECHANICAL, MUSICAL, or CRAFTSMANSHIP
+Concept 2: BOTANICAL, ARCHITECTURAL, NATURE, or NAVIGATION"""
+    else:
+        # For any other count, distribute categories evenly
+        categories = [
+            "CELESTIAL", "BOTANICAL", "MECHANICAL", "ARCHITECTURAL",
+            "CRAFTSMANSHIP", "NAVIGATION", "MUSICAL", "ELEMENTAL",
+            "SYMBOLIC", "NATURE"
+        ]
+        assignments = []
+        for i in range(count):
+            cat_idx = i % len(categories)
+            assignments.append(f"Concept {i+1}: {categories[cat_idx]}")
+        return "\n".join(assignments)
 
 
 # ============================================================================
@@ -728,6 +1023,164 @@ FORBIDDEN: No text, letters, or legible symbols. Carved shapes and ink texture o
 }
 
 
+# ============================================================================
+# RANDOMIZATION POOLS FOR MAXIMUM DIVERSITY
+# Each image generation picks random elements from these pools to ensure
+# that even with identical input, every card looks completely different
+# ============================================================================
+
+# Atmospheric conditions - affects lighting and mood
+RANDOM_ATMOSPHERES = [
+    "gentle snowfall with large fluffy flakes",
+    "crisp clear winter night with stars",
+    "golden sunset reflecting off fresh snow",
+    "misty dawn with frost in the air",
+    "magical aurora borealis dancing above",
+    "soft overcast with diffused silver light",
+    "twilight blue hour with warm lights glowing",
+    "bright winter morning with diamond dust in air",
+    "moonlit scene with silver reflections",
+    "after-storm stillness with dramatic clouds parting",
+    "cozy lamplight glow against dark winter evening",
+    "morning sun breaking through icy branches",
+]
+
+# Focal subjects - the main object/scene to feature
+RANDOM_SUBJECTS = [
+    "an ornate vintage music box playing silently",
+    "a crystal snow globe containing a miniature world",
+    "an ancient brass telescope pointed at the stars",
+    "a grandfather clock with frost-covered pendulum",
+    "a Victorian greenhouse with impossible flowers",
+    "a handcrafted wooden sleigh with velvet seats",
+    "an enchanted forest clearing with glowing mushrooms",
+    "a stone bridge arching over a frozen stream",
+    "a vintage typewriter with frost on its keys",
+    "a compass rose embedded in ancient ice",
+    "a grand piano covered in delicate snow",
+    "an artisan's workshop with tools mid-project",
+    "a ship's wheel from an icebound vessel",
+    "a mechanical orrery with spinning planets",
+    "a antique hourglass with frozen sand",
+    "a collection of vintage ornaments in a box",
+    "a solitary cabin with warm windows glowing",
+    "an ice sculpture mid-creation by invisible hands",
+    "a treasure chest overflowing with winter berries",
+    "a vintage camera capturing the perfect moment",
+    "a spiral staircase leading to somewhere magical",
+    "a baker's table with holiday treats",
+    "a library corner with snow falling past windows",
+    "a vintage hot air balloon basket in snow",
+    "a clockwork bird singing in frozen garden",
+]
+
+# Composition variations - camera angles and framing
+RANDOM_COMPOSITIONS = [
+    "intimate macro close-up with creamy bokeh",
+    "sweeping wide shot with epic sense of scale",
+    "dramatic low angle looking upward heroically",
+    "gentle bird's eye view from above",
+    "dutch angle adding dynamic energy",
+    "perfectly centered symmetrical composition",
+    "rule of thirds with subject off-center",
+    "through a window frame or archway",
+    "reflected in a frozen puddle or mirror",
+    "layered depth with foreground interest",
+    "silhouette against dramatic sky",
+    "extreme close-up of a single detail",
+]
+
+# Color accent variations - unique color emphasis for each card
+RANDOM_COLOR_ACCENTS = [
+    "rich crimson red like winter berries",
+    "burnished gold like holiday candlelight",
+    "deep sapphire blue of winter twilight",
+    "warm copper and brass tones",
+    "silver and platinum shimmer",
+    "forest green of evergreen branches",
+    "soft rose gold blush",
+    "royal purple of winter dusk",
+    "amber and honey warmth",
+    "teal and aquamarine ice tones",
+    "burgundy wine richness",
+    "champagne and cream elegance",
+]
+
+# Mood/emotion variations
+RANDOM_MOODS = [
+    "nostalgic warmth and cherished memories",
+    "wonder and magical discovery",
+    "peaceful serenity and calm",
+    "joyful celebration and festivity",
+    "cozy comfort and togetherness",
+    "elegant sophistication and refinement",
+    "whimsical playfulness and delight",
+    "majestic grandeur and awe",
+    "intimate tenderness and care",
+    "hopeful anticipation and excitement",
+    "timeless classic beauty",
+    "dreamy ethereal enchantment",
+]
+
+# Semantic theme mapping - maps gratitude reasons to visual themes
+SEMANTIC_THEME_MAPPING = {
+    # Work-related keywords -> visual themes
+    "project": ["clockwork precision", "architectural achievement", "masterful construction"],
+    "team": ["orchestra in harmony", "constellation of stars", "interconnected gears"],
+    "leadership": ["lighthouse beacon", "compass pointing true", "captain at the helm"],
+    "support": ["ancient bridge", "steady foundation", "sheltering tree"],
+    "innovation": ["emerging mechanism", "blooming in winter", "light breaking through"],
+    "deadline": ["clock striking midnight", "finish line crossed", "last piece of puzzle"],
+    "help": ["warm hands offering", "bridge across chasm", "light in darkness"],
+    "mentor": ["guiding star", "ancient map", "wise owl silhouette"],
+    "dedication": ["eternal flame", "carved stone monument", "deep roots"],
+    "creativity": ["artist's palette", "aurora colors", "impossible flowers"],
+}
+
+
+def _get_random_variation() -> dict:
+    """Generate a unique random variation for image generation.
+    
+    Returns a dictionary with random elements to inject variety
+    into every single image generation.
+    """
+    return {
+        "atmosphere": random.choice(RANDOM_ATMOSPHERES),
+        "subject": random.choice(RANDOM_SUBJECTS),
+        "composition": random.choice(RANDOM_COMPOSITIONS),
+        "color_accent": random.choice(RANDOM_COLOR_ACCENTS),
+        "mood": random.choice(RANDOM_MOODS),
+        "seed_phrase": f"unique variation #{random.randint(1000, 9999)}",
+    }
+
+
+def _extract_semantic_theme(reason: str | None, message: str | None) -> str:
+    """Extract a visual theme from the gratitude reason/message.
+    
+    Analyzes the text and maps it to visual concepts that work well
+    for image generation.
+    """
+    text = f"{reason or ''} {message or ''}".lower()
+    
+    matched_themes = []
+    for keyword, themes in SEMANTIC_THEME_MAPPING.items():
+        if keyword in text:
+            matched_themes.extend(themes)
+    
+    if matched_themes:
+        return random.choice(matched_themes)
+    
+    # Default creative themes if no match
+    default_themes = [
+        "celebration of achievement",
+        "warmth of gratitude",
+        "winter magic and wonder",
+        "joy of connection",
+        "beauty of appreciation",
+    ]
+    return random.choice(default_themes)
+
+
 class GeminiClient:
     """Client for Google Gemini API via LiteLLM proxy.
 
@@ -957,6 +1410,249 @@ class GeminiClient:
                 extra={"recipient": recipient, "error_type": type(e).__name__},
             )
             return get_fallback_visual_concept()
+
+    @retry(
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
+        wait=wait_exponential(multiplier=1, min=RETRY_MIN_WAIT, max=RETRY_MAX_WAIT),
+    )
+    async def analyze_for_visual_batch(
+        self,
+        recipient: str,
+        reason: Optional[str] = None,
+        message: Optional[str] = None,
+        count: int = 4,
+        styles: Optional[List[str]] = None,
+    ) -> List[VisualConcept]:
+        """Analyze gratitude and generate MULTIPLE diverse visual concepts.
+
+        This multi-agent ultrathink method generates N distinct visual concepts
+        in a single API call, ensuring each uses a different metaphor category
+        for maximum thematic diversity while maintaining semantic coherence.
+
+        The method uses a sophisticated prompt with simulated agents:
+        - Theme Analyst: Extracts core emotional theme
+        - Category Distributor: Assigns different metaphor categories
+        - Uniqueness Validator: Ensures no duplicate subjects/elements
+        - Scene Generators: Creates distinct scenes for each category
+        - Coherence Checker: Verifies thematic unity across concepts
+
+        Args:
+            recipient: Name of the person receiving the greeting
+            reason: Reason for gratitude (optional)
+            message: Personal message from sender (optional)
+            count: Number of diverse concepts to generate (default 4)
+            styles: Optional list of image style codes for style-aware fallback
+
+        Returns:
+            List of VisualConcept objects, each from a different metaphor category
+
+        Raises:
+            GeminiTextGenerationError: If analysis fails
+            GeminiRateLimitError: If rate limit is exceeded
+        """
+        # Build the batch analysis prompt with dynamic category assignments
+        category_assignments = _build_category_assignments(count)
+        full_prompt = BATCH_VISUAL_ANALYSIS_PROMPT.format(
+            recipient=recipient,
+            reason=reason or "профессиональные достижения",
+            message=message or "Спасибо за отличную работу!",
+            count=count,
+            category_assignments=category_assignments,
+        )
+
+        logger.info(
+            f"Analyzing gratitude for {count} diverse visual concepts (ultrathink batch)",
+            extra={
+                "recipient": recipient,
+                "count": count,
+                "has_reason": bool(reason),
+                "has_message": bool(message),
+            },
+        )
+
+        try:
+            client = await self._get_client()
+
+            # Use slightly higher temperature for creative diversity
+            # and more tokens for multiple concepts
+            response = await client.post(
+                "/chat/completions",
+                json={
+                    "model": self._text_model,
+                    "messages": [
+                        {"role": "user", "content": full_prompt}
+                    ],
+                    "max_tokens": ANALYSIS_MAX_TOKENS * 2,  # More tokens for batch
+                    "temperature": 0.5,  # Balanced: creative but consistent
+                },
+            )
+
+            if response.status_code == 429:
+                raise GeminiRateLimitError(original_error=Exception("Rate limit exceeded"))
+
+            response.raise_for_status()
+            data = response.json()
+
+            if not data.get("choices"):
+                raise GeminiTextGenerationError(
+                    message="Gemini API вернул пустой ответ при batch анализе",
+                    details={"recipient": recipient, "count": count},
+                )
+
+            response_text = data["choices"][0]["message"]["content"].strip()
+
+            # Parse JSON array response
+            concepts = self._parse_batch_concepts(response_text, count, styles)
+
+            logger.info(
+                f"Generated {len(concepts)} diverse visual concepts: "
+                f"themes={[c.core_theme for c in concepts]}",
+                extra={
+                    "count": len(concepts),
+                    "themes": [c.core_theme for c in concepts],
+                    "moods": [c.mood for c in concepts],
+                },
+            )
+
+            return concepts
+
+        except GeminiRateLimitError:
+            raise
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"HTTP error during batch visual analysis: {e}",
+                extra={"status_code": e.response.status_code},
+                exc_info=True,
+            )
+            # Fall back to diverse fallbacks
+            return self._get_diverse_fallbacks(count, styles)
+        except (httpx.RequestError, httpx.TimeoutException) as e:
+            logger.warning(
+                f"Network error during batch visual analysis: {e}, using diverse fallbacks",
+                extra={"recipient": recipient, "error_type": type(e).__name__},
+            )
+            return self._get_diverse_fallbacks(count, styles)
+        except Exception as e:
+            logger.warning(
+                f"Unexpected error during batch visual analysis: {e}, using diverse fallbacks",
+                extra={"recipient": recipient, "error_type": type(e).__name__},
+            )
+            return self._get_diverse_fallbacks(count, styles)
+
+    def _parse_batch_concepts(
+        self,
+        response_text: str,
+        expected_count: int,
+        styles: Optional[List[str]] = None,
+    ) -> List[VisualConcept]:
+        """Parse JSON array of visual concepts from API response.
+
+        Handles various response formats including markdown code blocks.
+        Falls back to diverse fallback concepts if parsing fails.
+
+        Args:
+            response_text: Raw response text from API
+            expected_count: Expected number of concepts
+            styles: Optional list of style codes for style-aware fallback
+
+        Returns:
+            List of VisualConcept objects
+        """
+        try:
+            # Handle potential markdown code blocks
+            cleaned_text = response_text
+            if cleaned_text.startswith("```"):
+                lines = cleaned_text.split("\n")
+                json_lines = []
+                in_json = False
+                for line in lines:
+                    if line.startswith("```") and not in_json:
+                        in_json = True
+                        continue
+                    elif line.startswith("```") and in_json:
+                        break
+                    elif in_json:
+                        json_lines.append(line)
+                cleaned_text = "\n".join(json_lines)
+
+            # Find JSON array bounds
+            start_idx = cleaned_text.find("[")
+            end_idx = cleaned_text.rfind("]") + 1
+            if start_idx >= 0 and end_idx > start_idx:
+                cleaned_text = cleaned_text[start_idx:end_idx]
+
+            parsed_array = json.loads(cleaned_text)
+
+            if not isinstance(parsed_array, list):
+                raise ValueError("Expected JSON array")
+
+            concepts = []
+            for item in parsed_array:
+                if isinstance(item, dict):
+                    concept = VisualConcept(
+                        core_theme=item.get("core_theme", "gratitude"),
+                        visual_metaphor=item.get(
+                            "visual_metaphor",
+                            "A vintage compass on weathered map in snowy setting"
+                        ),
+                        key_elements=item.get(
+                            "key_elements",
+                            ["compass", "map", "snow", "warm tones", "adventure"]
+                        ),
+                        mood=item.get("mood", "discovery and appreciation"),
+                        composition=item.get("composition", "medium shot, eye level"),
+                        lighting=item.get("lighting", "soft natural winter daylight"),
+                    )
+                    concepts.append(concept)
+
+            # Validate we got enough concepts
+            if len(concepts) >= expected_count:
+                return concepts[:expected_count]
+            elif len(concepts) > 0:
+                # Pad with diverse fallbacks if we got partial results
+                logger.warning(
+                    f"Got {len(concepts)} concepts, expected {expected_count}, padding with fallbacks"
+                )
+                remaining = expected_count - len(concepts)
+                fallbacks = self._get_diverse_fallbacks(remaining, styles)
+                return concepts + fallbacks
+            else:
+                raise ValueError("No valid concepts parsed")
+
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+            logger.warning(
+                f"Failed to parse batch visual concepts: {e}, using diverse fallbacks",
+                extra={"response_preview": response_text[:300]},
+            )
+            return self._get_diverse_fallbacks(expected_count, styles)
+
+    def _get_diverse_fallbacks(
+        self,
+        count: int,
+        styles: Optional[List[str]] = None,
+    ) -> List[VisualConcept]:
+        """Get diverse fallback concepts, optionally style-aware.
+
+        If styles are provided, uses style-specific fallback mapping.
+        Otherwise uses stratified sampling for diversity.
+
+        Args:
+            count: Number of fallback concepts needed
+            styles: Optional list of style codes
+
+        Returns:
+            List of diverse VisualConcept objects
+        """
+        if styles and len(styles) >= count:
+            # Use style-specific fallbacks for maximum appropriateness
+            return [
+                get_fallback_visual_concept_for_style(style)
+                for style in styles[:count]
+            ]
+        else:
+            # Use stratified sampling for diversity
+            return get_diverse_fallback_concepts(count)
 
     @retry(
         retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
@@ -1365,6 +2061,181 @@ class GeminiClient:
                 "message_keys": list(message.keys()) if message else [],
             },
         )
+
+    @retry(
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
+        wait=wait_exponential(multiplier=1, min=RETRY_MIN_WAIT, max=RETRY_MAX_WAIT),
+    )
+    async def generate_image_direct(
+        self,
+        style: str,
+        reason: Optional[str] = None,
+        message: Optional[str] = None,
+    ) -> Tuple[bytes, str]:
+        """Generate unique festive image directly with built-in randomization.
+        
+        This is the NEW one-stage generation approach that produces highly diverse
+        images by injecting random variations into each call. No intermediate
+        analysis step needed.
+        
+        Args:
+            style: Image style code (knitted, pixel_art, fantasy, etc.)
+            reason: Optional reason for gratitude (used for semantic theming)
+            message: Optional personal message (used for semantic theming)
+            
+        Returns:
+            Tuple of (image_bytes, prompt_used) where image_bytes is PNG format
+            
+        Raises:
+            GeminiImageGenerationError: If generation fails
+            GeminiRateLimitError: If rate limit is exceeded
+        """
+        if style not in IMAGE_STYLE_PROMPTS:
+            raise GeminiImageGenerationError(
+                message=f"Неизвестный стиль изображения: {style}",
+                details={"style": style, "available_styles": list(IMAGE_STYLE_PROMPTS.keys())},
+            )
+        
+        # Generate unique random variation for this specific call
+        variation = _get_random_variation()
+        semantic_theme = _extract_semantic_theme(reason, message)
+        
+        # Build the direct generation prompt
+        style_template = IMAGE_STYLE_PROMPTS[style]
+        
+        # Create a rich, unique prompt combining:
+        # 1. Random subject from our diverse pool
+        # 2. Semantic theme extracted from gratitude
+        # 3. Random atmospheric and compositional elements
+        # 4. Style-specific requirements
+        
+        direct_prompt = f"""Generate a BEAUTIFUL and UNIQUE festive greeting card image.
+
+═══════════════════════════════════════════════════════════════════════════════
+THIS CARD'S UNIQUE IDENTITY - {variation['seed_phrase']}
+═══════════════════════════════════════════════════════════════════════════════
+
+FEATURED SUBJECT: {variation['subject']}
+ATMOSPHERE: {variation['atmosphere']}
+COMPOSITION: {variation['composition']}
+COLOR ACCENT: {variation['color_accent']}
+EMOTIONAL MOOD: {variation['mood']}
+SEMANTIC THEME: {semantic_theme}
+
+═══════════════════════════════════════════════════════════════════════════════
+GRATITUDE CONTEXT (inspire the image, don't show as text):
+═══════════════════════════════════════════════════════════════════════════════
+За что (Reason): {reason or 'С Новым Годом!'}
+Послание (Message): {message or 'С праздником!'}
+
+Interpret the FEELING behind this gratitude. Let it guide the emotional tone,
+but DO NOT render any words or text in the image.
+
+═══════════════════════════════════════════════════════════════════════════════
+STYLE REQUIREMENTS:
+═══════════════════════════════════════════════════════════════════════════════
+{style_template.format(
+    core_theme=semantic_theme,
+    visual_metaphor=variation['subject'],
+    mood=variation['mood'],
+)}
+
+═══════════════════════════════════════════════════════════════════════════════
+ABSOLUTE REQUIREMENTS:
+═══════════════════════════════════════════════════════════════════════════════
+✗ NEVER render any text, letters, numbers, words, or symbols
+✗ NEVER show realistic human faces (silhouettes are acceptable)
+✗ NEVER use cliché objects: lanterns, lighthouses, candles, generic glowing orbs
+✓ MUST be winter/holiday/New Year themed
+✓ MUST be professional greeting card quality - beautiful and polished
+✓ MUST feel unique and special - this is a one-of-a-kind card
+
+Now create this unique, beautiful greeting card image."""
+        
+        logger.debug(
+            f"Generating direct image with style '{style}'",
+            extra={
+                "style": style,
+                "semantic_theme": semantic_theme,
+                "variation_seed": variation['seed_phrase'],
+                "subject": variation['subject'][:50],
+            },
+        )
+        
+        try:
+            client = await self._get_client()
+            
+            response = await client.post(
+                "/chat/completions",
+                json={
+                    "model": self._image_model,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": f"Generate an image based on this description:\n\n{direct_prompt}"
+                        }
+                    ],
+                    "max_tokens": IMAGE_MAX_TOKENS,
+                    "modalities": ["image", "text"],
+                    "extra_body": {
+                        "imageConfig": {
+                            "aspectRatio": "2:3"
+                        }
+                    },
+                },
+            )
+            
+            if response.status_code == 429:
+                raise GeminiRateLimitError(original_error=Exception("Rate limit exceeded"))
+            
+            response.raise_for_status()
+            data = response.json()
+            
+            image_bytes = self._extract_image_from_response(data, style)
+            
+            logger.info(
+                f"Direct image generated successfully: {len(image_bytes)} bytes",
+                extra={
+                    "style": style,
+                    "image_size": len(image_bytes),
+                    "variation_seed": variation['seed_phrase'],
+                },
+            )
+            
+            return image_bytes, direct_prompt
+            
+        except GeminiImageGenerationError:
+            raise
+        except GeminiRateLimitError:
+            raise
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"HTTP error during direct image generation: {e}",
+                extra={"status_code": e.response.status_code, "style": style},
+                exc_info=True,
+            )
+            raise GeminiImageGenerationError(
+                message=f"HTTP ошибка при генерации изображения: {e.response.status_code}",
+                details={"style": style},
+                original_error=e,
+            )
+        except Exception as e:
+            logger.error(
+                f"Direct image generation failed: {e}",
+                extra={"style": style, "error_type": type(e).__name__},
+                exc_info=True,
+            )
+            
+            error_str = str(e).lower()
+            if "rate limit" in error_str or "quota" in error_str:
+                raise GeminiRateLimitError(original_error=e)
+            
+            raise GeminiImageGenerationError(
+                message=f"Не удалось сгенерировать изображение в стиле '{style}'",
+                details={"style": style},
+                original_error=e,
+            )
 
     async def close(self) -> None:
         """Close the client and cleanup resources."""

@@ -87,11 +87,78 @@ def mock_gemini_client() -> AsyncMock:
         )
     )
 
+    # Configure analyze_for_visual_batch to return multiple diverse VisualConcepts
+    # This is used by the new multi-agent ultrathink system for diverse image generation
+    def create_diverse_concepts(count: int = 4):
+        """Create a list of diverse visual concepts for testing.
+        
+        Generates concepts up to the requested count by cycling through base templates.
+        """
+        base_concepts = [
+            VisualConcept(
+                core_theme="teamwork",
+                visual_metaphor="A brass orrery with planetary spheres rotating in synchronized dance",
+                key_elements=["brass orrery", "planetary spheres", "synchronized motion", "velvet base", "warm spotlight"],
+                mood="precision harmony",
+                composition="low angle, medium shot",
+                lighting="warm spotlight from above",
+            ),
+            VisualConcept(
+                core_theme="teamwork",
+                visual_metaphor="Four distinct instruments arranged in a snow-covered bandstand",
+                key_elements=["string instruments", "snow bandstand", "interweaving shadows", "musical notes", "winter dusk"],
+                mood="harmonic unity",
+                composition="wide shot, elevated",
+                lighting="golden dusk sidelight",
+            ),
+            VisualConcept(
+                core_theme="teamwork",
+                visual_metaphor="A greenhouse atrium with vine species forming a living arch",
+                key_elements=["living vine arch", "plant species", "frosted glass", "greenhouse atrium", "intertwined growth"],
+                mood="organic collaboration",
+                composition="medium shot, eye level",
+                lighting="soft diffused daylight",
+            ),
+            VisualConcept(
+                core_theme="teamwork",
+                visual_metaphor="An ancient stone bridge with four distinctive arches spanning a frozen stream",
+                key_elements=["four-arch bridge", "varied masonry", "frozen stream", "mountain setting", "unified structure"],
+                mood="diverse strength",
+                composition="wide establishing shot",
+                lighting="overcast soft light",
+            ),
+            VisualConcept(
+                core_theme="teamwork",
+                visual_metaphor="A frozen waterfall with ice crystals catching prismatic light",
+                key_elements=["frozen waterfall", "ice crystals", "prismatic light", "morning sun", "sculptural ice"],
+                mood="nature's frozen artistry",
+                composition="low angle looking up",
+                lighting="backlit morning sun",
+            ),
+        ]
+        # Cycle through base concepts to generate requested count
+        result = []
+        for i in range(count):
+            result.append(base_concepts[i % len(base_concepts)])
+        return result
+
+    mock.analyze_for_visual_batch = AsyncMock(
+        side_effect=lambda recipient, reason=None, message=None, count=4, styles=None: create_diverse_concepts(count)
+    )
+
     # Configure generate_image to return tuple of (bytes, prompt)
     mock.generate_image = AsyncMock(
         return_value=(
             b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00",  # Fake PNG header
             "A festive digital art greeting card",
+        )
+    )
+
+    # Configure generate_image_direct for new one-stage generation with randomization
+    mock.generate_image_direct = AsyncMock(
+        return_value=(
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00",  # Fake PNG header
+            "A unique festive greeting card with randomization",
         )
     )
 
@@ -111,7 +178,9 @@ def mock_gemini_client_with_errors() -> AsyncMock:
 
     mock.generate_text = AsyncMock(side_effect=Exception("API Error"))
     mock.analyze_for_visual = AsyncMock(side_effect=Exception("Analysis failed"))
+    mock.analyze_for_visual_batch = AsyncMock(side_effect=Exception("Batch analysis failed"))
     mock.generate_image = AsyncMock(side_effect=Exception("Image generation failed"))
+    mock.generate_image_direct = AsyncMock(side_effect=Exception("Direct image generation failed"))
 
     return mock
 
