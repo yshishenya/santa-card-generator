@@ -60,12 +60,12 @@ MAX_CAPTION_LENGTH = 1024
 
 def escape_html(text: str) -> str:
     """Escape special characters for Telegram HTML mode.
-
+    
     Args:
-        text: Text to escape
-
+        text: Text to escape.
+    
     Returns:
-        Text with escaped HTML special characters
+        Text with escaped HTML special characters.
     """
     return (
         text.replace("&", "&amp;")
@@ -136,40 +136,31 @@ class TelegramClient:
         recipient_telegram: Optional[str] = None,
     ) -> int:
         """Send greeting card to Telegram chat.
-
-        Sends a photo with formatted caption to the configured Telegram chat/topic.
-        Implements retry logic for transient errors.
-
+        
+        This function sends a photo with a formatted caption to a configured Telegram
+        chat or topic. It includes retry logic to handle transient errors, ensuring
+        robust message delivery. The caption is generated using the _format_caption
+        method, which incorporates various optional parameters for customization. The
+        function also logs relevant information for tracking and debugging purposes.
+        
         Args:
-            image_bytes: Image data as bytes (JPEG/PNG)
-            recipient: Name of the card recipient
-            reason: Optional reason for gratitude
-            message: The gratitude message text (or AI text if original_message provided)
-            sender: Optional sender name (None for anonymous)
-            correlation_id: Optional request tracking ID for logging
-            original_message: Optional original user text to include alongside AI text
-            recipient_telegram: Optional Telegram username (@user) or user ID for mention
-
+            image_bytes (bytes): Image data as bytes (JPEG/PNG).
+            recipient (str): Name of the card recipient.
+            reason (Optional[str]): Optional reason for gratitude.
+            message (str): The gratitude message text (or AI text if original_message provided).
+            sender (Optional[str]): Optional sender name (None for anonymous).
+            correlation_id (Optional[str]): Optional request tracking ID for logging.
+            original_message (Optional[str]): Optional original user text to include alongside AI text.
+            recipient_telegram (Optional[str]): Optional Telegram username (@user) or user ID for mention.
+        
         Returns:
-            Telegram message ID of the sent message
-
+            int: Telegram message ID of the sent message.
+        
         Raises:
-            TelegramSendError: If sending fails after all retries
-            TelegramNetworkError: If network connection fails
-            TelegramRateLimitError: If rate limit is exceeded
-            TelegramConfigError: If configuration is invalid (chat/topic not found)
-
-        Example:
-            >>> client = TelegramClient(token, chat_id, topic_id)
-            >>> message_id = await client.send_card(
-            ...     image_bytes=card_data,
-            ...     recipient="Иванов Иван",
-            ...     reason="За отличную работу",
-            ...     message="Спасибо за твой вклад!",
-            ...     sender="Петров Петр",
-            ...     recipient_telegram="@ivanov"
-            ... )
-            >>> print(f"Sent: {message_id}")
+            TelegramSendError: If sending fails after all retries.
+            TelegramNetworkError: If network connection fails.
+            TelegramRateLimitError: If rate limit is exceeded.
+            TelegramConfigError: If configuration is invalid (chat/topic not found).
         """
         caption = self._format_caption(
             recipient=recipient,
@@ -300,24 +291,8 @@ class TelegramClient:
         image_bytes: bytes,
         caption: str,
     ):
-        """Send photo with automatic retry on network errors.
-
-        This internal method wraps the actual Telegram API call with tenacity retry logic.
-        It retries only on transient network errors (NetworkError, TimedOut).
-
-        Args:
-            image_bytes: Image data as bytes
-            caption: Formatted caption text
-
-        Returns:
-            Telegram Message object
-
-        Raises:
-            NetworkError: If network connection fails (will be retried)
-            TimedOut: If request times out (will be retried)
-            TelegramAPIError: For other Telegram API errors (not retried)
-        """
         # Convert bytes to file-like object for python-telegram-bot
+        """Send a photo to Telegram with automatic retry on network errors."""
         photo = BytesIO(image_bytes)
         photo.name = "card.jpg"  # Set filename for proper MIME type detection
 
@@ -345,28 +320,28 @@ class TelegramClient:
         original_message: Optional[str] = None,
         recipient_telegram: Optional[str] = None,
     ) -> str:
-        """Format caption for Telegram message according to specification.
-
-        Creates a structured caption using HTML formatting. If original_message is provided,
-        shows both texts with labels "Слова благодарности" and "ИИ-креатив".
-
-        Supports two mention formats:
-        - @username: Direct mention (e.g., @ivanov)
-        - Numeric ID: Text mention via tg://user?id= link
-
-        Args:
-            recipient: Name of the card recipient
-            reason: Optional reason for gratitude
-            message: The gratitude message text (AI text if original_message provided)
-            sender: Optional sender name (None for anonymous)
-            original_message: Optional original user text to show alongside AI text
-            recipient_telegram: Optional Telegram username (@user) or user ID for mention
-
-        Returns:
-            Formatted caption string, truncated to MAX_CAPTION_LENGTH if necessary
-        """
         # Build caption parts with optional telegram mention
         # Escape HTML special characters in user-provided content
+        """Format caption for Telegram message according to specification.
+        
+        This function constructs a structured caption using HTML formatting for a
+        Telegram message. It incorporates optional elements such as a recipient's name,
+        a reason for gratitude, and an original message. The function also supports two
+        mention formats for the recipient: a direct mention using @username or a
+        numeric ID via a tg://user?id= link. If the total caption length exceeds
+        MAX_CAPTION_LENGTH, it truncates the message while preserving the structure.
+        
+        Args:
+            recipient (str): Name of the card recipient.
+            reason (Optional[str]): Optional reason for gratitude.
+            message (str): The gratitude message text (AI text if original_message provided).
+            sender (Optional[str]): Optional sender name (None for anonymous).
+            original_message (Optional[str]): Optional original user text to show alongside AI text.
+            recipient_telegram (Optional[str]): Optional Telegram username (@user) or user ID for mention.
+        
+        Returns:
+            str: Formatted caption string, truncated to MAX_CAPTION_LENGTH if necessary.
+        """
         escaped_recipient = escape_html(recipient)
 
         # Format recipient with telegram mention
