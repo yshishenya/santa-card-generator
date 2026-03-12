@@ -6,9 +6,6 @@ import Particles from 'vue3-particles'
 import router from './router'
 import App from './App.vue'
 
-// PrimeVue components
-import AutoComplete from 'primevue/autocomplete'
-
 // Import global styles
 import 'primeicons/primeicons.css'
 import './assets/styles/main.css'
@@ -48,9 +45,6 @@ try {
 
   console.log('Setting up Particles...')
   app.use(Particles)
-
-  console.log('Registering components...')
-  app.component('AutoComplete', AutoComplete)
 
   console.log('Mounting app...')
   app.mount('#app')
