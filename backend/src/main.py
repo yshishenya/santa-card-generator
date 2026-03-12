@@ -10,7 +10,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from src.api import auth, cards, employees
+from src.api import auth, photocards
 from src.api.dependencies import get_gemini_client, get_telegram_client, shutdown, startup
 from src.config import settings
 
@@ -84,8 +84,7 @@ app.add_middleware(
 
 # Include API routers
 app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
-app.include_router(cards.router, prefix="/api/v1", tags=["cards"])
-app.include_router(employees.router, prefix="/api/v1", tags=["employees"])
+app.include_router(photocards.router, prefix="/api/v1", tags=["photocards"])
 
 
 @app.get("/health")

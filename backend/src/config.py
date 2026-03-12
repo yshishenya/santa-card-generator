@@ -1,7 +1,8 @@
 """Application configuration settings."""
 
+from typing import Literal, Optional
+
 from pydantic_settings import BaseSettings
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -18,8 +19,13 @@ class Settings(BaseSettings):
 
     # Telegram bot configuration
     telegram_bot_token: str
-    telegram_chat_id: int
-    telegram_topic_id: int
+    telegram_delivery_env: Literal["staging", "prod"] = "staging"
+    telegram_staging_chat_id: Optional[int] = None
+    telegram_staging_topic_id: Optional[int] = None
+    telegram_prod_chat_id: Optional[int] = None
+    telegram_prod_topic_id: Optional[int] = None
+    telegram_chat_id: Optional[int] = None
+    telegram_topic_id: Optional[int] = None
 
     # Application settings
     debug: bool = False
@@ -42,6 +48,44 @@ class Settings(BaseSettings):
 
         env_file = ".env"
         case_sensitive = False
+
+    @property
+    def active_telegram_chat_id(self) -> int:
+        """Resolve the active Telegram chat based on delivery environment."""
+        if self.telegram_delivery_env == "staging":
+            if self.telegram_staging_chat_id is None:
+                raise ValueError(
+                    "TELEGRAM_STAGING_CHAT_ID must be set when TELEGRAM_DELIVERY_ENV=staging"
+                )
+            return self.telegram_staging_chat_id
+
+        if self.telegram_prod_chat_id is not None:
+            return self.telegram_prod_chat_id
+        if self.telegram_chat_id is not None:
+            return self.telegram_chat_id
+        raise ValueError(
+            "TELEGRAM_PROD_CHAT_ID or legacy TELEGRAM_CHAT_ID must be set when "
+            "TELEGRAM_DELIVERY_ENV=prod"
+        )
+
+    @property
+    def active_telegram_topic_id(self) -> int:
+        """Resolve the active Telegram topic based on delivery environment."""
+        if self.telegram_delivery_env == "staging":
+            if self.telegram_staging_topic_id is None:
+                raise ValueError(
+                    "TELEGRAM_STAGING_TOPIC_ID must be set when TELEGRAM_DELIVERY_ENV=staging"
+                )
+            return self.telegram_staging_topic_id
+
+        if self.telegram_prod_topic_id is not None:
+            return self.telegram_prod_topic_id
+        if self.telegram_topic_id is not None:
+            return self.telegram_topic_id
+        raise ValueError(
+            "TELEGRAM_PROD_TOPIC_ID or legacy TELEGRAM_TOPIC_ID must be set when "
+            "TELEGRAM_DELIVERY_ENV=prod"
+        )
 
 
 settings = Settings()

@@ -14,6 +14,13 @@ from src.models.card import (
     TextVariant,
 )
 from src.models.employee import Employee
+from src.models.photocard import (
+    PhotocardGenerateRequest,
+    PhotocardGenerateResponse,
+    PhotocardImageVariant,
+    PhotocardSendRequest,
+    PhotocardSendResponse,
+)
 from src.models.response import APIResponse, RegenerateResponse
 
 __all__ = [
@@ -31,4 +38,9 @@ __all__ = [
     "Employee",
     "APIResponse",
     "RegenerateResponse",
+    "PhotocardGenerateRequest",
+    "PhotocardGenerateResponse",
+    "PhotocardImageVariant",
+    "PhotocardSendRequest",
+    "PhotocardSendResponse",
 ]

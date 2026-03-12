@@ -1,524 +1,151 @@
-"""Pytest fixtures for Santa project tests.
+"""Shared pytest fixtures for backend tests."""
 
-This module provides reusable fixtures for testing the card generation service,
-including mock clients, sample data, and test utilities.
-
-Updated for new multi-style generation architecture:
-- 5 text variants (one per AI style)
-- 4 image variants (one per style)
-- Simplified CardGenerationRequest (no style selectors)
-"""
-
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.integrations.gemini import VisualConcept
-
-
-# ============================================================================
-# Rate Limiter Configuration for Tests
-# ============================================================================
+from src.config import settings
+from src.models.card import ImageStyle
+from src.models.photocard import (
+    PhotocardGenerateRequest,
+    PhotocardGenerateResponse,
+    PhotocardImageVariant,
+    PhotocardSendResponse,
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
-def configure_rate_limit_for_tests():
-    """Configure high rate limit for tests to prevent test interference.
+def configure_settings_for_tests():
+    """Set test-friendly settings overrides for the duration of the session."""
+    original_values = {
+        "rate_limit_per_minute": settings.rate_limit_per_minute,
+        "telegram_delivery_env": settings.telegram_delivery_env,
+        "telegram_staging_chat_id": settings.telegram_staging_chat_id,
+        "telegram_staging_topic_id": settings.telegram_staging_topic_id,
+        "telegram_prod_chat_id": settings.telegram_prod_chat_id,
+        "telegram_prod_topic_id": settings.telegram_prod_topic_id,
+        "telegram_chat_id": settings.telegram_chat_id,
+        "telegram_topic_id": settings.telegram_topic_id,
+    }
 
-    This fixture runs once at the start of the test session and sets
-    a very high rate limit to effectively disable rate limiting.
-    """
-    from src.config import settings
-
-    # Store original value and set high limit for tests
-    original_limit = settings.rate_limit_per_minute
-    # Use object.__setattr__ to bypass Pydantic's frozen model
     object.__setattr__(settings, "rate_limit_per_minute", 10000)
+    object.__setattr__(settings, "telegram_delivery_env", "staging")
+    object.__setattr__(settings, "telegram_staging_chat_id", -1001234567890)
+    object.__setattr__(settings, "telegram_staging_topic_id", 123)
+    object.__setattr__(settings, "telegram_prod_chat_id", -1009876543210)
+    object.__setattr__(settings, "telegram_prod_topic_id", 456)
+    object.__setattr__(settings, "telegram_chat_id", -1009876543210)
+    object.__setattr__(settings, "telegram_topic_id", 456)
 
     yield
 
-    # Restore original value
-    object.__setattr__(settings, "rate_limit_per_minute", original_limit)
-
-from src.models.card import (
-    AI_TEXT_STYLES,
-    ALL_IMAGE_STYLES,
-    CardGenerationRequest,
-    ImageStyle,
-    ImageVariant,
-    TextStyle,
-    TextVariant,
-)
-from src.models.employee import Employee
+    for key, value in original_values.items():
+        object.__setattr__(settings, key, value)
 
 
-# ============================================================================
-# Mock GeminiClient Fixture
-# ============================================================================
+@pytest.fixture
+def sample_photocard_request() -> PhotocardGenerateRequest:
+    """Create a sample photocard generation request."""
+    return PhotocardGenerateRequest(
+        full_name="Jane Frost",
+        alter_ego="Cyberpunk snow captain",
+    )
+
+
+@pytest.fixture
+def sample_image_variants() -> list[PhotocardImageVariant]:
+    """Create three generated image variants."""
+    return [
+        PhotocardImageVariant(
+            url="generated://image-001",
+            style=ImageStyle.CYBERPUNK,
+        ),
+        PhotocardImageVariant(
+            url="generated://image-002",
+            style=ImageStyle.HYPERREALISM,
+        ),
+        PhotocardImageVariant(
+            url="generated://image-003",
+            style=ImageStyle.FANTASY,
+        ),
+    ]
+
+
+@pytest.fixture
+def sample_image_data(sample_image_variants: list[PhotocardImageVariant]) -> dict[str, bytes]:
+    """Create fake PNG bytes for the sample variants."""
+    return {
+        variant.url: f"png-{index}".encode("utf-8")
+        for index, variant in enumerate(sample_image_variants, start=1)
+    }
+
+
+@pytest.fixture
+def sample_generate_response(
+    sample_image_variants: list[PhotocardImageVariant],
+) -> PhotocardGenerateResponse:
+    """Create a sample generate response."""
+    return PhotocardGenerateResponse(
+        session_id="test-session-123",
+        image_variants=sample_image_variants,
+    )
+
+
+@pytest.fixture
+def sample_send_response() -> PhotocardSendResponse:
+    """Create a sample send response."""
+    return PhotocardSendResponse(
+        success=True,
+        message="Photocard sent successfully",
+        telegram_message_id=12345,
+        delivery_env="staging",
+    )
 
 
 @pytest.fixture
 def mock_gemini_client() -> AsyncMock:
-    """Create a mock GeminiClient for testing.
-
-    The mock client provides async mocks for generate_text, analyze_for_visual,
-    and generate_image methods that return predictable test data.
-
-    Returns:
-        AsyncMock: Mocked GeminiClient with pre-configured return values.
-    """
-    mock = AsyncMock()
-
-    # Configure generate_text to return predictable text
-    mock.generate_text = AsyncMock(
-        return_value="Generated greeting text for Test Employee. "
-        "Thank you for your contributions!"
+    """Create a mock Gemini client for service tests."""
+    client = AsyncMock()
+    client.generate_image_direct = AsyncMock(
+        return_value=(b"\x89PNGtest-image", "prompt"),
     )
-
-    # Configure analyze_for_visual to return a VisualConcept
-    mock.analyze_for_visual = AsyncMock(
-        return_value=VisualConcept(
-            core_theme="teamwork",
-            visual_metaphor="A group of hands joining together in unity, symbolizing collaboration",
-            key_elements=["joined hands", "warm glow", "team spirit"],
-            mood="warm and inspiring",
-        )
-    )
-
-    # Configure analyze_for_visual_batch to return multiple diverse VisualConcepts
-    # This is used by the new multi-agent ultrathink system for diverse image generation
-    def create_diverse_concepts(count: int = 4):
-        """Create a list of diverse visual concepts for testing.
-        
-        Generates concepts up to the requested count by cycling through base templates.
-        """
-        base_concepts = [
-            VisualConcept(
-                core_theme="teamwork",
-                visual_metaphor="A brass orrery with planetary spheres rotating in synchronized dance",
-                key_elements=["brass orrery", "planetary spheres", "synchronized motion", "velvet base", "warm spotlight"],
-                mood="precision harmony",
-                composition="low angle, medium shot",
-                lighting="warm spotlight from above",
-            ),
-            VisualConcept(
-                core_theme="teamwork",
-                visual_metaphor="Four distinct instruments arranged in a snow-covered bandstand",
-                key_elements=["string instruments", "snow bandstand", "interweaving shadows", "musical notes", "winter dusk"],
-                mood="harmonic unity",
-                composition="wide shot, elevated",
-                lighting="golden dusk sidelight",
-            ),
-            VisualConcept(
-                core_theme="teamwork",
-                visual_metaphor="A greenhouse atrium with vine species forming a living arch",
-                key_elements=["living vine arch", "plant species", "frosted glass", "greenhouse atrium", "intertwined growth"],
-                mood="organic collaboration",
-                composition="medium shot, eye level",
-                lighting="soft diffused daylight",
-            ),
-            VisualConcept(
-                core_theme="teamwork",
-                visual_metaphor="An ancient stone bridge with four distinctive arches spanning a frozen stream",
-                key_elements=["four-arch bridge", "varied masonry", "frozen stream", "mountain setting", "unified structure"],
-                mood="diverse strength",
-                composition="wide establishing shot",
-                lighting="overcast soft light",
-            ),
-            VisualConcept(
-                core_theme="teamwork",
-                visual_metaphor="A frozen waterfall with ice crystals catching prismatic light",
-                key_elements=["frozen waterfall", "ice crystals", "prismatic light", "morning sun", "sculptural ice"],
-                mood="nature's frozen artistry",
-                composition="low angle looking up",
-                lighting="backlit morning sun",
-            ),
-        ]
-        # Cycle through base concepts to generate requested count
-        result = []
-        for i in range(count):
-            result.append(base_concepts[i % len(base_concepts)])
-        return result
-
-    mock.analyze_for_visual_batch = AsyncMock(
-        side_effect=lambda recipient, reason=None, message=None, count=4, styles=None: create_diverse_concepts(count)
-    )
-
-    # Configure generate_image to return tuple of (bytes, prompt)
-    mock.generate_image = AsyncMock(
-        return_value=(
-            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00",  # Fake PNG header
-            "A festive digital art greeting card",
-        )
-    )
-
-    # Configure generate_image_direct for new one-stage generation with randomization
-    mock.generate_image_direct = AsyncMock(
-        return_value=(
-            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00",  # Fake PNG header
-            "A unique festive greeting card with randomization",
-        )
-    )
-
-    return mock
-
-
-@pytest.fixture
-def mock_gemini_client_with_errors() -> AsyncMock:
-    """Create a mock GeminiClient that raises errors.
-
-    Useful for testing error handling scenarios.
-
-    Returns:
-        AsyncMock: Mocked GeminiClient configured to raise exceptions.
-    """
-    mock = AsyncMock()
-
-    mock.generate_text = AsyncMock(side_effect=Exception("API Error"))
-    mock.analyze_for_visual = AsyncMock(side_effect=Exception("Analysis failed"))
-    mock.analyze_for_visual_batch = AsyncMock(side_effect=Exception("Batch analysis failed"))
-    mock.generate_image = AsyncMock(side_effect=Exception("Image generation failed"))
-    mock.generate_image_direct = AsyncMock(side_effect=Exception("Direct image generation failed"))
-
-    return mock
-
-
-# ============================================================================
-# Mock TelegramClient Fixture
-# ============================================================================
+    client.close = AsyncMock()
+    return client
 
 
 @pytest.fixture
 def mock_telegram_client() -> AsyncMock:
-    """Create a mock TelegramClient for testing.
-
-    The mock client provides an async mock for send_card method
-    that returns a predictable message ID.
-
-    Returns:
-        AsyncMock: Mocked TelegramClient with pre-configured return values.
-    """
-    mock = AsyncMock()
-
-    # Configure send_card to return a predictable message ID
-    mock.send_card = AsyncMock(return_value=12345)
-
-    return mock
-
-
-@pytest.fixture
-def mock_telegram_client_with_error() -> AsyncMock:
-    """Create a mock TelegramClient that raises errors.
-
-    Useful for testing error handling scenarios when Telegram fails.
-
-    Returns:
-        AsyncMock: Mocked TelegramClient configured to raise exceptions.
-    """
-    mock = AsyncMock()
-
-    mock.send_card = AsyncMock(side_effect=Exception("Telegram API Error"))
-
-    return mock
-
-
-# ============================================================================
-# Mock EmployeeRepository Fixture
-# ============================================================================
-
-
-@pytest.fixture
-def sample_employees() -> List[Employee]:
-    """Create a list of sample employees for testing.
-
-    Returns:
-        List[Employee]: List of test employees.
-    """
-    return [
-        Employee(id="1", name="Ivanov Ivan Ivanovich", department="IT"),
-        Employee(id="2", name="Petrova Maria Sergeevna", department="HR"),
-        Employee(id="3", name="Sidorov Alexey Petrovich", department="Finance"),
-        Employee(id="4", name="Kozlova Anna Dmitrievna", department="Marketing"),
-        Employee(id="5", name="Smirnov Dmitry Alexandrovich", department=None),
-    ]
-
-
-@pytest.fixture
-def mock_employee_repo(sample_employees: List[Employee]) -> AsyncMock:
-    """Create a mock EmployeeRepository for testing.
-
-    The mock repository provides async mocks for get_all and get_by_name
-    methods that return sample employee data.
-
-    Args:
-        sample_employees: List of sample employees to use in the mock.
-
-    Returns:
-        AsyncMock: Mocked EmployeeRepository with pre-configured return values.
-    """
-    mock = AsyncMock()
-
-    # Configure get_all to return all sample employees
-    mock.get_all = AsyncMock(return_value=sample_employees)
-
-    # Configure get_by_name to search through sample employees
-    async def get_by_name_impl(name: str) -> Optional[Employee]:
-        name_lower = name.lower().strip()
-        for employee in sample_employees:
-            if employee.name.lower().strip() == name_lower:
-                return employee
-        return None
-
-    mock.get_by_name = AsyncMock(side_effect=get_by_name_impl)
-
-    return mock
-
-
-@pytest.fixture
-def mock_employee_repo_empty() -> AsyncMock:
-    """Create a mock EmployeeRepository with no employees.
-
-    Useful for testing scenarios where no employees exist.
-
-    Returns:
-        AsyncMock: Mocked EmployeeRepository with empty data.
-    """
-    mock = AsyncMock()
-
-    mock.get_all = AsyncMock(return_value=[])
-    mock.get_by_name = AsyncMock(return_value=None)
-
-    return mock
-
-
-# ============================================================================
-# Sample CardGenerationRequest Fixtures (NEW architecture)
-# ============================================================================
-
-
-@pytest.fixture
-def sample_card_request() -> CardGenerationRequest:
-    """Create a sample CardGenerationRequest for testing.
-
-    NEW architecture: no style selectors, all styles generated automatically.
-
-    Returns:
-        CardGenerationRequest: A valid card generation request.
-    """
-    return CardGenerationRequest(
-        recipient="Ivanov Ivan Ivanovich",
-        sender="HR Team",
-        reason="Outstanding performance",
-        message="Thank you for your hard work!",
-    )
-
-
-@pytest.fixture
-def sample_card_request_minimal() -> CardGenerationRequest:
-    """Create a minimal CardGenerationRequest with only required field.
-
-    Returns:
-        CardGenerationRequest: A minimal card request with only recipient.
-    """
-    return CardGenerationRequest(
-        recipient="Petrova Maria Sergeevna",
-    )
-
-
-@pytest.fixture
-def sample_card_request_unknown_employee() -> CardGenerationRequest:
-    """Create a sample CardGenerationRequest for an unknown employee.
-
-    Returns:
-        CardGenerationRequest: A card request with non-existent employee name.
-    """
-    return CardGenerationRequest(
-        recipient="Unknown Person",
-    )
-
-
-# ============================================================================
-# Sample Variant Fixtures (NEW architecture - 5 text, 4 image)
-# ============================================================================
-
-
-@pytest.fixture
-def sample_text_variants() -> List[TextVariant]:
-    """Create sample text variants for testing.
-
-    NEW architecture: 5 variants, one per AI style.
-
-    Returns:
-        List[TextVariant]: List of 5 text variants (one per style).
-    """
-    return [
-        TextVariant(
-            text="O, great Ivanov Ivan Ivanovich! Your contributions shine bright!",
-            style=TextStyle.ODE,
-        ),
-        TextVariant(
-            text="Winter snow falls\nIvanov brings the joy\nSuccess blooms bright",
-            style=TextStyle.HAIKU,
-        ),
-        TextVariant(
-            text="BREAKING: Employee Ivanov achieves outstanding results!",
-            style=TextStyle.NEWSPAPER,
-        ),
-        TextVariant(
-            text="Report from 2074: Ivanov's legacy still inspires generations...",
-            style=TextStyle.FUTURE,
-        ),
-        TextVariant(
-            text="So, Ivanov walks into the office... and productivity goes up 200%!",
-            style=TextStyle.STANDUP,
-        ),
-    ]
-
-
-@pytest.fixture
-def sample_image_variants() -> List[ImageVariant]:
-    """Create sample image variants for testing.
-
-    Uses 4 representative styles from the 15 available.
-
-    Returns:
-        List[ImageVariant]: List of 4 image variants (one per style).
-    """
-    return [
-        ImageVariant(
-            url="generated://img-001",
-            style=ImageStyle.HYPERREALISM,
-            prompt="Photorealistic winter scene",
-        ),
-        ImageVariant(
-            url="generated://img-002",
-            style=ImageStyle.PIXEL_ART,
-            prompt="Retro pixel art holiday greeting",
-        ),
-        ImageVariant(
-            url="generated://img-003",
-            style=ImageStyle.KNITTED,
-            prompt="Cozy knitted texture scene",
-        ),
-        ImageVariant(
-            url="generated://img-004",
-            style=ImageStyle.WATERCOLOR,
-            prompt="Soft watercolor winter scene",
-        ),
-    ]
-
-
-@pytest.fixture
-def sample_image_data(sample_image_variants: List[ImageVariant]) -> Dict[str, bytes]:
-    """Create sample image data dictionary for testing.
-
-    Maps image variant URLs to fake image bytes.
-
-    Args:
-        sample_image_variants: List of image variants to create data for.
-
-    Returns:
-        Dict[str, bytes]: Dictionary mapping URLs to image bytes.
-    """
-    return {
-        variant.url: f"fake_image_bytes_{i}".encode()
-        for i, variant in enumerate(sample_image_variants)
-    }
-
-
-# ============================================================================
-# Sample Employee Data Fixture
-# ============================================================================
-
-
-@pytest.fixture
-def sample_employee() -> Employee:
-    """Create a single sample employee for testing.
-
-    Returns:
-        Employee: A test employee instance.
-    """
-    return Employee(
-        id="1",
-        name="Ivanov Ivan Ivanovich",
-        department="IT",
-    )
-
-
-@pytest.fixture
-def sample_employee_no_department() -> Employee:
-    """Create a sample employee without a department.
-
-    Returns:
-        Employee: A test employee instance without department.
-    """
-    return Employee(
-        id="5",
-        name="Smirnov Dmitry Alexandrovich",
-        department=None,
-    )
-
-
-# ============================================================================
-# Time-related Fixtures
-# ============================================================================
-
-
-@pytest.fixture
-def past_datetime() -> datetime:
-    """Create a datetime in the past (1 hour ago).
-
-    Returns:
-        datetime: A timezone-aware datetime object representing 1 hour ago.
-    """
-    return datetime.now(timezone.utc) - timedelta(hours=1)
-
-
-@pytest.fixture
-def future_datetime() -> datetime:
-    """Create a datetime in the future (1 hour from now).
-
-    Returns:
-        datetime: A timezone-aware datetime object representing 1 hour from now.
-    """
-    return datetime.now(timezone.utc) + timedelta(hours=1)
-
-
-# ============================================================================
-# Sample Employee Data Fixture (for test_employee_repo.py)
-# ============================================================================
-
-
-@pytest.fixture
-def sample_employee_data() -> List[Dict[str, Any]]:
-    """Create sample employee data as raw dictionaries.
-
-    Used for testing EmployeeRepository file loading.
-
-    Returns:
-        List[Dict[str, Any]]: List of employee dictionaries.
-    """
-    return [
-        {"id": "1", "name": "Ivanov Ivan Ivanovich", "department": "IT"},
-        {"id": "2", "name": "Petrova Maria Sergeevna", "department": "HR"},
-        {"id": "3", "name": "Sidorov Alexey Petrovich", "department": "Finance"},
-    ]
-
-
-# ============================================================================
-# Mock Telegram Message Fixture (for test_telegram.py)
-# ============================================================================
+    """Create a mock Telegram client for service tests."""
+    client = AsyncMock()
+    client.delivery_env = "staging"
+    client.send_photocard = AsyncMock(return_value=12345)
+    client.send_card = AsyncMock(return_value=12345)
+    client.close = AsyncMock()
+    return client
 
 
 @pytest.fixture
 def mock_telegram_message() -> MagicMock:
-    """Create a mock Telegram Message object.
+    """Create a mock Telegram API message."""
+    message = MagicMock()
+    message.message_id = 12345
+    return message
 
-    Returns:
-        MagicMock: Mocked Telegram Message with message_id.
-    """
-    mock_message = MagicMock()
-    mock_message.message_id = 12345
-    return mock_message
+
+@pytest.fixture
+def sample_employee_data() -> list[dict]:
+    """Create employee data used by employee repository tests."""
+    return [
+        {
+            "id": "1",
+            "name": "John Doe",
+            "department": "Engineering",
+            "telegram": "@john_doe",
+        },
+        {
+            "id": "2",
+            "name": "Jane Smith",
+            "department": "Marketing",
+            "telegram": "@jane_smith",
+        },
+    ]
