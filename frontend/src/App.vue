@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-platform relative overflow-hidden">
+<div class="min-h-screen overflow-x-hidden bg-platform relative overflow-hidden">
     <!-- Ambient glow orbs -->
     <div class="ambient-orbs">
       <div class="ambient-orb orb-bottom-left"></div>

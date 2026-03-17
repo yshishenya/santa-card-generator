@@ -323,17 +323,17 @@ async function handleSend(): Promise<void> {
                       class="h-full w-full object-cover"
                     />
                   </div>
-                  <div class="mt-2 flex items-center justify-between gap-3">
-                    <div>
+                  <div class="mt-2 flex min-w-0 items-center gap-2">
+                    <div class="min-w-0 flex-1">
                       <p class="text-[10px] uppercase tracking-[0.16em] text-platform-text-muted">
                         Вариант {{ index + 1 }}
                       </p>
-                      <p class="mt-1 text-xs font-semibold text-platform-text-primary">
+                      <p class="mt-1 truncate text-xs font-semibold text-platform-text-primary">
                         {{ getStyleLabel(variant.style) }}
                       </p>
                     </div>
                     <span
-                      class="inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs"
+                      class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs"
                       :class="index === selectedImageIndex ? 'border-platform-accent bg-platform-accent/15 text-platform-accent' : 'border-platform-line/30 text-platform-text-muted'"
                     >
                       {{ index + 1 }}
