@@ -1,5 +1,6 @@
 """Photocard generation service for the MVP flow."""
 
+import asyncio
 import logging
 import re
 import uuid
@@ -45,6 +46,7 @@ STYLE_PRIORITY: List[ImageStyle] = [
     ImageStyle.SOVIET_POSTER,
     ImageStyle.VINTAGE_RUSSIAN,
 ]
+_IMAGE_GENERATION_BATCH_SIZE = 3
 
 STYLE_HINTS: dict[ImageStyle, Sequence[str]] = {
     ImageStyle.CYBERPUNK: (
@@ -400,32 +402,44 @@ class CardService:
         variants: List[PhotocardImageVariant] = []
         image_data: Dict[str, bytes] = {}
         failures: List[str] = []
+        total_styles = list(candidate_styles)
 
-        for style in candidate_styles:
-            if len(variants) == 3:
-                break
-
+        async def generate_style_image(style: ImageStyle) -> tuple[ImageStyle, bytes | None]:
             try:
                 image_bytes, _prompt = await self._gemini_client.generate_image_direct(
                     style=style.value,
                     reason=f"Alter ego: {alter_ego}",
                     message=f"Create a festive photocard portrait for {full_name}",
                 )
+                return style, image_bytes
             except Exception as exc:
-                failures.append(style.value)
                 logger.warning(
                     "[%s] Failed generating style %s: %s",
                     correlation_id,
                     style.value,
                     exc,
                 )
-                continue
+                failures.append(style.value)
+                return style, None
 
-            image_id = str(uuid.uuid4())
-            image_url = f"generated://{image_id}"
-            variant = PhotocardImageVariant(url=image_url, style=style)
-            variants.append(variant)
-            image_data[image_url] = image_bytes
+        for chunk_start in range(0, len(total_styles), _IMAGE_GENERATION_BATCH_SIZE):
+            if len(variants) == 3:
+                break
+
+            styles_batch = total_styles[chunk_start:chunk_start + _IMAGE_GENERATION_BATCH_SIZE]
+            generation_tasks = [generate_style_image(style) for style in styles_batch]
+            generation_results = await asyncio.gather(*generation_tasks)
+
+            for style, image_bytes in generation_results:
+                if image_bytes is None:
+                    continue
+                image_id = str(uuid.uuid4())
+                image_url = f"generated://{image_id}"
+                variant = PhotocardImageVariant(url=image_url, style=style)
+                variants.append(variant)
+                image_data[image_url] = image_bytes
+                if len(variants) == 3:
+                    break
 
         if len(variants) != 3:
             raise CardServiceError(
