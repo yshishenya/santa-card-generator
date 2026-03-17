@@ -5,6 +5,7 @@ import logging
 from src.config import settings
 from src.core import CardService
 from src.integrations import GeminiClient, TelegramClient
+from src.integrations.gemini_client_google_tuned import ReferenceAwareGeminiClient
 from src.integrations.exceptions import GeminiConfigError, TelegramConfigError
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ def get_gemini_client() -> GeminiClient:
     global _gemini_client
     if _gemini_client is None:
         try:
-            _gemini_client = GeminiClient(
+            _gemini_client = ReferenceAwareGeminiClient(
                 api_key=settings.gemini_api_key,
                 base_url=settings.gemini_base_url,
                 text_model=settings.gemini_text_model,

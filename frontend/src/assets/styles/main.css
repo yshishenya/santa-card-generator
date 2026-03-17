@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 /*
- * Magical Winter Night Theme - "Cozy Night Magic"
+ * Professional 4.0 Theme
  *
  * Color Naming Convention:
- * - accent: Primary highlight color (blue #3382FE)
+ * - accent: Primary highlight color (blue #6366F1)
  * - bluelight: Ambient glow effects (blue variants)
  *
  * Legacy naming (deprecated but kept for compatibility):
@@ -14,57 +14,57 @@
  * - "warmlight" → now refers to blue glow colors
  */
 :root {
-  /* Primary - Warm Festive Red */
-  --color-primary: #E25555;
-  --color-primary-light: #FF7B7B;
-  --color-primary-dark: #C44545;
-  --color-primary-glow: #FF9999;
+  /* Primary */
+  --color-primary: #0EA5E9;
+  --color-primary-light: #38BDF8;
+  --color-primary-dark: #0284C7;
+  --color-primary-glow: #7DD3FC;
 
-  /* Secondary - Pine Green */
-  --color-secondary: #4A9F4A;
-  --color-secondary-light: #6BBF6B;
-  --color-secondary-dark: #3A7F3A;
-  --color-secondary-glow: #7FCF7F;
+  /* Secondary */
+  --color-secondary: #1D4ED8;
+  --color-secondary-light: #60A5FA;
+  --color-secondary-dark: #1E40AF;
+  --color-secondary-glow: #93C5FD;
 
   /* Accent - Bright Blue (primary highlight color) */
-  --color-accent: #3382FE;
-  --color-accent-light: #5B9BFE;
-  --color-accent-dark: #1A6DE0;
-  --color-accent-glow: #7AB4FF;
+  --color-accent: #6366F1;
+  --color-accent-light: #818CF8;
+  --color-accent-dark: #4338CA;
+  --color-accent-glow: #A5B4FC;
 
   /* Blue Light - Ambient glow effects (legacy name: warmlight) */
-  --color-warmlight: #4D9AFF;
-  --color-warmlight-soft: #99C8FF;
+  --color-warmlight: #3B82F6;
+  --color-warmlight-soft: #93C5FC;
 
-  /* Background - Night Sky */
-  --color-bg-primary: #0B1929;
-  --color-bg-secondary: #122640;
-  --color-bg-card: #1A3355;
-  --color-frost: #2A4A6F;
+  /* Background surface */
+  --color-bg-primary: #060C1A;
+  --color-bg-secondary: #0B1222;
+  --color-bg-card: #131B33;
+  --color-frost: #243152;
 
-  /* Text colors for dark theme */
-  --color-text-primary: #F0F8FF;
-  --color-text-secondary: #B8D4F0;
-  --color-text-muted: #7BA3CC;
-  --color-snow: #E8F4FF;
+  /* Text colors */
+  --color-text-primary: #E2E8F0;
+  --color-text-secondary: #B8C3DD;
+  --color-text-muted: #94A3B8;
+  --color-platform-light: #F8FAFC;
 
-  /* Magic accents */
-  --color-magic-purple: #9D7BFF;
-  --color-magic-cyan: #5CC8E8;
-  --color-magic-pink: #FF8FAB;
-  --color-magic-blue: #6BA3FF;
+  /* Accent palette */
+  --color-magic-purple: #8B5CF6;
+  --color-magic-cyan: #0EA5E9;
+  --color-magic-pink: #64748B;
+  --color-magic-blue: #6366F1;
 
   /* Glass card colors for night theme */
-  --color-glass-bg: rgba(26, 51, 85, 0.85);
-  --color-glass-border: rgba(51, 130, 254, 0.2);
-  --color-glass-shadow: rgba(51, 130, 254, 0.15);
+  --color-glass-bg: rgba(19, 27, 51, 0.88);
+  --color-glass-border: rgba(99, 102, 241, 0.2);
+  --color-glass-shadow: rgba(99, 102, 241, 0.15);
 }
 
 /* Global styles */
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Manrope', 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -82,11 +82,11 @@ body {
     );
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(51, 130, 254, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.15);
     border-radius: 24px;
     box-shadow:
       0 4px 24px rgba(0, 0, 0, 0.3),
-      0 0 40px rgba(51, 130, 254, 0.08),
+      0 0 40px rgba(99, 102, 241, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
@@ -100,30 +100,30 @@ body {
       rgba(30, 58, 95, 0.95) 0%,
       rgba(22, 44, 75, 0.9) 100%
     );
-    border-color: rgba(51, 130, 254, 0.35);
+    border-color: rgba(99, 102, 241, 0.35);
     box-shadow:
       0 8px 40px rgba(0, 0, 0, 0.4),
-      0 0 60px rgba(51, 130, 254, 0.15),
+      0 0 60px rgba(99, 102, 241, 0.15),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
     transform: translateY(-2px);
   }
 
-  /* Festive glow card */
-  .glass-card-festive {
+  /* Glass highlight card */
+  .glass-card-platform {
     @apply glass-card;
     position: relative;
     overflow: hidden;
   }
 
-  .glass-card-festive::before {
+  .glass-card-platform::before {
     content: '';
     position: absolute;
     inset: -2px;
     background: linear-gradient(
       135deg,
-      rgba(77, 154, 255, 0.2) 0%,
-      rgba(51, 130, 254, 0.25) 50%,
-      rgba(77, 154, 255, 0.2) 100%
+      rgba(99, 102, 241, 0.2) 0%,
+      rgba(99, 102, 241, 0.25) 50%,
+      rgba(99, 102, 241, 0.2) 100%
     );
     border-radius: 26px;
     z-index: -1;
@@ -131,43 +131,44 @@ body {
     transition: opacity 0.5s ease;
   }
 
-  .glass-card-festive:hover::before {
+  .glass-card-platform:hover::before {
     opacity: 1;
   }
 
   /* Gradient text - Bright Blue */
   .text-gradient {
-    background: linear-gradient(135deg, #3382FE 0%, #5B9BFE 50%, #7AB4FF 100%);
+    background: linear-gradient(135deg, #6366F1 0%, #818CF8 50%, #A5B4FC 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .text-gradient-magic {
-    background: linear-gradient(135deg, #9D7BFF 0%, #5CC8E8 50%, #FF8FAB 100%);
+    background: linear-gradient(135deg, #8B5CF6 0%, #0EA5E9 50%, #64748B 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .text-gradient-gold {
-    background: linear-gradient(135deg, #1A6DE0 0%, #3382FE 50%, #5B9BFE 100%);
+    background: linear-gradient(135deg, #4338CA 0%, #6366F1 50%, #818CF8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  .text-gradient-festive {
-    background: linear-gradient(135deg, #E25555 0%, #3382FE 50%, #4A9F4A 100%);
+  .text-gradient-platform {
+    background: linear-gradient(135deg, #0EA5E9 0%, #6366F1 50%, #1D4ED8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  /* Magic button styles - Night theme with blue glow */
+
+  /* Platform button styles */
   .btn-magic {
     position: relative;
-    background: linear-gradient(135deg, #4D9AFF 0%, #3382FE 100%);
+    background: linear-gradient(135deg, #3B82F6 0%, #6366F1 100%);
     border: none;
     border-radius: 12px;
     color: #FFFFFF;
@@ -180,7 +181,7 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, #3382FE 0%, #7AB4FF 100%);
+    background: linear-gradient(135deg, #6366F1 0%, #A5B4FC 100%);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -192,8 +193,8 @@ body {
   .btn-magic:hover {
     transform: translateY(-2px);
     box-shadow:
-      0 10px 40px rgba(51, 130, 254, 0.4),
-      0 0 20px rgba(51, 130, 254, 0.3);
+      0 10px 40px rgba(99, 102, 241, 0.4),
+      0 0 20px rgba(99, 102, 241, 0.3);
   }
 
   .btn-magic span,
@@ -202,9 +203,9 @@ body {
     z-index: 1;
   }
 
-  /* Christmas gradient button */
-  .btn-christmas {
-    background: linear-gradient(135deg, #E25555 0%, #C44545 100%);
+  /* Accent button style */
+  .btn-platform {
+    background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
     border: none;
     border-radius: 12px;
     color: white;
@@ -212,63 +213,85 @@ body {
     transition: all 0.3s ease;
   }
 
-  .btn-christmas:hover {
-    background: linear-gradient(135deg, #FF7B7B 0%, #E25555 100%);
+  .btn-platform:hover {
+    background: linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%);
     transform: translateY(-2px);
-    box-shadow: 0 10px 40px rgba(226, 85, 85, 0.4);
+    box-shadow: 0 10px 40px rgba(14, 165, 233, 0.4);
   }
 
+
   /* Night theme text utilities */
-  .text-winter-snow {
-    color: var(--color-snow);
+  .text-platform-light {
+    color: var(--color-platform-light);
+  }
+
+  .text-platform-light\/70 {
+    color: rgba(232, 244, 255, 0.7);
+  }
+
+  .text-platform-light\/80 {
+    color: rgba(232, 244, 255, 0.8);
+  }
+
+  .text-platform-light\/60 {
+    color: rgba(232, 244, 255, 0.6);
+  }
+
+  .text-platform-light\/50 {
+    color: rgba(232, 244, 255, 0.5);
+  }
+
+  .text-platform-light\/90 {
+    color: rgba(232, 244, 255, 0.9);
   }
 
   /* Glow effects for night theme */
   .glow-red {
-    box-shadow: 0 0 20px rgba(226, 85, 85, 0.4), 0 0 40px rgba(226, 85, 85, 0.2);
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.4), 0 0 40px rgba(14, 165, 233, 0.2);
   }
 
   .glow-green {
-    box-shadow: 0 0 20px rgba(74, 159, 74, 0.4), 0 0 40px rgba(74, 159, 74, 0.2);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.4), 0 0 40px rgba(56, 189, 248, 0.2);
   }
 
   /* Blue accent glow (legacy name: glow-gold) */
   .glow-gold {
-    box-shadow: 0 0 20px rgba(51, 130, 254, 0.5), 0 0 40px rgba(51, 130, 254, 0.25);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(99, 102, 241, 0.25);
   }
 
   /* Alias for semantic naming */
   .glow-accent {
-    box-shadow: 0 0 20px rgba(51, 130, 254, 0.5), 0 0 40px rgba(51, 130, 254, 0.25);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(99, 102, 241, 0.25);
   }
 
   /* Blue ambient glow (legacy name: glow-warmlight) */
   .glow-warmlight {
     box-shadow:
-      0 0 20px rgba(77, 154, 255, 0.5),
-      0 0 40px rgba(77, 154, 255, 0.3),
-      0 0 60px rgba(51, 130, 254, 0.2);
+      0 0 20px rgba(99, 102, 241, 0.5),
+      0 0 40px rgba(99, 102, 241, 0.3),
+      0 0 60px rgba(99, 102, 241, 0.2);
   }
 
   /* Alias for semantic naming */
   .glow-bluelight {
     box-shadow:
-      0 0 20px rgba(77, 154, 255, 0.5),
-      0 0 40px rgba(77, 154, 255, 0.3),
-      0 0 60px rgba(51, 130, 254, 0.2);
+      0 0 20px rgba(99, 102, 241, 0.5),
+      0 0 40px rgba(99, 102, 241, 0.3),
+      0 0 60px rgba(99, 102, 241, 0.2);
   }
 
-  .glow-festive {
+  .glow-platform {
     box-shadow:
-      0 0 30px rgba(77, 154, 255, 0.3),
-      0 0 60px rgba(51, 130, 254, 0.2),
-      0 0 90px rgba(226, 85, 85, 0.1);
+      0 0 30px rgba(99, 102, 241, 0.3),
+      0 0 60px rgba(99, 102, 241, 0.2),
+      0 0 90px rgba(14, 165, 233, 0.1);
   }
+
 
   /* Input styles - Night theme */
   .input-magic {
     background: rgba(26, 51, 85, 0.8);
-    border: 1px solid rgba(51, 130, 254, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.2);
     border-radius: 12px;
     color: var(--color-text-primary);
     transition: all 0.3s ease;
@@ -276,8 +299,8 @@ body {
 
   .input-magic:focus {
     background: rgba(30, 58, 95, 0.9);
-    border-color: rgba(51, 130, 254, 0.5);
-    box-shadow: 0 0 20px rgba(51, 130, 254, 0.2);
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
     outline: none;
   }
 
@@ -289,9 +312,9 @@ body {
   .shimmer {
     background: linear-gradient(
       90deg,
-      rgba(51, 130, 254, 0) 0%,
-      rgba(51, 130, 254, 0.2) 50%,
-      rgba(51, 130, 254, 0) 100%
+      rgba(99, 102, 241, 0) 0%,
+      rgba(99, 102, 241, 0.2) 50%,
+      rgba(99, 102, 241, 0) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
@@ -299,9 +322,9 @@ body {
 
   /* Frost effect - adjusted for night */
   .frost-border {
-    border: 1px solid rgba(92, 200, 232, 0.3);
+    border: 1px solid rgba(14, 165, 233, 0.3);
     box-shadow:
-      inset 0 0 20px rgba(92, 200, 232, 0.1),
+      inset 0 0 20px rgba(14, 165, 233, 0.1),
       0 4px 20px rgba(0, 0, 0, 0.2);
   }
 }
@@ -313,28 +336,28 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(11, 25, 41, 0.8);
+  background: rgba(11, 18, 34, 0.8);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(51, 130, 254, 0.4) 0%, rgba(77, 154, 255, 0.3) 100%);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.4) 0%, rgba(99, 102, 241, 0.3) 100%);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(51, 130, 254, 0.6) 0%, rgba(77, 154, 255, 0.5) 100%);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.6) 0%, rgba(99, 102, 241, 0.5) 100%);
 }
 
 /* PrimeVue customizations - Night theme */
 .p-autocomplete-panel {
   background: rgba(26, 51, 85, 0.98);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(51, 130, 254, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: 16px;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.4),
-    0 0 40px rgba(51, 130, 254, 0.1);
+    0 0 40px rgba(99, 102, 241, 0.1);
 }
 
 .p-autocomplete-item {
@@ -345,11 +368,11 @@ body {
 }
 
 .p-autocomplete-item:hover {
-  background: linear-gradient(135deg, rgba(51, 130, 254, 0.15) 0%, rgba(77, 154, 255, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
 }
 
 .p-autocomplete-item.p-highlight {
-  background: linear-gradient(135deg, rgba(51, 130, 254, 0.25) 0%, rgba(77, 154, 255, 0.2) 100%);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(99, 102, 241, 0.2) 100%);
 }
 
 /* Animations */
@@ -393,10 +416,10 @@ body {
 
 @keyframes glowPulse {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(51, 130, 254, 0.3), 0 0 40px rgba(77, 154, 255, 0.15);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3), 0 0 40px rgba(99, 102, 241, 0.15);
   }
   50% {
-    box-shadow: 0 0 30px rgba(51, 130, 254, 0.5), 0 0 60px rgba(77, 154, 255, 0.25);
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.5), 0 0 60px rgba(99, 102, 241, 0.25);
   }
 }
 
@@ -404,12 +427,12 @@ body {
   0%, 100% {
     opacity: 0.6;
     transform: scale(1);
-    filter: drop-shadow(0 0 2px rgba(51, 130, 254, 0.5));
+    filter: drop-shadow(0 0 2px rgba(99, 102, 241, 0.5));
   }
   50% {
     opacity: 1;
     transform: scale(1.2);
-    filter: drop-shadow(0 0 8px rgba(51, 130, 254, 0.8));
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.8));
   }
 }
 
@@ -426,33 +449,33 @@ body {
 
 /* Loading animation customization */
 .loading-spinner {
-  border-color: rgba(51, 130, 254, 0.3);
+  border-color: rgba(99, 102, 241, 0.3);
   border-top-color: var(--color-accent);
 }
 
 /* Selection ring with blue glow */
 .ring-aurora {
-  --tw-ring-color: rgba(51, 130, 254, 0.6);
-  box-shadow: 0 0 20px rgba(51, 130, 254, 0.2);
+  --tw-ring-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
 }
 
 /* Text opacity utilities for night theme */
-.text-winter-snow\/70 {
+.text-platform-light\/70 {
   color: rgba(232, 244, 255, 0.7);
 }
 
-.text-winter-snow\/80 {
+.text-platform-light\/80 {
   color: rgba(232, 244, 255, 0.8);
 }
 
-.text-winter-snow\/60 {
+.text-platform-light\/60 {
   color: rgba(232, 244, 255, 0.6);
 }
 
-.text-winter-snow\/50 {
+.text-platform-light\/50 {
   color: rgba(232, 244, 255, 0.5);
 }
 
-.text-winter-snow\/90 {
+.text-platform-light\/90 {
   color: rgba(232, 244, 255, 0.9);
 }

@@ -9,7 +9,7 @@ Features:
   soviet_poster, hyperrealism, digital_3d, fantasy, comic_book, watercolor,
   cyberpunk, paper_cutout, pop_art, lego, linocut)
 - Text generation via gemini-2.5-flash
-- Image generation via gemini-2.5-flash-image-preview
+- Image generation via gemini-3.1-flash-image-preview
 - Automatic retry on transient errors
 - Comprehensive error handling
 - Structured logging
@@ -19,6 +19,7 @@ import json
 import logging
 import base64
 import random
+import re
 from dataclasses import dataclass
 from typing import Optional, Any, Dict, List, Tuple
 
@@ -40,6 +41,86 @@ ANALYSIS_TEMPERATURE = 0.3  # Lower temperature for more consistent analysis
 MAX_RETRY_ATTEMPTS = 3
 RETRY_MIN_WAIT = 2
 RETRY_MAX_WAIT = 10
+PHOTOCARD_PRIMARY_TEMPERATURE = 0.05
+PHOTOCARD_RETRY_TEMPERATURE = 0.5
+
+PHOTOCARD_BRAND_PALETTE = {
+    "main": ["#FFFFFF", "#B9CDFF", "#1F2A3A", "#0A0A0A"],
+    "additional": ["#F15A5A", "#F8C44D", "#58B8D9", "#7CD4A5", "#FFB8DE"],
+}
+
+_PHOTOCARD_STYLE_VARIATIONS = {
+    "bento_grid": {
+        "composition": "connected central cluster occupying 70-80% across 3x3 or 4x3 modules",
+    },
+    "minimalist_corporate_line_art": {
+        "composition": "single dominant centered motif occupying 70-80% with generous breathing room",
+    },
+    "quirky_hand_drawn_flat": {
+        "composition": "single rounded central figure occupying 70-80% with lively doodle accents",
+    },
+}
+
+_PHOTOCARD_STYLE_PALETTES = {
+    "bento_grid": [
+        (["#FFFFFF", "#B9CDFF", "#E8ECFF"], ["#F15A5A", "#F8C44D"]),
+        (["#FFFFFF", "#DCE8FF", "#B9CDFF"], ["#58B8D9", "#7CD4A5"]),
+    ],
+    "minimalist_corporate_line_art": [
+        (["#FFFFFF", "#0A0A0A"], ["#B9CDFF"]),
+        (["#F7F8FA", "#111111"], ["#B9CDFF", "#58B8D9"]),
+    ],
+    "quirky_hand_drawn_flat": [
+        (["#FFFFFF", "#B9CDFF", "#EFF4FF"], ["#F15A5A", "#F8C44D"]),
+        (["#FFFFFF", "#DDE8FF", "#DDF7FF"], ["#7CD4A5", "#FFB8DE"]),
+    ],
+}
+
+_PHOTOCARD_AGENT_OVERRIDES: dict[str, str] | None = None
+
+
+def _get_photocard_agent_overrides(style: str) -> str:
+    """Load optional photocard prompt overrides and return merged override block."""
+    global _PHOTOCARD_AGENT_OVERRIDES
+    if _PHOTOCARD_AGENT_OVERRIDES is None:
+        try:
+            from .photocard_prompt_agent_overrides import PHOTOCARD_AGENT_STYLE_OVERRIDES
+
+            if isinstance(PHOTOCARD_AGENT_STYLE_OVERRIDES, dict):
+                _PHOTOCARD_AGENT_OVERRIDES = {
+                    key: str(value)
+                    for key, value in PHOTOCARD_AGENT_STYLE_OVERRIDES.items()
+                    if isinstance(key, str) and isinstance(value, str)
+                }
+            else:
+                _PHOTOCARD_AGENT_OVERRIDES = {}
+        except Exception:
+            _PHOTOCARD_AGENT_OVERRIDES = {}
+
+    if not _PHOTOCARD_AGENT_OVERRIDES:
+        return ""
+
+    global_override = _PHOTOCARD_AGENT_OVERRIDES.get("_global", "").strip()
+    style_override = _PHOTOCARD_AGENT_OVERRIDES.get(style, "").strip()
+    if global_override and style_override:
+        return f"{global_override}\n\n{style_override}"
+    return global_override or style_override
+
+
+def _get_photocard_variation(style: str) -> dict[str, str]:
+    """Return a stable style variation hint set for photocard generation."""
+    if style in _PHOTOCARD_STYLE_VARIATIONS:
+        return _PHOTOCARD_STYLE_VARIATIONS[style]
+    return {"composition": "dominant central motif occupies roughly 70-80% of the tile"}
+
+
+def _sample_photocard_palette(style: str) -> Tuple[List[str], List[str]]:
+    """Return style-tuned color palette for photocard generation."""
+    variations = _PHOTOCARD_STYLE_PALETTES.get(style, [])
+    if variations:
+        primary_colors, accent_colors = random.choice(variations)
+        return list(primary_colors), list(accent_colors)
+    return PHOTOCARD_BRAND_PALETTE["main"][:3], PHOTOCARD_BRAND_PALETTE["additional"][:2]
 
 from .exceptions import (
     GeminiTextGenerationError,
@@ -73,7 +154,7 @@ class VisualConcept:
     key_elements: List[str]  # 5 specific elements to include in the image
     mood: str  # Emotional atmosphere
     composition: str = "medium shot, eye level"  # Camera angle and framing
-    lighting: str = "soft natural winter daylight"  # Light source and quality
+    lighting: str = "soft balanced daylight"  # Light source and quality
 
 
 # ============================================================================
@@ -86,8 +167,8 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 1: CELESTIAL - for ethereal styles
     VisualConcept(
         core_theme="appreciation",
-        visual_metaphor="A vintage brass orrery with crystalline planetary spheres catching the light of a winter sunset, gears frozen mid-rotation as frost patterns form on its polished surfaces",
-        key_elements=["brass orrery", "crystal spheres", "frost patterns", "winter sunset", "intricate gears"],
+        visual_metaphor="A vintage brass orrery with crystalline planetary spheres catching the light of a late autumn sunset, turning gears reflected in warm polished metal",
+        key_elements=["brass orrery", "planetary spheres", "golden highlights", "detailed gears", "sunset glow"],
         mood="wonder and cosmic harmony",
         composition="low angle, medium shot with shallow DoF",
         lighting="warm sunset glow from behind, cool ambient fill",
@@ -95,8 +176,8 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 2: BOTANICAL - for organic, natural styles
     VisualConcept(
         core_theme="gratitude",
-        visual_metaphor="A Victorian glass terrarium filled with impossible winter flowers - crystalline roses and frost-petaled lilies growing from snow-dusted soil, condensation on the curved glass walls",
-        key_elements=["glass terrarium", "crystal roses", "frost lilies", "snow soil", "condensation droplets"],
+        visual_metaphor="A Victorian glass terrarium filled with resilient flowers - translucent blossoms and metallic petals growing from mineral-rich soil, condensation beading on the curved glass walls",
+        key_elements=["glass terrarium", "metallic petals", "unusual flowers", "condensation droplets", "curved walls"],
         mood="delicate nurturing beauty",
         composition="close-up, eye level, layered depth",
         lighting="soft diffused daylight through glass, subtle internal glow",
@@ -104,8 +185,8 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 3: MECHANICAL/CLOCKWORK - for precision styles
     VisualConcept(
         core_theme="innovation",
-        visual_metaphor="An antique astronomical clock emerging from fresh snowdrift, its exposed golden mechanisms turning as moonlight catches each precisely crafted gear and celestial indicator",
-        key_elements=["astronomical clock", "golden gears", "moonlight", "snowdrift", "celestial dials"],
+        visual_metaphor="An antique astronomical clock on a glass stand, its exposed golden mechanisms turning as moonlight catches each precisely crafted gear and celestial indicator",
+        key_elements=["astronomical clock", "golden gears", "moonlight", "celestial dials", "precision mechanics"],
         mood="precision and timeless ingenuity",
         composition="medium shot, slight dutch angle",
         lighting="cool moonlight from above, warm brass reflections",
@@ -113,8 +194,8 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 4: ARCHITECTURAL - for grand, structural styles
     VisualConcept(
         core_theme="support",
-        visual_metaphor="A magnificent stone viaduct with graceful arches spanning a frozen valley, snow resting on its ancient stones while a distant train creates a plume of steam against the twilight sky",
-        key_elements=["stone viaduct", "frozen valley", "graceful arches", "steam plume", "twilight sky"],
+        visual_metaphor="A magnificent stone viaduct with graceful arches spanning a deep valley, evening fog clinging to weathered stones while a distant train creates a plume of steam against the twilight sky",
+        key_elements=["stone viaduct", "graceful arches", "ancient engineering", "steam plume", "twilight sky"],
         mood="enduring strength and connection",
         composition="wide establishing shot, eye level",
         lighting="golden twilight with blue shadows, warm steam accent",
@@ -122,8 +203,8 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 5: CRAFTSMANSHIP - for artisanal styles
     VisualConcept(
         core_theme="excellence",
-        visual_metaphor="A master glassblower's workshop with a half-formed crystal ornament glowing orange on the end of a blowpipe, snow visible through frosted windows, tools arranged with reverent precision",
-        key_elements=["glowing glass", "blowpipe", "crystal ornament", "frosted windows", "artisan tools"],
+        visual_metaphor="A master glassblower's workshop with a half-formed ornament glowing orange on the end of a blowpipe, light spilling through large windows, tools arranged with reverent precision",
+        key_elements=["glowing glass", "blowpipe", "ornament", "studio windows", "artisan tools"],
         mood="focused mastery and creation",
         composition="medium shot, warm-cool contrast",
         lighting="orange furnace glow vs cool window light",
@@ -131,8 +212,8 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 6: NAVIGATION/JOURNEY - for adventure styles
     VisualConcept(
         core_theme="mentorship",
-        visual_metaphor="An ancient mariner's sextant and star charts spread on a captain's desk, the brass instrument catching lamplight while snow falls past the cabin's porthole, distant constellations visible",
-        key_elements=["brass sextant", "star charts", "captain's desk", "snow porthole", "constellations"],
+        visual_metaphor="An ancient mariner's sextant and star charts spread on a captain's desk, the brass instrument catching lamplight while distant constellations glow past a compass-windowed cabin",
+        key_elements=["brass sextant", "star charts", "captain's desk", "maritime compass", "constellations"],
         mood="guidance through unknown waters",
         composition="close-up with deep background",
         lighting="warm oil lamp glow, cool starlight accent",
@@ -140,17 +221,17 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 7: MUSICAL - for harmonious, elegant styles
     VisualConcept(
         core_theme="teamwork",
-        visual_metaphor="A string quartet's instruments arranged in a snow-dusted gazebo at dusk - violin, viola, cello, and bass forming a perfect constellation, sheet music pages frozen mid-flutter in the still air",
-        key_elements=["string instruments", "snow gazebo", "frozen sheet music", "dusk light", "perfect arrangement"],
-        mood="harmony frozen in a perfect moment",
+        visual_metaphor="A string quartet's instruments arranged in a glass pavilion at dusk - violin, viola, cello, and bass forming a perfect constellation, sheet music pages turning slowly in still air",
+        key_elements=["string instruments", "pavilion", "floating sheet music", "dusk light", "perfect arrangement"],
+        mood="harmony held in a perfect moment",
         composition="wide shot, slightly elevated",
         lighting="golden dusk rim light, blue ambient shadows",
     ),
     # Category 8: ELEMENTAL - for dramatic, dynamic styles
     VisualConcept(
         core_theme="perseverance",
-        visual_metaphor="A cascade of autumn leaves suspended mid-transformation into snowflakes, the moment of change frozen in time above a forest floor carpeted in both colors",
-        key_elements=["autumn leaves", "snowflake transformation", "frozen moment", "forest floor", "mixed carpet"],
+        visual_metaphor="A cascade of autumn leaves transforming into glowing seed-like motes, the moment of change suspended in time above a forest floor patterned in warm and cool tones",
+        key_elements=["autumn leaves", "transforming motes", "forest floor", "suspended motion", "dual palette"],
         mood="beautiful metamorphosis",
         composition="medium shot, eye level, magical realism",
         lighting="soft diffused light, subtle sparkle on transitions",
@@ -158,8 +239,8 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 9: SYMBOLIC OBJECTS - for meaningful, intimate styles
     VisualConcept(
         core_theme="dedication",
-        visual_metaphor="A perfectly balanced antique scale with snowflakes on one plate and golden autumn leaves on the other, both sides in perfect equilibrium on a frost-covered marble pedestal",
-        key_elements=["antique scale", "snowflakes", "golden leaves", "perfect balance", "marble pedestal"],
+        visual_metaphor="A perfectly balanced antique scale with polished glass cubes on one plate and golden leaves on the other, both sides in strict equilibrium on a marble pedestal",
+        key_elements=["antique scale", "glass cubes", "golden leaves", "perfect balance", "marble pedestal"],
         mood="harmony through balance",
         composition="close-up, centered, symmetrical",
         lighting="soft even lighting, subtle highlights on metal",
@@ -167,17 +248,17 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 10: NATURE TRANSFORMATIONS - for organic change styles
     VisualConcept(
         core_theme="creativity",
-        visual_metaphor="A frozen waterfall with streams of ice crystals suspended mid-cascade, prismatic light dancing through the formations as morning sun hits the sculptural ice",
-        key_elements=["frozen waterfall", "ice crystals", "prismatic light", "morning sun", "sculptural ice"],
-        mood="nature's frozen artistry",
+        visual_metaphor="A suspended waterfall in reverse: reflected water strands glittering in motion, prismatic light dancing through the formations as morning sun hits each sculptural curve",
+        key_elements=["suspended waterfalls", "crystal strands", "prismatic light", "morning sun", "architectural form"],
+        mood="nature's sculptural artistry",
         composition="low angle looking up, dramatic",
         lighting="backlit morning sun, rainbow refractions",
     ),
     # Category 11: TEXTILE/CRAFT - specifically for knitted style
     VisualConcept(
         core_theme="warmth",
-        visual_metaphor="A cozy reading nook with hand-knitted blankets draped over an antique armchair, a steaming mug of cocoa on the side table, snow falling past the frosted window creating a soft glow",
-        key_elements=["knitted blankets", "antique armchair", "cocoa mug", "frosted window", "falling snow"],
+        visual_metaphor="A cozy reading nook with hand-knitted blankets draped over an antique armchair, a warm mug of tea on the side table, late light falling softly through an open window",
+        key_elements=["knitted blankets", "antique armchair", "warm mug", "open window", "soft light"],
         mood="comfort and cherished moments",
         composition="medium shot, inviting warmth",
         lighting="warm interior glow, cool blue from window",
@@ -185,8 +266,8 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 12: RETRO/NOSTALGIC - for vintage styles
     VisualConcept(
         core_theme="celebration",
-        visual_metaphor="A vintage gramophone with its brass horn pointed toward a snowy window, vinyl records stacked nearby, musical notes seeming to materialize as frost patterns on the glass",
-        key_elements=["brass gramophone", "vinyl records", "frost patterns", "snowy window", "musical traces"],
+        visual_metaphor="A vintage gramophone with its brass horn angled toward an open window, vinyl records stacked nearby, musical notes materializing as bright arcs of light in the room",
+        key_elements=["brass gramophone", "vinyl records", "light arcs", "open window", "musical traces"],
         mood="nostalgia and timeless joy",
         composition="medium shot, warm nostalgic tones",
         lighting="soft afternoon light, warm brass highlights",
@@ -194,8 +275,8 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 13: TECHNOLOGICAL/FUTURISTIC - for modern styles
     VisualConcept(
         core_theme="innovation",
-        visual_metaphor="A holographic snowflake projection floating above a sleek crystalline surface, its geometric patterns constantly shifting while real snow falls around it, blending digital and natural",
-        key_elements=["holographic snowflake", "crystalline surface", "shifting patterns", "real snow", "digital-natural blend"],
+        visual_metaphor="A holographic geometry projection floating above a sleek crystalline surface, its geometric patterns constantly shifting while particle glints drift around it, blending digital and natural rhythms",
+        key_elements=["holographic geometry", "crystalline surface", "shifting patterns", "drifting particles", "digital-natural blend"],
         mood="future meets tradition",
         composition="close-up, centered, high-tech aesthetic",
         lighting="cool blue holographic glow, soft ambient",
@@ -203,17 +284,17 @@ FALLBACK_VISUAL_CONCEPTS = [
     # Category 14: MINIATURE/DIORAMA - for cute/playful styles
     VisualConcept(
         core_theme="joy",
-        visual_metaphor="A miniature winter village inside a snow globe, tiny houses with warm windows, a frozen pond with skating figures, all viewed from an intimate macro perspective as if we've shrunk down",
-        key_elements=["snow globe", "miniature village", "warm windows", "frozen pond", "skating figures"],
+        visual_metaphor="A miniature craft village inside a glass orb, tiny houses with warm windows and a reflective central pool, all viewed from an intimate macro perspective as if we've shrunk down",
+        key_elements=["glass orb", "miniature village", "warm windows", "reflective pool", "macro perspective"],
         mood="whimsical enchantment",
         composition="macro close-up, inside looking out",
-        lighting="warm village glow, cool surrounding snow",
+        lighting="warm village glow, soft neutral haze",
     ),
     # Category 15: PRINTMAKING/GRAPHIC - for bold graphic styles
     VisualConcept(
         core_theme="strength",
-        visual_metaphor="A majestic winter stag standing proud on a snowy ridge, antlers silhouetted against a full moon, forest of pine trees creating dramatic negative space in the composition",
-        key_elements=["winter stag", "antler silhouette", "full moon", "snowy ridge", "pine forest"],
+        visual_metaphor="A majestic stag-shaped sculpture standing proud on a granite ridge, antlers silhouetted against a full moon while distant pines frame deep negative space",
+        key_elements=["stag sculpture", "antler silhouette", "full moon", "granite ridge", "pine forest"],
         mood="noble strength and solitude",
         composition="wide shot, high contrast, graphic",
         lighting="strong moonlight backlight, deep shadows",
@@ -224,20 +305,20 @@ FALLBACK_VISUAL_CONCEPTS = [
 # Each image style gets a specific fallback concept from a different category
 STYLE_FALLBACK_MAPPING = {
     "knitted": 10,        # TEXTILE/CRAFT - cozy reading nook
-    "magic_realism": 7,   # ELEMENTAL - leaves to snowflakes transformation
-    "pixel_art": 13,      # MINIATURE/DIORAMA - snow globe village
+    "magic_realism": 7,   # ELEMENTAL - leaves transformation
+    "pixel_art": 13,      # MINIATURE/DIORAMA - craft village scene
     "vintage_russian": 11, # RETRO/NOSTALGIC - gramophone
-    "soviet_poster": 14,  # PRINTMAKING/GRAPHIC - winter stag
-    "hyperrealism": 9,    # NATURE TRANSFORMATIONS - frozen waterfall
-    "digital_3d": 13,     # MINIATURE/DIORAMA - snow globe village
+    "soviet_poster": 14,  # PRINTMAKING/GRAPHIC - sculptural stag motif
+    "hyperrealism": 9,    # NATURE TRANSFORMATIONS - sculptural water forms
+    "digital_3d": 13,     # MINIATURE/DIORAMA - miniature village
     "fantasy": 0,         # CELESTIAL - brass orrery
     "comic_book": 7,      # ELEMENTAL - leaves transformation
     "watercolor": 1,      # BOTANICAL - terrarium flowers
-    "cyberpunk": 12,      # TECHNOLOGICAL - holographic snowflake
+    "cyberpunk": 12,      # TECHNOLOGICAL - holographic geometry
     "paper_cutout": 3,    # ARCHITECTURAL - viaduct
     "pop_art": 8,         # SYMBOLIC OBJECTS - balanced scale
-    "lego": 13,           # MINIATURE/DIORAMA - snow globe village
-    "linocut": 14,        # PRINTMAKING/GRAPHIC - winter stag
+    "lego": 13,           # MINIATURE/DIORAMA - miniature village
+    "linocut": 14,        # PRINTMAKING/GRAPHIC - symbolic stag motif
 }
 
 
@@ -296,15 +377,15 @@ FALLBACK_VISUAL_CONCEPT = FALLBACK_VISUAL_CONCEPTS[0]
 METAPHOR_CATEGORIES = """
 METAPHOR CATEGORIES (choose ONE category, then create a specific scene):
 
-1. NATURE TRANSFORMATIONS - ice melting, seeds sprouting in snow, frozen waterfall, aurora borealis
+1. NATURE TRANSFORMATIONS - seeds awakening, hidden springs, suspended water lines, aurora-like light fields
 2. MECHANICAL/CLOCKWORK - gears interlocking, compass pointing north, vintage clock mechanisms, brass instruments
-3. ARCHITECTURAL - bridges connecting cliffs, arched doorways with light, spiral staircases, snow-covered towers
+3. ARCHITECTURAL - bridges connecting cliffs, arched doorways with light, spiral staircases, observatory towers
 4. CRAFTSMANSHIP - hands shaping pottery (silhouette), weaving on a loom, blacksmith's anvil, origami birds
-5. NAVIGATION/JOURNEY - maps with routes, ships in harbor, mountain paths, footprints in snow leading forward
-6. MUSICAL - orchestral instruments in snow, music notes as snowflakes, grand piano in forest clearing
-7. BOTANICAL - greenhouse with rare flowers, bonsai tree, winter garden, roots intertwining underground
+5. NAVIGATION/JOURNEY - maps with routes, ships in harbor, mountain paths, footprints on ancient stone leading forward
+6. MUSICAL - orchestral instruments in harmony, music notes as light trails, grand piano in reflective spaces
+7. BOTANICAL - greenhouse with rare flowers, bonsai tree, root systems in deep soil, living architecture
 8. CELESTIAL - constellation patterns, moon phases, northern lights, planets aligning
-9. ELEMENTAL - fire and ice meeting, wind carrying autumn leaves into snow, crystal formations
+9. ELEMENTAL - fire and water meeting, wind carrying petals and dust, crystal formations
 10. SYMBOLIC OBJECTS - hourglasses, scales in balance, keys and locks, vintage books with bookmarks
 """
 
@@ -346,7 +427,7 @@ STEP 3 - CREATE SPECIFIC SCENE:
 Design a concrete, filmable scene with:
 • SUBJECT: The main object/element (be specific: "brass astrolabe" not "instrument")
 • ACTION: What is happening (dynamic verb: "rotating", "unfolding", "emerging")
-• ENVIRONMENT: Where it takes place (specific setting with winter/festive elements)
+• ENVIRONMENT: Where it takes place (specific setting with clear, identifiable details)
 • LIGHTING: Light source and quality (e.g., "warm golden hour backlight", "cool moonlight from above")
 
 STEP 4 - DEFINE COMPOSITION:
@@ -362,7 +443,7 @@ CRITICAL CONSTRAINTS:
 ✗ NO realistic human faces (silhouettes and hands from behind are OK)
 ✗ NO cliché light sources: lanterns, lighthouses, candles, torches, glowing orbs
 ✗ NO generic "magical glow" - be specific about light source
-✓ YES winter/New Year/festive imagery when natural
+✓ YES strong symbolic imagery when it naturally supports the narrative
 ✓ YES specific, concrete objects (not abstract concepts)
 ✓ YES dynamic elements suggesting movement or transformation
 
@@ -377,23 +458,23 @@ EXAMPLES (notice the diversity in metaphor categories):
 
 Input: reason="внедрение новой CRM системы", message="Спасибо за инициативу и упорство"
 Category: MECHANICAL/CLOCKWORK
-Output: {{"core_theme": "innovation", "visual_metaphor": "A complex brass orrery mechanism emerging from fresh snow, its polished gears beginning to turn as the first ray of winter sunrise catches the metal, tiny snowflakes suspended mid-air around the rotating planetary spheres", "key_elements": ["brass orrery", "interlocking gears", "planetary spheres", "fresh snow drift", "sunrise reflections"], "mood": "awakening and precision", "composition": "low angle close-up, shallow depth of field", "lighting": "warm sunrise from the right, golden hour quality"}}
+Output: {{"core_theme": "innovation", "visual_metaphor": "A complex brass orrery mechanism emerging from the first light of dawn, polished gears beginning to turn as a focused beam catches the metal, tiny crystalline particles suspended mid-air around rotating planetary spheres", "key_elements": ["brass orrery", "interlocking gears", "planetary spheres", "dawn light", "sunrise reflections"], "mood": "awakening and precision", "composition": "low angle close-up, shallow depth of field", "lighting": "warm sunrise from the right, golden hour quality"}}
 
 Input: reason="поддержку команды в сложный квартал", message="Ты был надёжной опорой"
 Category: ARCHITECTURAL
-Output: {{"core_theme": "support", "visual_metaphor": "An ancient stone bridge arching over a frozen river gorge, its weathered pillars standing firm as snow falls gently, a warm amber glow visible from windows of a small cabin on the far side", "key_elements": ["stone arch bridge", "frozen river", "snow-covered pillars", "distant cabin", "falling snow"], "mood": "steadfast reliability and safe passage", "composition": "wide establishing shot, eye level", "lighting": "overcast diffused daylight with warm accent from cabin windows"}}
+Output: {{"core_theme": "support", "visual_metaphor": "An ancient stone bridge arching over a deep river gorge, its weathered pillars standing firm while morning fog rolls between them, a warm amber glow visible from windows of a small cabin beyond", "key_elements": ["stone arch bridge", "river gorge", "weathered pillars", "distant cabin", "warm interior glow"], "mood": "steadfast reliability and safe passage", "composition": "wide establishing shot, eye level", "lighting": "overcast soft daylight with warm cabin accent"}}
 
 Input: reason="креативные идеи для маркетинга", message="Твои идеи всегда вдохновляют"
 Category: BOTANICAL
-Output: {{"core_theme": "creativity", "visual_metaphor": "A vintage glass greenhouse in a snow-covered garden, inside which impossible flowers bloom in winter - roses made of ice crystals, tulips with petals of aurora colors, all tended by gardening tools left mid-work", "key_elements": ["Victorian greenhouse", "crystal ice roses", "aurora-colored tulips", "vintage watering can", "snow outside"], "mood": "wonder and cultivation", "composition": "medium shot through frosted glass, layered depth", "lighting": "soft diffused winter daylight filtering through glass panels"}}
+Output: {{"core_theme": "creativity", "visual_metaphor": "A vintage glass greenhouse in a wild botanical courtyard, inside which impossible flowers bloom in impossible colors, all tended by gardening tools left mid-work", "key_elements": ["Victorian greenhouse", "crystal-like roses", "impossible tulips", "vintage watering can", "lush microclimate"], "mood": "wonder and cultivation", "composition": "medium shot through glass, layered depth", "lighting": "soft diffused daylight filtering through glass panels"}}
 
 Input: reason="обучение новых сотрудников", message="Благодаря тебе команда стала сильнее"
 Category: NAVIGATION/JOURNEY
-Output: {{"core_theme": "mentorship", "visual_metaphor": "An antique brass compass resting on a weathered leather map case atop a snow-dusted mountain summit cairn, the needle pointing toward distant peaks bathed in alpenglow, with a trail of bootprints visible in the snow below", "key_elements": ["brass compass", "leather map case", "stone cairn", "mountain peaks", "bootprints in snow"], "mood": "guidance and achievement", "composition": "close-up with deep background, slight low angle", "lighting": "alpenglow from distant peaks, cool shadows in foreground"}}
+Output: {{"core_theme": "mentorship", "visual_metaphor": "An antique brass compass resting on a weathered leather map case atop a mountain summit cairn, the needle pointing toward distant peaks glowing in dusk light, with a deliberate path visible below", "key_elements": ["brass compass", "leather map case", "stone cairn", "mountain peaks", "leading path"], "mood": "guidance and achievement", "composition": "close-up with deep background, slight low angle", "lighting": "alpenglow from distant peaks, crisp evening shadows"}}
 
 Input: reason="успешное закрытие года", message="Отличная работа всей команды"
 Category: MUSICAL
-Output: {{"core_theme": "teamwork", "visual_metaphor": "A grand piano covered in a light dusting of snow stands in a forest clearing, its lid open to reveal keys that shimmer like ice, while sheet music pages flutter frozen mid-air, each page a different part of the same symphony", "key_elements": ["grand piano", "ice-like keys", "floating sheet music", "forest clearing", "snow dust"], "mood": "harmony and celebration", "composition": "wide shot, slightly elevated angle", "lighting": "soft overcast with subtle rim light on piano edges"}}
+Output: {{"core_theme": "teamwork", "visual_metaphor": "A grand piano stands in a forest clearing, its lid open to reveal keys in soft focus, while sheet music pages circle in controlled motion like a synchronized rhythm", "key_elements": ["grand piano", "floating sheet music", "forest clearing", "multiple viewpoints", "synchronized motion"], "mood": "harmony and celebration", "composition": "wide shot, slightly elevated angle", "lighting": "soft morning light with subtle rim accents on piano edges"}}
 
 ═══════════════════════════════════════════════════════════════════════════════
 Now analyze the input above and respond with JSON only:"""
@@ -433,15 +514,15 @@ Assign EXACTLY ONE unique metaphor category to each of the {count} concepts.
 You MUST use {count} DIFFERENT categories from this list (no repeats!):
 
 1. CELESTIAL - orreries, astrolabes, star charts, moon phases, constellations
-2. BOTANICAL - terrariums, greenhouses, winter gardens, impossible flowers, bonsai
+2. BOTANICAL - terrariums, greenhouses, indoor gardens, impossible flowers, bonsai
 3. MECHANICAL - clockwork, gears, astronomical clocks, precision instruments
 4. ARCHITECTURAL - viaducts, arched bridges, towers, spiral staircases, doorways
 5. CRAFTSMANSHIP - glassblowing, pottery, weaving, metalwork, woodcarving
 6. NAVIGATION - sextants, compasses, maps, ships, mountain paths, cairns
 7. MUSICAL - string instruments, pianos, sheet music, orchestras, gramophones
 8. ELEMENTAL - transformation moments, fire-ice meeting, crystal formations
-9. SYMBOLIC - scales, hourglasses, keys, vintage books, snow globes
-10. NATURE - frozen waterfalls, ancient trees, migrating birds, seasons changing
+9. SYMBOLIC - scales, hourglasses, keys, vintage books, compasses
+10. NATURE - cascading waterways, ancient trees, migrating birds, seasons changing
 
 Distribution for {count} concepts:
 {category_assignments}
@@ -459,7 +540,7 @@ Before generating, verify:
 For EACH assigned category, create a unique scene with:
 • SUBJECT: Specific named object ("Victorian brass orrery" not "instrument")
 • ACTION: Dynamic state ("emerging", "transforming", "awakening")
-• ENVIRONMENT: Unique winter setting with distinct characteristics
+• ENVIRONMENT: Unique setting with distinct characteristics
 • LIGHTING: Specific, different light source for each (no repeats!)
 • COMPOSITION: Varied camera angles (mix of: low angle, eye level, bird's eye, close-up, wide)
 </AGENT_4>
@@ -479,7 +560,7 @@ CRITICAL CONSTRAINTS (apply to ALL concepts)
 ✗ NO realistic human faces (silhouettes and hands are OK)
 ✗ NO lanterns, lighthouses, candles, torches, or generic glowing orbs
 ✗ NO concept should share more than 1 key element with another concept
-✓ YES winter/New Year/festive imagery naturally integrated
+✓ YES culturally neutral celebratory imagery naturally integrated
 ✓ YES specific, concrete, visually distinct objects
 ✓ YES each concept should work beautifully in its own artistic style
 
@@ -496,10 +577,10 @@ OUTPUT FORMAT (JSON array, no markdown, no explanation)
 EXAMPLE: 4 diverse concepts for "teamwork on a project"
 ═══════════════════════════════════════════════════════════════════════════════
 [
-  {{"core_theme": "teamwork", "visual_metaphor": "A Victorian brass orrery with four interlocking planetary rings, each sphere a different precious metal, rotating in synchronized dance above a snow-dusted velvet display", "key_elements": ["brass orrery", "planetary rings", "precious metal spheres", "velvet base", "synchronized motion"], "mood": "precision harmony", "composition": "low angle, medium shot, shallow DoF", "lighting": "warm spotlight from above, cool ambient fill"}},
-  {{"core_theme": "teamwork", "visual_metaphor": "Four distinct instruments - violin, cello, flute, and harp - arranged in a snow-covered bandstand, each casting musical note-shaped shadows that interweave on the white ground", "key_elements": ["four instruments", "snow bandstand", "interweaving shadows", "musical note shapes", "winter dusk"], "mood": "harmonic unity", "composition": "wide shot, slightly elevated, symmetrical", "lighting": "golden dusk sidelight, long purple shadows"}},
-  {{"core_theme": "teamwork", "visual_metaphor": "A greenhouse atrium where four different vine species have grown together to form a living arch, their leaves touching at the peak, frost patterns decorating the glass walls", "key_elements": ["living vine arch", "four plant species", "frosted glass", "greenhouse atrium", "intertwined growth"], "mood": "organic collaboration", "composition": "medium shot, eye level, through the arch", "lighting": "soft diffused winter daylight, green leaf glow"}},
-  {{"core_theme": "teamwork", "visual_metaphor": "An ancient stone bridge with four distinctive arches, each built in a slightly different masonry style yet forming one unified span across a frozen mountain stream", "key_elements": ["four-arch bridge", "varied masonry", "frozen stream", "mountain setting", "unified structure"], "mood": "diverse strength", "composition": "wide establishing shot, eye level, centered", "lighting": "overcast soft light, blue ice reflections"}}
+  {{"core_theme": "teamwork", "visual_metaphor": "A Victorian brass orrery with four interlocking planetary rings, each sphere a different precious metal, rotating in synchronized dance above a velvet display", "key_elements": ["brass orrery", "planetary rings", "precious metal spheres", "velvet base", "synchronized motion"], "mood": "precision harmony", "composition": "low angle, medium shot, shallow DoF", "lighting": "warm spotlight from above, cool ambient fill"}},
+  {{"core_theme": "teamwork", "visual_metaphor": "Four distinct instruments - violin, cello, flute, and harp - arranged in a glass pavilion, each casting musical note-shaped shadows that interweave on the tiled floor", "key_elements": ["four instruments", "music pavilion", "interweaving shadows", "musical note shapes", "evening light"], "mood": "harmonic unity", "composition": "wide shot, slightly elevated, symmetrical", "lighting": "golden sidelight, smooth long shadows"}},
+  {{"core_theme": "teamwork", "visual_metaphor": "A greenhouse atrium where four different vine species have grown together to form a living arch, their leaves touching at the peak above a reflective pool", "key_elements": ["living vine arch", "four plant species", "reflective pool", "greenhouse atrium", "intertwined growth"], "mood": "organic collaboration", "composition": "medium shot, eye level, through the arch", "lighting": "soft diffused daylight, green leaf glow"}},
+  {{"core_theme": "teamwork", "visual_metaphor": "An ancient stone bridge with four distinctive arches, each built in a slightly different masonry style yet forming one unified span across a mountain stream", "key_elements": ["four-arch bridge", "varied masonry", "mountain stream", "architectural unity", "unified structure"], "mood": "diverse strength", "composition": "wide establishing shot, eye level, centered", "lighting": "overcast soft light with specular highlights"}}
 ]
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -586,7 +667,7 @@ Output: "2030 год. Листая архивы, понимаем: когда {r
 </input>
 
 <rules>
-- Зимние образы (снег, лёд, тепло)
+- Образы с атмосферой (свет, вода, воздух)
 - Имя {recipient} минимум один раз
 - Пустая строка между хайку
 </rules>
@@ -594,13 +675,13 @@ Output: "2030 год. Листая архивы, понимаем: когда {r
 <example>
 Input: "за поддержку в трудный момент"
 Output:
-Снег кружит в ночи
-{recipient} руку подал —
-Путь стал светлее
+Лёгкий туман
+по утру стережёт окно —
+Всё стало проще
 
-Лёд на окне тает
-От слов благодарности
-Сердце согрето
+Словно миг в тишине
+Мы чувствуем твою опору
+В нём теплота
 </example>
 
 Выведи только хайку, без пояснений.""",
@@ -667,7 +748,7 @@ Output: "{recipient}, слушай, я тут посчитал — ты геро
 # ============================================================================
 
 IMAGE_STYLE_PROMPTS = {
-    "knitted": """Generate a cozy holiday greeting card image in knitted wool texture style.
+    "knitted": """Generate a cozy greeting card image in knitted wool texture style.
 
 THEME TO INTERPRET: {core_theme}
 INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
@@ -676,10 +757,10 @@ MOOD TO CONVEY: {mood}
 YOUR CREATIVE TASK:
 Create a UNIQUE scene that expresses the theme of "{core_theme}" through the knitted wool aesthetic.
 You must REINTERPRET the inspiration into something that works perfectly for knitted texture -
-think of cozy winter objects, holiday decorations, or festive scenes that would look beautiful as knitted art.
+think of warm handcrafted objects, meaningful scenes, or artisanal moments that would look beautiful as knitted art.
 
 STYLE SPECIFICATIONS:
-Render the entire scene as if made from knitted wool fabric. Every object should have the texture of hand-knitted yarn with visible stitches, fuzzy fibers, and yarn loops. Think of a premium Christmas sweater or knitted ornament come to life.
+Render the entire scene as if made from knitted wool fabric. Every object should have the texture of hand-knitted yarn with visible stitches, fuzzy fibers, and yarn loops. Think of a premium knit accessory or textile craft come to life.
 
 TECHNICAL REQUIREMENTS:
 - Macro photography quality, 8K resolution
@@ -722,7 +803,7 @@ MOOD TO CONVEY: {mood}
 YOUR CREATIVE TASK:
 Create a UNIQUE pixel art scene expressing "{core_theme}" as a classic video game would.
 Transform the inspiration into charming 16-bit sprites - think of what objects and scenes
-work best as pixel art: treasure chests, crystals, holiday trees, cozy cabins, snowy landscapes.
+work best as pixel art: treasure chests, crystals, retro consoles, city corners, transport hubs.
 
 STYLE SPECIFICATIONS:
 Authentic Super Nintendo / Sega Genesis era pixel art. Clean pixel grid with deliberate placement. Isometric or side-scroller framing. The charm of retro gaming.
@@ -732,7 +813,7 @@ TECHNICAL REQUIREMENTS:
 - Crisp pixels with NO anti-aliasing or smoothing
 - Dithering patterns for gradients and shadows
 - Vibrant saturated colors: festive reds, greens, ice blues
-- Decorative pixel-snow border frame optional
+- Decorative pixel border frame optional
 
 FORBIDDEN: No text, UI elements, health bars, score displays, or any alphanumeric characters.""",
 
@@ -745,7 +826,7 @@ MOOD TO CONVEY: {mood}
 YOUR CREATIVE TASK:
 Create a UNIQUE scene expressing "{core_theme}" as a turn-of-century Russian artist would paint it.
 Reimagine the inspiration using period-appropriate imagery: troikas, samovars, birch forests,
-Ded Moroz, winter villages, ornate decorations, folk motifs.
+city streets, tram lines, ornate decorations, folk motifs.
 
 STYLE SPECIFICATIONS:
 Pre-revolutionary Russian postcard aesthetic. Art Nouveau influence with flowing organic lines. Hand-drawn feel with delicate linework.
@@ -783,7 +864,7 @@ TECHNICAL REQUIREMENTS:
 
 FORBIDDEN: No text, slogans, Cyrillic lettering, or any typographic elements. Pure graphic symbolism.""",
 
-    "hyperrealism": """Generate a hyperrealistic winter still life photograph for a greeting card.
+    "hyperrealism": """Generate a hyperrealistic still life photograph for a greeting card.
 
 THEME TO INTERPRET: {core_theme}
 INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
@@ -791,22 +872,22 @@ MOOD TO CONVEY: {mood}
 
 YOUR CREATIVE TASK:
 Create a UNIQUE photorealistic still life expressing "{core_theme}" through tangible objects.
-Choose subjects that photograph beautifully with extreme detail: frost-covered objects,
-metallic surfaces, glass, ice crystals, natural textures, winter materials.
+Choose subjects that photograph beautifully with extreme detail: glass objects,
+metallic surfaces, glass, crystal-like textures, natural textures, studio-ready materials.
 
 STYLE SPECIFICATIONS:
-National Geographic or high-end commercial photography quality. Every surface tells a story through texture. Winter stillness captured with scientific precision.
+National Geographic or high-end commercial photography quality. Every surface tells a story through texture. Detail captured with scientific precision.
 
 TECHNICAL REQUIREMENTS:
 - 8K resolution, extreme sharpness on focal point
 - Macro lens perspective with creamy bokeh background
-- Obsessive detail: ice crystals, frost patterns, material textures
+- Obsessive detail: fine textures, micro particles, material textures
 - Color palette: icy whites, cool blues, silver, with one warm accent (gold or red)
 - Caustic light patterns, realistic reflections, subsurface scattering
 
 FORBIDDEN: No text, labels, engravings, or watermarks. No human faces. Objects and textures only.""",
 
-    "digital_3d": """Generate a cute 3D isometric render for a holiday greeting card.
+    "digital_3d": """Generate a cute 3D isometric render for a greeting card.
 
 THEME TO INTERPRET: {core_theme}
 INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
@@ -814,7 +895,7 @@ MOOD TO CONVEY: {mood}
 
 YOUR CREATIVE TASK:
 Create a UNIQUE isometric 3D scene expressing "{core_theme}" with toylike charm.
-Transform the inspiration into cute, chunky 3D objects: miniature buildings, holiday decorations,
+Transform the inspiration into cute, chunky 3D objects: miniature buildings, studio props,
 stylized nature, whimsical machines - things that look delightful as clay or plastic models.
 
 STYLE SPECIFICATIONS:
@@ -838,7 +919,7 @@ MOOD TO CONVEY: {mood}
 YOUR CREATIVE TASK:
 Create a UNIQUE fantasy scene expressing "{core_theme}" with epic grandeur.
 Reimagine the inspiration as something from a fantasy world: enchanted forests, mystical artifacts,
-ancient towers, magical creatures (silhouettes), legendary items, snowy kingdoms.
+ancient towers, magical creatures (silhouettes), legendary items, cloud-crowned kingdoms.
 
 STYLE SPECIFICATIONS:
 Lord of the Rings concept art meets classic fantasy illustration. Epic scope with intimate detail. Oil painting quality with visible brushwork. Magic feels ancient and earned.
@@ -853,7 +934,7 @@ TECHNICAL REQUIREMENTS:
 
 FORBIDDEN: No text, readable runes, or letter-like symbols. No photorealistic human faces.""",
 
-    "comic_book": """Generate a dynamic comic book panel for a holiday greeting card.
+    "comic_book": """Generate a dynamic comic book panel for a greeting card.
 
 THEME TO INTERPRET: {core_theme}
 INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
@@ -885,8 +966,8 @@ MOOD TO CONVEY: {mood}
 
 YOUR CREATIVE TASK:
 Create a UNIQUE watercolor scene expressing "{core_theme}" with delicate beauty.
-Reimagine the inspiration as something that flows beautifully in watercolor: winter landscapes,
-delicate flowers, soft winter light, birds, snowfall, peaceful nature scenes.
+Reimagine the inspiration as something that flows beautifully in watercolor: city streets,
+delicate flowers, soft ambient light, birds, peaceful nature scenes.
 
 STYLE SPECIFICATIONS:
 Authentic wet-on-wet watercolor technique. Beautiful unpredictability of pigment meeting water. Loose, expressive, emotionally evocative.
@@ -901,7 +982,7 @@ TECHNICAL REQUIREMENTS:
 
 FORBIDDEN: No text, sharp digital lines, or perfect geometric shapes. Must feel hand-painted.""",
 
-    "cyberpunk": """Generate a futuristic cyberpunk scene for a holiday greeting card.
+    "cyberpunk": """Generate a futuristic cyberpunk scene for a greeting card.
 
 THEME TO INTERPRET: {core_theme}
 INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
@@ -910,13 +991,13 @@ MOOD TO CONVEY: {mood}
 YOUR CREATIVE TASK:
 Create a UNIQUE cyberpunk scene expressing "{core_theme}" in a neon-drenched future.
 Transform the inspiration into high-tech imagery: holographic displays, chrome machinery,
-neon-lit streets with snow, futuristic decorations, sci-fi reimaginings of holiday objects.
+neon-lit streets, futuristic devices, sci-fi reimaginings of iconic objects.
 
 STYLE SPECIFICATIONS:
-Blade Runner meets Snow Crash meets a neon-drenched holiday. High-tech low-life aesthetic where advanced technology coexists with gritty urban decay.
+Blade Runner meets cyberpunk noir. High-tech low-life aesthetic where advanced technology coexists with gritty urban decay.
 
 TECHNICAL REQUIREMENTS:
-- Night scene with rain or snow falling
+- Night scene with rain, steam, or drifting light particles
 - Neon glow effects with bloom and chromatic aberration
 - Reflections on wet surfaces, puddles, chrome
 - Color palette: hot neon pink, electric cyan, acid green, deep black shadows
@@ -933,8 +1014,8 @@ MOOD TO CONVEY: {mood}
 
 YOUR CREATIVE TASK:
 Create a UNIQUE paper diorama expressing "{core_theme}" through layered silhouettes.
-Transform the inspiration into paper craft: winter scenes with depth, forest silhouettes,
-architectural elements, snowflakes, holiday decorations - things that work as cut paper layers.
+Transform the inspiration into paper craft: layered city silhouettes, architectural elements,
+seasonal-neutral landscapes, decorative forms - things that work as cut paper layers.
 
 STYLE SPECIFICATIONS:
 Exquisite paper craft in kirigami tradition. Multiple layers creating depth and dimension. Premium pop-up book or museum installation quality.
@@ -949,7 +1030,7 @@ TECHNICAL REQUIREMENTS:
 
 FORBIDDEN: No printed text, words, or letters. Imagery through cut shapes and silhouettes only.""",
 
-    "pop_art": """Generate a Pop Art poster for a holiday greeting card.
+    "pop_art": """Generate a Pop Art poster for a greeting card.
 
 THEME TO INTERPRET: {core_theme}
 INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
@@ -958,7 +1039,7 @@ MOOD TO CONVEY: {mood}
 YOUR CREATIVE TASK:
 Create a UNIQUE pop art composition expressing "{core_theme}" as Warhol would.
 Transform the inspiration into bold graphic icons: everyday objects made iconic,
-holiday items as consumer culture, bold repetition, striking simple shapes.
+consumer symbols as graphic motifs, bold repetition, striking simple shapes.
 
 STYLE SPECIFICATIONS:
 Classic Pop Art in Andy Warhol and Roy Lichtenstein tradition. Bold, iconic, reproducible. Advertising language as fine art.
@@ -981,8 +1062,8 @@ MOOD TO CONVEY: {mood}
 
 YOUR CREATIVE TASK:
 Create a UNIQUE brick-built scene expressing "{core_theme}" as a master builder would.
-Transform the inspiration into brick constructions: miniature holiday villages, vehicles,
-characters (minifig style), winter landscapes - anything that could be built from toy bricks.
+Transform the inspiration into brick constructions: miniature cities, vehicles,
+characters (minifig style), dynamic landscapes - anything that could be built from toy bricks.
 
 STYLE SPECIFICATIONS:
 Everything is awesome in interlocking plastic bricks. Miniature world of toy blocks photographed with loving macro attention.
@@ -997,7 +1078,7 @@ TECHNICAL REQUIREMENTS:
 
 FORBIDDEN: No printed graphics or text on any brick surface. Pure brick construction only.""",
 
-    "linocut": """Generate a linocut print for a holiday greeting card.
+    "linocut": """Generate a linocut print for a greeting card.
 
 THEME TO INTERPRET: {core_theme}
 INSPIRATION (adapt creatively, don't copy literally): {visual_metaphor}
@@ -1005,7 +1086,7 @@ MOOD TO CONVEY: {mood}
 
 YOUR CREATIVE TASK:
 Create a UNIQUE linocut expressing "{core_theme}" through bold carved shapes.
-Transform the inspiration into high-contrast graphics: simplified winter scenes,
+Transform the inspiration into high-contrast graphics: simplified symbolic scenes,
 folk art animals, decorative patterns, strong silhouettes - things that carve beautifully.
 
 STYLE SPECIFICATIONS:
@@ -1031,47 +1112,47 @@ FORBIDDEN: No text, letters, or legible symbols. Carved shapes and ink texture o
 
 # Atmospheric conditions - affects lighting and mood
 RANDOM_ATMOSPHERES = [
-    "gentle snowfall with large fluffy flakes",
-    "crisp clear winter night with stars",
-    "golden sunset reflecting off fresh snow",
-    "misty dawn with frost in the air",
-    "magical aurora borealis dancing above",
+    "soft city dawn with rising warm light",
+    "clear night with distant constellations",
+    "golden sunset reflecting off glass surfaces",
+    "misty dawn with suspended particles",
+    "aurora-like gradients dancing above",
     "soft overcast with diffused silver light",
     "twilight blue hour with warm lights glowing",
-    "bright winter morning with diamond dust in air",
-    "moonlit scene with silver reflections",
+    "bright morning haze over reflective surfaces",
+    "moonlit scene with gentle highlights",
     "after-storm stillness with dramatic clouds parting",
-    "cozy lamplight glow against dark winter evening",
-    "morning sun breaking through icy branches",
+    "cozy lamplight glow against evening backdrop",
+    "sunlight breaking through dense branches",
 ]
 
 # Focal subjects - the main object/scene to feature
 RANDOM_SUBJECTS = [
     "an ornate vintage music box playing silently",
-    "a crystal snow globe containing a miniature world",
+    "a crystal sphere containing a miniature world",
     "an ancient brass telescope pointed at the stars",
-    "a grandfather clock with frost-covered pendulum",
+    "a grandfather clock with precision pendulum",
     "a Victorian greenhouse with impossible flowers",
-    "a handcrafted wooden sleigh with velvet seats",
+    "a handcrafted workshop table with velvet textures",
     "an enchanted forest clearing with glowing mushrooms",
-    "a stone bridge arching over a frozen stream",
-    "a vintage typewriter with frost on its keys",
-    "a compass rose embedded in ancient ice",
-    "a grand piano covered in delicate snow",
+    "a stone bridge arching over a flowing stream",
+    "a vintage typewriter with fresh ink strokes",
+    "a compass rose embedded in carved stone",
+    "a grand piano with warm reflections on keys",
     "an artisan's workshop with tools mid-project",
-    "a ship's wheel from an icebound vessel",
+    "a ship's wheel from a deep-ocean vessel",
     "a mechanical orrery with spinning planets",
-    "a antique hourglass with frozen sand",
-    "a collection of vintage ornaments in a box",
+    "a antique hourglass with slow-falling sand",
+    "a collection of vintage components in a box",
     "a solitary cabin with warm windows glowing",
-    "an ice sculpture mid-creation by invisible hands",
-    "a treasure chest overflowing with winter berries",
+    "an architect's model in careful construction",
+    "a treasure chest overflowing with bright tokens",
     "a vintage camera capturing the perfect moment",
     "a spiral staircase leading to somewhere magical",
-    "a baker's table with holiday treats",
-    "a library corner with snow falling past windows",
-    "a vintage hot air balloon basket in snow",
-    "a clockwork bird singing in frozen garden",
+    "a baker's table with crafted sweets",
+    "a library corner with warm lamplight reflections",
+    "a vintage hot air balloon basket in clear air",
+    "a clockwork bird singing in a glass garden",
 ]
 
 # Composition variations - camera angles and framing
@@ -1084,7 +1165,7 @@ RANDOM_COMPOSITIONS = [
     "perfectly centered symmetrical composition",
     "rule of thirds with subject off-center",
     "through a window frame or archway",
-    "reflected in a frozen puddle or mirror",
+    "reflected in a puddle or mirror",
     "layered depth with foreground interest",
     "silhouette against dramatic sky",
     "extreme close-up of a single detail",
@@ -1092,16 +1173,16 @@ RANDOM_COMPOSITIONS = [
 
 # Color accent variations - unique color emphasis for each card
 RANDOM_COLOR_ACCENTS = [
-    "rich crimson red like winter berries",
-    "burnished gold like holiday candlelight",
-    "deep sapphire blue of winter twilight",
+    "rich crimson red like polished lacquer",
+    "burnished gold with cinematic highlights",
+    "deep sapphire blue of evening studios",
     "warm copper and brass tones",
     "silver and platinum shimmer",
-    "forest green of evergreen branches",
+    "forest green of layered foliage",
     "soft rose gold blush",
-    "royal purple of winter dusk",
+    "royal purple of warm dusk",
     "amber and honey warmth",
-    "teal and aquamarine ice tones",
+    "teal and aquamarine tones",
     "burgundy wine richness",
     "champagne and cream elegance",
 ]
@@ -1129,7 +1210,7 @@ SEMANTIC_THEME_MAPPING = {
     "team": ["orchestra in harmony", "constellation of stars", "interconnected gears"],
     "leadership": ["lighthouse beacon", "compass pointing true", "captain at the helm"],
     "support": ["ancient bridge", "steady foundation", "sheltering tree"],
-    "innovation": ["emerging mechanism", "blooming in winter", "light breaking through"],
+    "innovation": ["emerging mechanism", "blooming in momentum", "light breaking through"],
     "deadline": ["clock striking midnight", "finish line crossed", "last piece of puzzle"],
     "help": ["warm hands offering", "bridge across chasm", "light in darkness"],
     "mentor": ["guiding star", "ancient map", "wise owl silhouette"],
@@ -1174,7 +1255,7 @@ def _extract_semantic_theme(reason: str | None, message: str | None) -> str:
     default_themes = [
         "celebration of achievement",
         "warmth of gratitude",
-        "winter magic and wonder",
+        "creative transformation and wonder",
         "joy of connection",
         "beauty of appreciation",
     ]
@@ -1184,7 +1265,7 @@ def _extract_semantic_theme(reason: str | None, message: str | None) -> str:
 class GeminiClient:
     """Client for Google Gemini API via LiteLLM proxy.
 
-    Provides methods for generating stylized text and images for greeting cards.
+    Provides methods for generating stylized text and images for cards.
     Handles errors, retries, and logging automatically.
 
     Example:
@@ -1205,7 +1286,7 @@ class GeminiClient:
         api_key: str,
         base_url: str = "https://litellm.pro-4.ru/v1",
         text_model: str = "gemini-2.5-flash",
-        image_model: str = "gemini/gemini-2.5-flash-image-preview",
+        image_model: str = "gemini/gemini-3.1-flash-image-preview",
     ):
         """Initialize Gemini client via LiteLLM proxy.
 
@@ -1308,8 +1389,26 @@ class GeminiClient:
                     ],
                     "max_tokens": ANALYSIS_MAX_TOKENS,
                     "temperature": ANALYSIS_TEMPERATURE,
+                    "response_format": {"type": "json_object"},
                 },
             )
+
+            if response.status_code == 400 and "response_format" in str(response.text or "").lower():
+                logger.warning(
+                    "OpenAI compatibility rejected response_format for visual analysis, retrying without it",
+                    extra={"recipient": recipient},
+                )
+                response = await client.post(
+                    "/chat/completions",
+                    json={
+                        "model": self._text_model,
+                        "messages": [
+                            {"role": "user", "content": full_prompt}
+                        ],
+                        "max_tokens": ANALYSIS_MAX_TOKENS,
+                        "temperature": ANALYSIS_TEMPERATURE,
+                    },
+                )
 
             if response.status_code == 429:
                 raise GeminiRateLimitError(original_error=Exception("Rate limit exceeded"))
@@ -1325,40 +1424,24 @@ class GeminiClient:
 
             response_text = data["choices"][0]["message"]["content"].strip()
 
-            # Parse JSON response
             try:
-                # Handle potential markdown code blocks
-                if response_text.startswith("```"):
-                    # Extract JSON from code block
-                    lines = response_text.split("\n")
-                    json_lines = []
-                    in_json = False
-                    for line in lines:
-                        if line.startswith("```") and not in_json:
-                            in_json = True
-                            continue
-                        elif line.startswith("```") and in_json:
-                            break
-                        elif in_json:
-                            json_lines.append(line)
-                    response_text = "\n".join(json_lines)
-
-                parsed = json.loads(response_text)
+                parsed_text = self._extract_json_payload(response_text)
+                parsed = json.loads(parsed_text)
 
                 # Extract all fields with sensible defaults
                 visual_concept = VisualConcept(
                     core_theme=parsed.get("core_theme", "gratitude"),
                     visual_metaphor=parsed.get(
                         "visual_metaphor",
-                        "A vintage compass on weathered map in snowy setting"
+                        "A vintage compass on weathered map in a warm urban environment"
                     ),
                     key_elements=parsed.get(
                         "key_elements",
-                        ["compass", "map", "snow", "warm tones", "adventure"]
+                        ["compass", "map", "warm tones", "clear pathway", "adventure"]
                     ),
                     mood=parsed.get("mood", "discovery and appreciation"),
                     composition=parsed.get("composition", "medium shot, eye level"),
-                    lighting=parsed.get("lighting", "soft natural winter daylight"),
+                    lighting=parsed.get("lighting", "soft natural daylight"),
                 )
 
                 logger.info(
@@ -1378,7 +1461,10 @@ class GeminiClient:
             except json.JSONDecodeError as e:
                 logger.warning(
                     f"Failed to parse visual analysis JSON: {e}, using random fallback",
-                    extra={"response_text": response_text[:200]},
+                    extra={
+                        "response_text": response_text[:220],
+                        "parsed_text": parsed_text[:220],
+                    },
                 )
                 # Use random fallback for diversity
                 return get_fallback_visual_concept()
@@ -1403,6 +1489,7 @@ class GeminiClient:
                 extra={"recipient": recipient, "error_type": type(e).__name__},
             )
             return get_fallback_visual_concept()
+
         except (KeyError, TypeError, ValueError) as e:
             # Data parsing errors - use random fallback
             logger.warning(
@@ -1410,6 +1497,42 @@ class GeminiClient:
                 extra={"recipient": recipient, "error_type": type(e).__name__},
             )
             return get_fallback_visual_concept()
+
+    @staticmethod
+    def _extract_json_payload(response_text: str, expect_array: bool = False) -> str:
+        """Extract pure JSON text from model output that may contain wrappers."""
+        text = response_text.strip()
+        if not text:
+            return ""
+
+        if text.startswith("```"):
+            lines = text.split("\n")
+            json_lines = []
+            in_json = False
+            for line in lines:
+                if line.startswith("```") and not in_json:
+                    in_json = True
+                    continue
+                if line.startswith("```") and in_json:
+                    break
+                if in_json:
+                    json_lines.append(line)
+            text = "\n".join(json_lines).strip()
+
+        if expect_array:
+            start_idx = text.find("[")
+            end_idx = text.rfind("]") + 1
+        else:
+            start_idx = text.find("{")
+            end_idx = text.rfind("}") + 1
+
+        if start_idx >= 0 and end_idx > start_idx:
+            text = text[start_idx:end_idx]
+
+        # Some models leak trailing commas in JSON
+        text = re.sub(r",\s*([\]\}])", r"\\1", text)
+        text = text.replace("\u201c", '"').replace("\u201d", '"')
+        return text
 
     @retry(
         retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
@@ -1560,27 +1683,12 @@ class GeminiClient:
             List of VisualConcept objects
         """
         try:
-            # Handle potential markdown code blocks
-            cleaned_text = response_text
-            if cleaned_text.startswith("```"):
-                lines = cleaned_text.split("\n")
-                json_lines = []
-                in_json = False
-                for line in lines:
-                    if line.startswith("```") and not in_json:
-                        in_json = True
-                        continue
-                    elif line.startswith("```") and in_json:
-                        break
-                    elif in_json:
-                        json_lines.append(line)
-                cleaned_text = "\n".join(json_lines)
-
-            # Find JSON array bounds
-            start_idx = cleaned_text.find("[")
-            end_idx = cleaned_text.rfind("]") + 1
-            if start_idx >= 0 and end_idx > start_idx:
-                cleaned_text = cleaned_text[start_idx:end_idx]
+            cleaned_text = self._extract_json_payload(response_text, expect_array=True)
+            if not cleaned_text.startswith("["):
+                start_idx = response_text.find("[")
+                end_idx = response_text.rfind("]") + 1
+                if start_idx >= 0 and end_idx > start_idx:
+                    cleaned_text = response_text[start_idx:end_idx]
 
             parsed_array = json.loads(cleaned_text)
 
@@ -1593,16 +1701,16 @@ class GeminiClient:
                     concept = VisualConcept(
                         core_theme=item.get("core_theme", "gratitude"),
                         visual_metaphor=item.get(
-                            "visual_metaphor",
-                            "A vintage compass on weathered map in snowy setting"
+                        "visual_metaphor",
+                            "A vintage compass on weathered map in a warm urban environment"
                         ),
                         key_elements=item.get(
                             "key_elements",
-                            ["compass", "map", "snow", "warm tones", "adventure"]
+                            ["compass", "map", "warm tones", "clear pathway", "adventure"]
                         ),
                         mood=item.get("mood", "discovery and appreciation"),
                         composition=item.get("composition", "medium shot, eye level"),
-                        lighting=item.get("lighting", "soft natural winter daylight"),
+                        lighting=item.get("lighting", "soft natural daylight"),
                     )
                     concepts.append(concept)
 
@@ -1691,7 +1799,7 @@ class GeminiClient:
             ...     style="haiku",
             ...     recipient="Анна Смирнова",
             ...     reason="успешный запуск нового продукта",
-            ...     message="С Новым Годом!",
+            ...     message="за вклад в развитие продукта!",
             ...     sender="Иван Петров"
             ... )
         """
@@ -1807,7 +1915,7 @@ class GeminiClient:
         visual_concept: VisualConcept,
         style: str,
     ) -> Tuple[bytes, str]:
-        """Generate festive image using Gemini image model.
+        """Generate an image using Gemini image model.
 
         Uses structured VisualConcept data instead of raw text to avoid
         literal text appearing in images.
@@ -1826,8 +1934,8 @@ class GeminiClient:
         Example:
             >>> concept = VisualConcept(
             ...     core_theme="innovation",
-            ...     visual_metaphor="A brass orrery mechanism emerging from snow",
-            ...     key_elements=["orrery", "gears", "snow", "sunrise"],
+            ...     visual_metaphor="A brass orrery mechanism emerging at dawn",
+            ...     key_elements=["orrery", "gears", "sunrise", "light"],
             ...     mood="awakening and precision",
             ...     composition="low angle close-up, shallow depth of field",
             ...     lighting="warm sunrise from the right, golden hour quality"
@@ -1863,12 +1971,8 @@ class GeminiClient:
         try:
             client = await self._get_client()
 
-            # Request image generation via chat completions
-            # Gemini image models use modalities parameter for image generation
-            # Using 2:3 aspect ratio for vertical A6 postcard format (105x148mm)
-            response = await client.post(
-                "/chat/completions",
-                json={
+            def _build_payload(*, image_config: bool = True) -> dict:
+                payload = {
                     "model": self._image_model,
                     "messages": [
                         {
@@ -1878,13 +1982,28 @@ class GeminiClient:
                     ],
                     "max_tokens": IMAGE_MAX_TOKENS,
                     "modalities": ["image", "text"],
-                    "extra_body": {
-                        "imageConfig": {
-                            "aspectRatio": "2:3"
-                        }
-                    },
-                },
+                }
+                if image_config:
+                    payload["extra_body"] = {"imageConfig": {"aspectRatio": "2:3"}}
+                return payload
+
+            # Request image generation via chat completions
+            # Gemini image models use modalities parameter for image generation
+            # Using 2:3 aspect ratio for vertical A6 postcard format (105x148mm)
+            response = await client.post(
+                "/chat/completions",
+                json=_build_payload(image_config=False),
             )
+
+            if response.status_code == 400 and "imageconfig" in str(response.text or "").lower():
+                logger.warning(
+                    "Upstream rejected imageConfig, retrying with imageConfig",
+                    extra={"style": style},
+                )
+                response = await client.post(
+                    "/chat/completions",
+                    json=_build_payload(image_config=True),
+                )
 
             if response.status_code == 429:
                 raise GeminiRateLimitError(original_error=Exception("Rate limit exceeded"))
@@ -2073,7 +2192,7 @@ class GeminiClient:
         reason: Optional[str] = None,
         message: Optional[str] = None,
     ) -> Tuple[bytes, str]:
-        """Generate unique festive image directly with built-in randomization.
+        """Generate unique image directly with built-in randomization.
         
         This is the NEW one-stage generation approach that produces highly diverse
         images by injecting random variations into each call. No intermediate
@@ -2110,7 +2229,7 @@ class GeminiClient:
         # 3. Random atmospheric and compositional elements
         # 4. Style-specific requirements
         
-        direct_prompt = f"""Generate a BEAUTIFUL and UNIQUE festive greeting card image.
+        direct_prompt = f"""Generate a BEAUTIFUL and UNIQUE corporate celebration card image.
 
 ═══════════════════════════════════════════════════════════════════════════════
 THIS CARD'S UNIQUE IDENTITY - {variation['seed_phrase']}
@@ -2126,8 +2245,8 @@ SEMANTIC THEME: {semantic_theme}
 ═══════════════════════════════════════════════════════════════════════════════
 GRATITUDE CONTEXT (inspire the image, don't show as text):
 ═══════════════════════════════════════════════════════════════════════════════
-За что (Reason): {reason or 'С Новым Годом!'}
-Послание (Message): {message or 'С праздником!'}
+За что (Reason): {reason or 'вклад в общее дело'}
+Послание (Message): {message or 'Спасибо за вклад в рост компании!'}
 
 Interpret the FEELING behind this gratitude. Let it guide the emotional tone,
 but DO NOT render any words or text in the image.
@@ -2147,7 +2266,7 @@ ABSOLUTE REQUIREMENTS:
 ✗ NEVER render any text, letters, numbers, words, or symbols
 ✗ NEVER show realistic human faces (silhouettes are acceptable)
 ✗ NEVER use cliché objects: lanterns, lighthouses, candles, generic glowing orbs
-✓ MUST be winter/holiday/New Year themed
+✓ MUST be professional and culturally neutral
 ✓ MUST be professional greeting card quality - beautiful and polished
 ✓ MUST feel unique and special - this is a one-of-a-kind card
 
@@ -2166,9 +2285,8 @@ Now create this unique, beautiful greeting card image."""
         try:
             client = await self._get_client()
             
-            response = await client.post(
-                "/chat/completions",
-                json={
+            def _build_payload(*, image_config: bool = True) -> dict:
+                payload = {
                     "model": self._image_model,
                     "messages": [
                         {
@@ -2178,13 +2296,25 @@ Now create this unique, beautiful greeting card image."""
                     ],
                     "max_tokens": IMAGE_MAX_TOKENS,
                     "modalities": ["image", "text"],
-                    "extra_body": {
-                        "imageConfig": {
-                            "aspectRatio": "2:3"
-                        }
-                    },
-                },
+                }
+                if image_config:
+                    payload["extra_body"] = {"imageConfig": {"aspectRatio": "2:3"}}
+                return payload
+
+            response = await client.post(
+                "/chat/completions",
+                json=_build_payload(image_config=False),
             )
+
+            if response.status_code == 400 and "imageconfig" in str(response.text or "").lower():
+                logger.warning(
+                    "Upstream rejected imageConfig, retrying with imageConfig",
+                    extra={"style": style},
+                )
+                response = await client.post(
+                    "/chat/completions",
+                    json=_build_payload(image_config=True),
+                )
             
             if response.status_code == 429:
                 raise GeminiRateLimitError(original_error=Exception("Rate limit exceeded"))

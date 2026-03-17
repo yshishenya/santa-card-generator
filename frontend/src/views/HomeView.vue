@@ -151,15 +151,15 @@ async function handleSend(): Promise<void> {
 <template>
   <div class="space-y-8">
     <div class="text-center space-y-4">
-      <div class="inline-flex items-center gap-3 rounded-full border border-christmas-gold/30 bg-winter-bg-secondary/60 px-4 py-2 text-sm text-winter-text-secondary">
+      <div class="inline-flex items-center gap-3 rounded-full border border-platform-accent/30 bg-platform-bg-secondary/60 px-4 py-2 text-sm text-platform-text-secondary">
         <span class="text-lg">📸</span>
         <span>Photocard MVP</span>
       </div>
       <div>
         <h1 class="text-4xl md:text-5xl font-bold text-gradient mb-3">
-          Новогодняя фотокарточка
+          Платформа фотокарточек Pro 4.0 · 7-летие
         </h1>
-        <p class="mx-auto max-w-2xl text-lg text-winter-text-secondary">
+        <p class="mx-auto max-w-2xl text-lg text-platform-text-secondary">
           Введите только имя и альтер эго. Сервис сгенерирует ровно 3 варианта изображения, после чего выберите один и отдельно подтвердите отправку.
         </p>
       </div>
@@ -168,10 +168,10 @@ async function handleSend(): Promise<void> {
     <section class="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
       <form class="glass-card space-y-5 p-6" @submit.prevent="handleGenerate">
         <div class="space-y-2">
-          <label for="full-name" class="block text-sm font-semibold uppercase tracking-[0.18em] text-christmas-gold">
+          <label for="full-name" class="block text-sm font-semibold uppercase tracking-[0.18em] text-platform-accent">
             Full Name
           </label>
-          <div v-if="employeesLoading" class="text-sm text-winter-text-muted">
+          <div v-if="employeesLoading" class="text-sm text-platform-text-muted">
             Загрузка списка людей...
           </div>
           <template v-else-if="employees.length > 0">
@@ -192,7 +192,7 @@ async function handleSend(): Promise<void> {
                 {{ employee.name }}{{ employee.department ? ` — ${employee.department}` : '' }}
               </option>
             </select>
-            <p v-if="selectedEmployeeId === ''" class="text-sm text-winter-text-muted">
+            <p v-if="selectedEmployeeId === ''" class="text-sm text-platform-text-muted">
               Выберите сотрудника из списка.
             </p>
             <input
@@ -211,14 +211,14 @@ async function handleSend(): Promise<void> {
             v-model="fullName"
             type="text"
             maxlength="200"
-            placeholder="Например, Jane Frost"
+            placeholder="Например, Alex Carter"
             class="input-magic w-full px-4 py-3 text-base"
             :disabled="isGenerating || isSending"
           />
         </div>
 
         <div class="space-y-2">
-          <label for="alter-ego" class="block text-sm font-semibold uppercase tracking-[0.18em] text-christmas-gold">
+          <label for="alter-ego" class="block text-sm font-semibold uppercase tracking-[0.18em] text-platform-accent">
             Alter Ego
           </label>
           <textarea
@@ -226,16 +226,16 @@ async function handleSend(): Promise<void> {
             v-model="alterEgo"
             rows="5"
             maxlength="200"
-            placeholder="Например, cyberpunk snow captain with neon armor"
+            placeholder="Например, creative lead with clean minimal visual style"
             class="input-magic w-full resize-none px-4 py-3 text-base"
             :disabled="isGenerating || isSending"
           ></textarea>
-          <p class="text-sm text-winter-text-muted">
+          <p class="text-sm text-platform-text-muted">
             По этому описанию backend выбирает стили через эвристику и fallback.
           </p>
         </div>
 
-        <div v-if="error" class="rounded-2xl border border-christmas-red/40 bg-christmas-red/10 px-4 py-3 text-sm text-christmas-red-light">
+        <div v-if="error" class="rounded-2xl border border-platform-primary/40 bg-platform-primary/10 px-4 py-3 text-sm text-platform-primary-light">
           {{ error }}
         </div>
 
@@ -254,7 +254,7 @@ async function handleSend(): Promise<void> {
 
           <button
             type="button"
-            class="rounded-xl border border-winter-frost/30 bg-winter-bg-secondary px-5 py-4 font-semibold text-winter-text-primary transition hover:border-christmas-gold/30 hover:bg-winter-frost/20"
+            class="rounded-xl border border-platform-line/30 bg-platform-bg-secondary px-5 py-4 font-semibold text-platform-text-primary transition hover:border-platform-accent/30 hover:bg-platform-line/20"
             :disabled="isGenerating || isSending"
             @click="resetAll"
           >
@@ -266,19 +266,19 @@ async function handleSend(): Promise<void> {
       <section class="glass-card p-6">
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h2 class="text-2xl font-semibold text-christmas-gold">
+            <h2 class="text-2xl font-semibold text-platform-accent">
               Выбор изображения
             </h2>
-            <p class="mt-2 text-sm text-winter-text-secondary">
+            <p class="mt-2 text-sm text-platform-text-secondary">
               После генерации выберите один из трёх вариантов и подтвердите отправку.
             </p>
           </div>
-          <p v-if="sessionId" class="rounded-full border border-winter-frost/30 bg-winter-bg-secondary/70 px-3 py-1 text-xs text-winter-text-muted">
+          <p v-if="sessionId" class="rounded-full border border-platform-line/30 bg-platform-bg-secondary/70 px-3 py-1 text-xs text-platform-text-muted">
             session_id: {{ sessionId }}
           </p>
         </div>
 
-        <div v-if="!hasGenerated" class="mt-10 rounded-3xl border border-dashed border-winter-frost/30 bg-winter-bg-secondary/40 px-6 py-16 text-center text-winter-text-muted">
+        <div v-if="!hasGenerated" class="mt-10 rounded-3xl border border-dashed border-platform-line/30 bg-platform-bg-secondary/40 px-6 py-16 text-center text-platform-text-muted">
           Сначала запустите генерацию. Здесь появятся ровно 3 варианта фотокарточки.
         </div>
 
@@ -292,7 +292,7 @@ async function handleSend(): Promise<void> {
               :class="{ 'photocard-option--active': index === selectedImageIndex }"
               @click="selectImage(index)"
             >
-              <div class="aspect-[3/4] overflow-hidden rounded-[1.35rem] bg-winter-bg-secondary">
+              <div class="aspect-[3/4] overflow-hidden rounded-[1.35rem] bg-platform-bg-secondary">
                 <img
                   :src="variant.url"
                   :alt="`Вариант ${index + 1}`"
@@ -301,16 +301,16 @@ async function handleSend(): Promise<void> {
               </div>
               <div class="mt-3 flex items-center justify-between gap-3">
                 <div>
-                  <p class="text-xs uppercase tracking-[0.18em] text-winter-text-muted">
+                  <p class="text-xs uppercase tracking-[0.18em] text-platform-text-muted">
                     Вариант {{ index + 1 }}
                   </p>
-                  <p class="mt-1 text-sm font-semibold text-winter-text-primary">
+                  <p class="mt-1 text-sm font-semibold text-platform-text-primary">
                     {{ getStyleLabel(variant.style) }}
                   </p>
                 </div>
                 <span
                   class="inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm"
-                  :class="index === selectedImageIndex ? 'border-christmas-gold bg-christmas-gold/15 text-christmas-gold' : 'border-winter-frost/30 text-winter-text-muted'"
+                  :class="index === selectedImageIndex ? 'border-platform-accent bg-platform-accent/15 text-platform-accent' : 'border-platform-line/30 text-platform-text-muted'"
                 >
                   {{ index + 1 }}
                 </span>
@@ -318,9 +318,9 @@ async function handleSend(): Promise<void> {
             </button>
           </div>
 
-          <div class="mt-8 rounded-[2rem] border border-christmas-gold/20 bg-winter-bg-secondary/60 p-5">
+          <div class="mt-8 rounded-[2rem] border border-platform-accent/20 bg-platform-bg-secondary/60 p-5">
             <div class="flex flex-col gap-5 md:flex-row md:items-center">
-              <div v-if="selectedImage" class="w-full max-w-[200px] overflow-hidden rounded-[1.5rem] border border-winter-frost/30">
+              <div v-if="selectedImage" class="w-full max-w-[200px] overflow-hidden rounded-[1.5rem] border border-platform-line/30">
                 <img
                   :src="selectedImage.url"
                   alt="Выбранная фотокарточка"
@@ -330,22 +330,22 @@ async function handleSend(): Promise<void> {
 
               <div class="flex-1 space-y-4">
                 <div>
-                  <p class="text-xs uppercase tracking-[0.18em] text-winter-text-muted">
+                  <p class="text-xs uppercase tracking-[0.18em] text-platform-text-muted">
                     Подтверждение
                   </p>
-                  <h3 class="mt-1 text-2xl font-semibold text-winter-text-primary">
+                  <h3 class="mt-1 text-2xl font-semibold text-platform-text-primary">
                     {{ fullName }}
                   </h3>
-                  <p class="mt-2 text-winter-text-secondary">
+                  <p class="mt-2 text-platform-text-secondary">
                     {{ alterEgo }}
                   </p>
                 </div>
 
-                <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-christmas-gold/25 bg-christmas-gold/10 px-4 py-3 text-sm text-winter-text-primary">
+                <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-platform-accent/25 bg-platform-accent/10 px-4 py-3 text-sm text-platform-text-primary">
                   <input
                     v-model="confirmSend"
                     type="checkbox"
-                    class="mt-0.5 h-4 w-4 rounded border-christmas-gold/60 bg-transparent"
+                    class="mt-0.5 h-4 w-4 rounded border-platform-accent/60 bg-transparent"
                   />
                   <span>
                     Подтверждаю отправку выбранного изображения в Telegram с подписью только из `full_name` и `alter_ego`.
@@ -367,7 +367,7 @@ async function handleSend(): Promise<void> {
                   </button>
                   <button
                     type="button"
-                    class="rounded-xl border border-winter-frost/30 bg-transparent px-5 py-3 font-semibold text-winter-text-primary transition hover:border-christmas-gold/30 hover:bg-winter-frost/20"
+                    class="rounded-xl border border-platform-line/30 bg-transparent px-5 py-3 font-semibold text-platform-text-primary transition hover:border-platform-accent/30 hover:bg-platform-line/20"
                     :disabled="isSending"
                     @click="handleGenerate"
                   >
@@ -394,11 +394,11 @@ async function handleSend(): Promise<void> {
 
 .photocard-option:hover {
   transform: translateY(-2px);
-  border-color: rgba(212, 175, 55, 0.35);
+  border-color: rgba(99, 102, 241, 0.35);
 }
 
 .photocard-option--active {
-  border-color: rgba(212, 175, 55, 0.72);
+  border-color: rgba(99, 102, 241, 0.72);
   box-shadow: 0 18px 44px rgba(6, 17, 27, 0.32);
 }
 </style>

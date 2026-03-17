@@ -54,7 +54,7 @@ class TestGeminiClientInit:
         assert client._api_key == api_key
         assert client._base_url == "https://litellm.pro-4.ru/v1"
         assert client._text_model == "gemini-2.5-flash"
-        assert client._image_model == "gemini/gemini-2.5-flash-image-preview"
+        assert client._image_model == "gemini/gemini-3.1-flash-image-preview"
 
     def test_init_with_custom_config(self) -> None:
         """Test initialization with custom configuration.

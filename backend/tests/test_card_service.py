@@ -46,9 +46,9 @@ class TestCardService:
         styles = service._build_style_candidates("cyber neon superhero")
 
         assert styles[:3] == [
-            ImageStyle.CYBERPUNK,
-            ImageStyle.COMIC_BOOK,
-            ImageStyle.HYPERREALISM,
+            ImageStyle.BENTO_GRID,
+            ImageStyle.MINIMALIST_CORPORATE_LINE_ART,
+            ImageStyle.QUIRKY_HAND_DRAWN_FLAT,
         ]
 
     def test_classify_styles_falls_back_to_defaults_when_no_match(
@@ -65,9 +65,9 @@ class TestCardService:
         styles = service._build_style_candidates("plain office persona")
 
         assert styles[:3] == [
-            ImageStyle.HYPERREALISM,
-            ImageStyle.FANTASY,
-            ImageStyle.DIGITAL_3D,
+            ImageStyle.BENTO_GRID,
+            ImageStyle.MINIMALIST_CORPORATE_LINE_ART,
+            ImageStyle.QUIRKY_HAND_DRAWN_FLAT,
         ]
 
     @pytest.mark.asyncio

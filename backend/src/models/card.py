@@ -42,6 +42,9 @@ class ImageStyle(str, Enum):
     All 15 styles matching IMAGE_STYLE_PROMPTS in gemini.py.
     """
 
+    BENTO_GRID = "bento_grid"
+    MINIMALIST_CORPORATE_LINE_ART = "minimalist_corporate_line_art"
+    QUIRKY_HAND_DRAWN_FLAT = "quirky_hand_drawn_flat"
     KNITTED = "knitted"
     MAGIC_REALISM = "magic_realism"
     PIXEL_ART = "pixel_art"
@@ -61,6 +64,9 @@ class ImageStyle(str, Enum):
 
 # All image styles
 ALL_IMAGE_STYLES = [
+    ImageStyle.BENTO_GRID,
+    ImageStyle.MINIMALIST_CORPORATE_LINE_ART,
+    ImageStyle.QUIRKY_HAND_DRAWN_FLAT,
     ImageStyle.KNITTED,
     ImageStyle.MAGIC_REALISM,
     ImageStyle.PIXEL_ART,
@@ -80,6 +86,9 @@ ALL_IMAGE_STYLES = [
 
 # Human-readable labels for image styles
 IMAGE_STYLE_LABELS = {
+    ImageStyle.BENTO_GRID: "Модульная плитка",
+    ImageStyle.MINIMALIST_CORPORATE_LINE_ART: "Минималистичный line-art",
+    ImageStyle.QUIRKY_HAND_DRAWN_FLAT: "Игровой плоский стиль",
     ImageStyle.KNITTED: "Трикотаж",
     ImageStyle.MAGIC_REALISM: "Магический реализм",
     ImageStyle.PIXEL_ART: "Пиксель-арт",

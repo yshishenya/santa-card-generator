@@ -2,7 +2,6 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import PrimeVue from 'primevue/config'
 import Aura from '@primevue/themes/aura'
-import Particles from 'vue3-particles'
 import router from './router'
 import App from './App.vue'
 
@@ -42,9 +41,6 @@ try {
       }
     }
   })
-
-  console.log('Setting up Particles...')
-  app.use(Particles)
 
   console.log('Mounting app...')
   app.mount('#app')

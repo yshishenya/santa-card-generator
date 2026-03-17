@@ -20,12 +20,15 @@ from src.models.photocard import (
 logger = logging.getLogger(__name__)
 
 DEFAULT_STYLE_FALLBACKS: List[ImageStyle] = [
-    ImageStyle.HYPERREALISM,
-    ImageStyle.FANTASY,
-    ImageStyle.DIGITAL_3D,
+    ImageStyle.BENTO_GRID,
+    ImageStyle.MINIMALIST_CORPORATE_LINE_ART,
+    ImageStyle.QUIRKY_HAND_DRAWN_FLAT,
 ]
 
 STYLE_PRIORITY: List[ImageStyle] = [
+    ImageStyle.BENTO_GRID,
+    ImageStyle.MINIMALIST_CORPORATE_LINE_ART,
+    ImageStyle.QUIRKY_HAND_DRAWN_FLAT,
     ImageStyle.HYPERREALISM,
     ImageStyle.FANTASY,
     ImageStyle.DIGITAL_3D,
@@ -369,13 +372,22 @@ class CardService:
         return [style for style, score in ranked_styles if score > 0]
 
     def _build_style_candidates(self, alter_ego: str) -> List[ImageStyle]:
-        candidates = self._classify_styles(alter_ego)
+        scored_candidates = self._classify_styles(alter_ego)
+        candidates: List[ImageStyle] = []
+
+        # Keep user-driven styles in reserve, but always prioritize the
+        # professional P4.0 photocard primary styles first.
         for style in DEFAULT_STYLE_FALLBACKS:
+            candidates.append(style)
+
+        for style in scored_candidates:
             if style not in candidates:
                 candidates.append(style)
+
         for style in STYLE_PRIORITY:
             if style not in candidates:
                 candidates.append(style)
+
         return candidates
 
     async def _generate_exactly_three_images(

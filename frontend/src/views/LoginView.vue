@@ -24,20 +24,10 @@ async function handleSubmit() {
 
 <template>
   <div class="login-container">
-    <!-- Blue ambient glow background -->
     <div class="login-bg">
       <div class="ambient-glow ambient-glow-1"></div>
       <div class="ambient-glow ambient-glow-2"></div>
       <div class="ambient-glow ambient-glow-3"></div>
-    </div>
-
-    <!-- Twinkling stars -->
-    <div class="stars">
-      <span class="star star-1">&#10022;</span>
-      <span class="star star-2">&#10022;</span>
-      <span class="star star-3">&#10022;</span>
-      <span class="star star-4">&#10022;</span>
-      <span class="star star-5">&#10022;</span>
     </div>
 
     <!-- Login card -->
@@ -45,17 +35,12 @@ async function handleSubmit() {
       <!-- Header -->
       <div class="text-center mb-10">
         <div class="icon-container">
-          <span class="text-6xl animate-float">🎅</span>
-          <div class="sparkles">
-            <span class="sparkle-item">✨</span>
-            <span class="sparkle-item delay-1">✨</span>
-            <span class="sparkle-item delay-2">✨</span>
-          </div>
+          <span class="text-6xl animate-float">🔐</span>
         </div>
         <h1 class="text-3xl font-bold text-gradient mb-3">
-          Новогодняя открытка
+          Платформа фотокарточек Pro 4.0
         </h1>
-        <p class="text-winter-secondary text-lg">
+        <p class="text-platform-text-secondary text-lg">
           Введите пароль для доступа
         </p>
       </div>
@@ -65,7 +50,7 @@ async function handleSubmit() {
         <!-- Password input -->
         <div class="form-control">
           <label class="label">
-            <span class="label-text text-winter-secondary font-medium">Пароль</span>
+            <span class="label-text text-platform-text-secondary font-medium">Пароль</span>
           </label>
           <div class="relative group">
             <input
@@ -78,7 +63,7 @@ async function handleSubmit() {
             />
             <button
               type="button"
-              class="absolute right-4 top-1/2 -translate-y-1/2 text-winter-muted hover:text-winter-snow transition-colors text-xl"
+              class="absolute right-4 top-1/2 -translate-y-1/2 text-platform-text-muted hover:text-platform-light transition-colors text-xl"
               @click="showPassword = !showPassword"
             >
               <span v-if="showPassword">👁️</span>
@@ -113,14 +98,6 @@ async function handleSubmit() {
         </button>
       </form>
 
-      <!-- Footer decoration -->
-      <div class="mt-8 text-center">
-        <div class="flex items-center justify-center gap-3 text-winter-muted text-sm">
-          <span>❄️</span>
-          <span>С Новым Годом 2025!</span>
-          <span>❄️</span>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -199,67 +176,6 @@ async function handleSubmit() {
   }
 }
 
-/* Twinkling stars */
-.stars {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
-.star {
-  position: absolute;
-  color: #FFFEF0;
-  animation: twinkleStar 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 240, 0.9));
-}
-
-.star-1 {
-  top: 10%;
-  left: 15%;
-  font-size: 14px;
-  animation-delay: 0s;
-}
-
-.star-2 {
-  top: 15%;
-  right: 20%;
-  font-size: 18px;
-  animation-delay: 0.7s;
-}
-
-.star-3 {
-  top: 5%;
-  left: 40%;
-  font-size: 12px;
-  animation-delay: 1.4s;
-}
-
-.star-4 {
-  top: 25%;
-  right: 35%;
-  font-size: 16px;
-  animation-delay: 0.3s;
-}
-
-.star-5 {
-  top: 8%;
-  right: 10%;
-  font-size: 14px;
-  animation-delay: 1s;
-}
-
-@keyframes twinkleStar {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(0.8);
-    filter: drop-shadow(0 0 3px rgba(255, 255, 240, 0.5));
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-    filter: drop-shadow(0 0 8px rgba(255, 255, 240, 1));
-  }
-}
 
 .login-card {
   position: relative;
@@ -343,12 +259,12 @@ async function handleSubmit() {
 /* NOTE: .text-gradient is defined globally in main.css */
 
 /* Page-specific text color utilities (shortcuts for tailwind classes) */
-.text-winter-secondary {
-  color: #B8D4F0;  /* Same as var(--color-text-secondary) */
+.text-platform-text-secondary {
+  color: #B8C3DD;  /* Same as var(--color-text-secondary) */
 }
 
-.text-winter-muted {
-  color: #7BA3CC;  /* Same as var(--color-text-muted) */
+.text-platform-text-muted {
+  color: #94A3B8;  /* Same as var(--color-text-muted) */
 }
 
 .input-field {
@@ -372,7 +288,7 @@ async function handleSubmit() {
 }
 
 .input-field::placeholder {
-  color: #7BA3CC;
+  color: #94A3B8;
 }
 
 .input-field:disabled {

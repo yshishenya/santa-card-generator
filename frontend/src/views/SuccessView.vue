@@ -36,7 +36,7 @@ onUnmounted(() => {
 <template>
   <div class="space-y-8 py-12 text-center">
     <div class="flex justify-center">
-      <div class="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-christmas-gold to-christmas-green shadow-lg shadow-christmas-gold/30">
+      <div class="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-platform-accent to-platform-primary shadow-lg shadow-platform-accent/30">
         <i class="pi pi-check text-5xl text-white"></i>
       </div>
     </div>
@@ -45,18 +45,17 @@ onUnmounted(() => {
       <h1 class="text-4xl md:text-5xl font-bold text-gradient">
         Фотокарточка отправлена
       </h1>
-      <p class="mx-auto max-w-2xl text-xl text-winter-text-secondary">
-        Telegram delivery завершён в окружении <span class="font-semibold text-christmas-gold">{{ deliveryEnv }}</span>.
+      <p class="mx-auto max-w-2xl text-xl text-platform-text-secondary">
+        Telegram delivery завершён в окружении <span class="font-semibold text-platform-accent">{{ deliveryEnv }}</span>.
       </p>
-      <p v-if="messageId" class="text-sm text-winter-text-muted">
+      <p v-if="messageId" class="text-sm text-platform-text-muted">
         message_id: {{ messageId }}
       </p>
     </div>
 
     <div class="flex justify-center gap-4 text-3xl">
-      <span class="animate-float">🎄</span>
-      <span class="animate-sparkle" style="animation-delay: 0.2s">✨</span>
-      <span class="animate-float" style="animation-delay: 0.4s">📸</span>
+      <span class="animate-float">🧭</span>
+      <span class="animate-float" style="animation-delay: 0.2s">📸</span>
     </div>
 
     <div class="pt-4">
@@ -68,7 +67,7 @@ onUnmounted(() => {
       </button>
     </div>
 
-    <p class="text-sm text-winter-text-muted">
+    <p class="text-sm text-platform-text-muted">
       Автоматический переход на главную через 5 секунд.
     </p>
   </div>

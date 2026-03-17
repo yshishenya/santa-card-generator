@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     gemini_api_key: str
     gemini_base_url: str = "https://litellm.pro-4.ru/v1"
     gemini_text_model: str = "gemini-2.5-flash"
-    gemini_image_model: str = "gemini/gemini-2.5-flash-image-preview"
+    gemini_image_model: str = "gemini/gemini-3.1-flash-image-preview"
 
     # Telegram bot configuration
     telegram_bot_token: str

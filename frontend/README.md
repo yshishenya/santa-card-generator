@@ -1,17 +1,16 @@
-# Santa Frontend
+# Platform Cards Frontend
 
-AI-generated Christmas greeting cards with Vue.js 3 and festive UI.
+AI-generated photocard platform with Vue.js 3.
 
 ## Tech Stack
 
 - **Framework**: Vue.js 3 (Composition API with `<script setup>`)
 - **Build Tool**: Vite 5
 - **UI Library**: PrimeVue (Aura theme)
-- **CSS Framework**: Tailwind CSS + daisyUI (winter/night themes)
+- **CSS Framework**: Tailwind CSS + daisyUI
 - **State Management**: Pinia
 - **Routing**: Vue Router 4
 - **Effects**:
-  - tsParticles (snow animation)
   - @vueuse/motion (animations)
   - vue3-carousel (carousels)
   - Glassmorphism effects
@@ -27,16 +26,14 @@ frontend/
 │   │   └── client.ts         # Axios HTTP client with endpoints
 │   ├── assets/
 │   │   └── styles/
-│   │       └── main.css      # Global styles + Christmas theme
+│   │       └── main.css      # Global styles + platform theme
 │   ├── components/           # Vue components
 │   │   ├── CardForm.vue      # Card generation form
 │   │   ├── GenerationPreview.vue  # Preview with carousels
 │   │   ├── GlassCard.vue     # Glassmorphism card wrapper
 │   │   ├── ImageCarousel.vue # Image variants carousel
-│   │   ├── SnowBackground.vue # tsParticles snow effect
 │   │   └── TextCarousel.vue  # Text variants carousel
 │   ├── composables/          # Composable functions
-│   │   └── useParticles.ts   # Snow particle configuration
 │   ├── router/               # Vue Router
 │   │   └── index.ts          # Route definitions
 │   ├── stores/               # Pinia stores
@@ -60,13 +57,7 @@ frontend/
 
 ## Features
 
-### 1. Christmas Theme
-- **Colors**: Red (#DC2626), Green (#16A34A), Gold (#F59E0B)
-- **Background**: Dark gradient (winter night)
-- **Effects**: Falling snow particles, glassmorphism cards
-- **Animations**: Twinkle, snow-fall
-
-### 2. Card Generation Flow
+### 1. Card Generation Flow
 1. **Form** (CardForm.vue):
    - Recipient selection (autocomplete from employees)
    - Optional sender, reason, message fields
@@ -151,26 +142,16 @@ In production (Docker), API requests are proxied through nginx to backend servic
 ## Styling
 
 ### Tailwind Classes
-- `christmas-red`, `christmas-green`, `christmas-gold` - Theme colors
-- `winter-bg-primary`, `winter-bg-secondary` - Background colors
-- `winter-snow` - Snow white text color
+- `platform-primary`, `platform-bg-primary`, `platform-card`, etc. - Platform color tokens
 - `glass-card` - Glassmorphism effect
 
 ### daisyUI Themes
-- `winter` - Light theme (default)
 - `night` - Dark theme
 
 ### Custom Animations
-- `animate-snow-fall` - Falling snow animation
 - `animate-twinkle` - Twinkling effect
 
 ## Components
-
-### SnowBackground.vue
-tsParticles configuration:
-- 100 white particles
-- Falling downward with wobble
-- Transparent background
 
 ### GlassCard.vue
 Reusable glassmorphism card:
