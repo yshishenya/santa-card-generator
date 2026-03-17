@@ -78,6 +78,26 @@ function closeImageZoom(): void {
   isImageZoomed.value = false
 }
 
+function selectPreviousImage(): void {
+  if (imageVariants.value.length === 0) {
+    return
+  }
+  const nextIndex = selectedImageIndex.value === 0
+    ? imageVariants.value.length - 1
+    : selectedImageIndex.value - 1
+  selectedImageIndex.value = nextIndex
+  confirmSend.value = false
+}
+
+function selectNextImage(): void {
+  if (imageVariants.value.length === 0) {
+    return
+  }
+  const nextIndex = (selectedImageIndex.value + 1) % imageVariants.value.length
+  selectedImageIndex.value = nextIndex
+  confirmSend.value = false
+}
+
 async function loadEmployees(): Promise<void> {
   employeesLoading.value = true
   try {
@@ -353,17 +373,39 @@ async function handleSend(): Promise<void> {
                 >
                   <button
                     type="button"
-                    class="absolute right-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-platform-line/40 bg-platform-bg-primary/80 text-sm text-platform-text-secondary transition hover:bg-platform-accent/20"
+                    class="absolute right-2 top-2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-platform-line/40 bg-platform-bg-primary/80 text-sm text-platform-text-secondary transition hover:bg-platform-accent/20"
                     @click="closeImageZoom"
                   >
                     ×
                   </button>
-                  <div class="overflow-hidden rounded-[1.2rem] bg-platform-bg-primary">
-                    <img
-                      :src="selectedImage.url"
-                      alt="Увеличенный вид"
-                      class="mx-auto max-h-[75vh] w-auto rounded-[1.2rem] object-contain"
-                    />
+
+                  <div class="grid place-items-center">
+                    <div class="relative w-full overflow-hidden rounded-[1.2rem] bg-platform-bg-primary">
+                      <img
+                        :src="selectedImage.url"
+                        alt="Увеличенный вид"
+                        class="mx-auto max-h-[75vh] w-full rounded-[1.2rem] object-contain"
+                      />
+
+                      <button
+                        type="button"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-platform-line/40 bg-platform-bg-primary/80 px-3 py-2 text-sm text-platform-text-secondary transition hover:bg-platform-accent/20"
+                        @click="selectPreviousImage"
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-platform-line/40 bg-platform-bg-primary/80 px-3 py-2 text-sm text-platform-text-secondary transition hover:bg-platform-accent/20"
+                        @click="selectNextImage"
+                      >
+                        →
+                      </button>
+                    </div>
+
+                    <p class="mt-3 text-sm text-platform-text-secondary">
+                      {{ selectedImageIndex + 1 }} / {{ imageVariants.length }}
+                    </p>
                   </div>
                 </div>
               </div>
