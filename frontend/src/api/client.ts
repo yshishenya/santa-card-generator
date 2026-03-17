@@ -4,6 +4,7 @@ import type {
   PhotocardGenerateResponse,
   PhotocardSendRequest,
   PhotocardSendResponse,
+  Employee,
 } from '@/types'
 
 const GENERATION_TIMEOUT_MS = 300000
@@ -66,6 +67,13 @@ interface BackendPhotocardSendResponse {
 interface BackendAuthResponse {
   success: boolean
   message: string
+}
+
+interface BackendEmployeesResponse {
+  id: string
+  name: string
+  department?: string | null
+  telegram?: string | null
 }
 
 class APIClient {
@@ -142,6 +150,27 @@ class APIClient {
       telegram_message_id: backendData.telegram_message_id,
       delivery_env: backendData.delivery_env,
     }
+  }
+
+  async fetchEmployees(): Promise<Employee[]> {
+    const response = await this.client.get<APIResponse<BackendEmployeesResponse[]> | BackendEmployeesResponse[]>(
+      '/employees'
+    )
+
+    const payload = Array.isArray(response.data)
+      ? response.data
+      : response.data?.data
+
+    if (!Array.isArray(payload)) {
+      return []
+    }
+
+    return payload.map((employee) => ({
+      id: employee.id,
+      name: employee.name,
+      department: employee.department ?? null,
+      telegram: employee.telegram ?? null,
+    }))
   }
 
   async verifyPassword(password: string): Promise<boolean> {

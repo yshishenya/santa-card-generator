@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiClient, APIError } from '@/api/client'
 import {
   IMAGE_STYLE_LABELS,
   type ImageStyle,
   type PhotocardImageVariant,
+  type Employee,
 } from '@/types'
 
 const router = useRouter()
 
 const fullName = ref('')
 const alterEgo = ref('')
+const employees = ref<Employee[]>([])
+const selectedEmployeeId = ref('')
+const employeesLoading = ref(false)
 const sessionId = ref<string | null>(null)
 const imageVariants = ref<PhotocardImageVariant[]>([])
 const selectedImageIndex = ref(0)
@@ -22,6 +26,14 @@ const error = ref<string | null>(null)
 
 const hasGenerated = computed(() => imageVariants.value.length === 3 && sessionId.value !== null)
 const selectedImage = computed(() => imageVariants.value[selectedImageIndex.value] ?? null)
+
+function getSelectedEmployeeName(): string {
+  if (!selectedEmployeeId.value) {
+    return fullName.value
+  }
+  const employee = employees.value.find((item) => item.id === selectedEmployeeId.value)
+  return employee?.name ?? fullName.value
+}
 
 function getErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof APIError) {
@@ -43,6 +55,7 @@ function resetGeneratedState(): void {
 function resetAll(): void {
   fullName.value = ''
   alterEgo.value = ''
+  selectedEmployeeId.value = ''
   error.value = null
   resetGeneratedState()
 }
@@ -52,14 +65,36 @@ function selectImage(index: number): void {
   confirmSend.value = false
 }
 
+async function loadEmployees(): Promise<void> {
+  employeesLoading.value = true
+  try {
+    employees.value = await apiClient.fetchEmployees()
+  } catch (error) {
+    // Keep UI usable via manual input if employee list cannot be loaded.
+    employees.value = []
+  } finally {
+    employeesLoading.value = false
+  }
+}
+
+function onEmployeeSelect(): void {
+  if (selectedEmployeeId.value !== '__manual') {
+    fullName.value = getSelectedEmployeeName()
+    return
+  }
+  fullName.value = ''
+}
+
 function getStyleLabel(style: ImageStyle): string {
   return IMAGE_STYLE_LABELS[style] ?? style
 }
 
 async function handleGenerate(): Promise<void> {
-  if (!fullName.value.trim() || !alterEgo.value.trim()) {
+  const recipient = getSelectedEmployeeName().trim()
+  if (!recipient || !alterEgo.value.trim()) {
     return
   }
+  fullName.value = recipient
 
   try {
     isGenerating.value = true
@@ -67,7 +102,7 @@ async function handleGenerate(): Promise<void> {
     resetGeneratedState()
 
     const response = await apiClient.generatePhotocard({
-      full_name: fullName.value.trim(),
+      full_name: recipient,
       alter_ego: alterEgo.value.trim(),
     })
 
@@ -79,6 +114,10 @@ async function handleGenerate(): Promise<void> {
     isGenerating.value = false
   }
 }
+
+onMounted(() => {
+  loadEmployees()
+})
 
 async function handleSend(): Promise<void> {
   if (!sessionId.value || !selectedImage.value || !confirmSend.value) {
@@ -132,7 +171,42 @@ async function handleSend(): Promise<void> {
           <label for="full-name" class="block text-sm font-semibold uppercase tracking-[0.18em] text-christmas-gold">
             Full Name
           </label>
+          <div v-if="employeesLoading" class="text-sm text-winter-text-muted">
+            Загрузка списка людей...
+          </div>
+          <template v-else-if="employees.length > 0">
+            <select
+              id="full-name"
+              v-model="selectedEmployeeId"
+              class="input-magic w-full px-4 py-3 text-base"
+              :disabled="isGenerating || isSending"
+              @change="onEmployeeSelect"
+            >
+              <option value="">Выберите получателя</option>
+              <option value="__manual">Ввести вручную</option>
+              <option
+                v-for="employee in employees"
+                :key="employee.id"
+                :value="employee.id"
+              >
+                {{ employee.name }}{{ employee.department ? ` — ${employee.department}` : '' }}
+              </option>
+            </select>
+            <p v-if="selectedEmployeeId === ''" class="text-sm text-winter-text-muted">
+              Выберите сотрудника из списка.
+            </p>
+            <input
+              v-if="selectedEmployeeId === '__manual'"
+              v-model="fullName"
+              type="text"
+              maxlength="200"
+              placeholder="Введите имя получателя вручную"
+              class="input-magic mt-2 w-full px-4 py-3 text-base"
+              :disabled="isGenerating || isSending"
+            />
+          </template>
           <input
+            v-else
             id="full-name"
             v-model="fullName"
             type="text"

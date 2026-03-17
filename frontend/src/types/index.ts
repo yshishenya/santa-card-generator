@@ -61,6 +61,13 @@ export interface PhotocardSendResponse {
   delivery_env: 'staging' | 'prod'
 }
 
+export interface Employee {
+  id: string
+  name: string
+  department?: string | null
+  telegram?: string | null
+}
+
 export interface APIError {
   detail: string
 }
