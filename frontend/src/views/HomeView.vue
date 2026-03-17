@@ -24,15 +24,22 @@ const isGenerating = ref(false)
 const isSending = ref(false)
 const error = ref<string | null>(null)
 
+const hasEmployees = computed(() => employees.value.length > 0)
 const hasGenerated = computed(() => imageVariants.value.length === 3 && sessionId.value !== null)
 const selectedImage = computed(() => imageVariants.value[selectedImageIndex.value] ?? null)
+const selectedEmployee = computed(() => employees.value.find((employee) => employee.id === selectedEmployeeId.value))
+const resolvedFullName = computed(() => {
+  if (selectedEmployee.value) {
+    return selectedEmployee.value.name
+  }
+  return fullName.value.trim()
+})
 
 function getSelectedEmployeeName(): string {
-  if (!selectedEmployeeId.value) {
-    return fullName.value
+  if (selectedEmployee.value) {
+    return selectedEmployee.value.name
   }
-  const employee = employees.value.find((item) => item.id === selectedEmployeeId.value)
-  return employee?.name ?? fullName.value
+  return fullName.value.trim()
 }
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -69,7 +76,7 @@ async function loadEmployees(): Promise<void> {
   employeesLoading.value = true
   try {
     employees.value = await apiClient.fetchEmployees()
-  } catch (error) {
+  } catch {
     // Keep UI usable via manual input if employee list cannot be loaded.
     employees.value = []
   } finally {
@@ -78,11 +85,7 @@ async function loadEmployees(): Promise<void> {
 }
 
 function onEmployeeSelect(): void {
-  if (selectedEmployeeId.value !== '__manual') {
-    fullName.value = getSelectedEmployeeName()
-    return
-  }
-  fullName.value = ''
+  fullName.value = selectedEmployee.value?.name ?? ''
 }
 
 function getStyleLabel(style: ImageStyle): string {
@@ -160,7 +163,7 @@ async function handleSend(): Promise<void> {
           Платформа фотокарточек Pro 4.0 · 7-летие
         </h1>
         <p class="mx-auto max-w-2xl text-lg text-platform-text-secondary">
-          Введите только имя и альтер эго. Сервис сгенерирует ровно 3 варианта изображения, после чего выберите один и отдельно подтвердите отправку.
+          Введите только имя получателя и альтер-эго. Сервис сгенерирует ровно 3 варианта изображения, после чего выберите один и отдельно подтвердите отправку.
         </p>
       </div>
     </div>
@@ -174,7 +177,7 @@ async function handleSend(): Promise<void> {
           <div v-if="employeesLoading" class="text-sm text-platform-text-muted">
             Загрузка списка людей...
           </div>
-          <template v-else-if="employees.length > 0">
+          <template v-else-if="hasEmployees">
             <select
               id="full-name"
               v-model="selectedEmployeeId"
@@ -182,8 +185,7 @@ async function handleSend(): Promise<void> {
               :disabled="isGenerating || isSending"
               @change="onEmployeeSelect"
             >
-              <option value="">Выберите получателя</option>
-              <option value="__manual">Ввести вручную</option>
+              <option value="" disabled>Выберите получателя</option>
               <option
                 v-for="employee in employees"
                 :key="employee.id"
@@ -192,18 +194,9 @@ async function handleSend(): Promise<void> {
                 {{ employee.name }}{{ employee.department ? ` — ${employee.department}` : '' }}
               </option>
             </select>
-            <p v-if="selectedEmployeeId === ''" class="text-sm text-platform-text-muted">
+            <p v-if="!selectedEmployeeId" class="text-sm text-platform-text-muted">
               Выберите сотрудника из списка.
             </p>
-            <input
-              v-if="selectedEmployeeId === '__manual'"
-              v-model="fullName"
-              type="text"
-              maxlength="200"
-              placeholder="Введите имя получателя вручную"
-              class="input-magic mt-2 w-full px-4 py-3 text-base"
-              :disabled="isGenerating || isSending"
-            />
           </template>
           <input
             v-else
@@ -211,7 +204,7 @@ async function handleSend(): Promise<void> {
             v-model="fullName"
             type="text"
             maxlength="200"
-            placeholder="Например, Alex Carter"
+            placeholder="Введите имя получателя вручную"
             class="input-magic w-full px-4 py-3 text-base"
             :disabled="isGenerating || isSending"
           />
@@ -242,7 +235,7 @@ async function handleSend(): Promise<void> {
         <div class="flex flex-wrap gap-3">
           <button
             type="submit"
-            :disabled="isGenerating || isSending || !fullName.trim() || !alterEgo.trim()"
+            :disabled="isGenerating || isSending || !(hasEmployees ? selectedEmployeeId : fullName.trim()) || !alterEgo.trim()"
             class="btn-magic flex-1 rounded-xl px-6 py-4 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span class="flex items-center justify-center gap-2">
@@ -267,7 +260,7 @@ async function handleSend(): Promise<void> {
         <div class="flex items-start justify-between gap-4">
           <div>
             <h2 class="text-2xl font-semibold text-platform-accent">
-              Выбор изображения
+              Превью карточки
             </h2>
             <p class="mt-2 text-sm text-platform-text-secondary">
               После генерации выберите один из трёх вариантов и подтвердите отправку.
@@ -283,60 +276,68 @@ async function handleSend(): Promise<void> {
         </div>
 
         <template v-else>
-          <div class="mt-6 grid gap-4 md:grid-cols-3">
-            <button
-              v-for="(variant, index) in imageVariants"
-              :key="variant.url"
-              type="button"
-              class="photocard-option text-left"
-              :class="{ 'photocard-option--active': index === selectedImageIndex }"
-              @click="selectImage(index)"
-            >
-              <div class="aspect-[3/4] overflow-hidden rounded-[1.35rem] bg-platform-bg-secondary">
-                <img
-                  :src="variant.url"
-                  :alt="`Вариант ${index + 1}`"
-                  class="h-full w-full object-cover"
-                />
-              </div>
-              <div class="mt-3 flex items-center justify-between gap-3">
-                <div>
-                  <p class="text-xs uppercase tracking-[0.18em] text-platform-text-muted">
-                    Вариант {{ index + 1 }}
-                  </p>
-                  <p class="mt-1 text-sm font-semibold text-platform-text-primary">
-                    {{ getStyleLabel(variant.style) }}
-                  </p>
-                </div>
-                <span
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm"
-                  :class="index === selectedImageIndex ? 'border-platform-accent bg-platform-accent/15 text-platform-accent' : 'border-platform-line/30 text-platform-text-muted'"
+          <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,430px)_minmax(0,1fr)]">
+            <div class="space-y-3">
+              <h3 class="text-sm font-semibold uppercase tracking-[0.16em] text-platform-accent">
+                Варианты
+              </h3>
+              <div class="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                <button
+                  v-for="(variant, index) in imageVariants"
+                  :key="variant.url"
+                  type="button"
+                  class="photocard-option text-left"
+                  :class="{ 'photocard-option--active': index === selectedImageIndex }"
+                  @click="selectImage(index)"
                 >
-                  {{ index + 1 }}
-                </span>
+                  <div class="aspect-[3/4] overflow-hidden rounded-[1.2rem] bg-platform-bg-secondary">
+                    <img
+                      :src="variant.url"
+                      :alt="`Вариант ${index + 1}`"
+                      class="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div class="mt-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p class="text-xs uppercase tracking-[0.18em] text-platform-text-muted">
+                        Вариант {{ index + 1 }}
+                      </p>
+                      <p class="mt-1 text-sm font-semibold text-platform-text-primary">
+                        {{ getStyleLabel(variant.style) }}
+                      </p>
+                    </div>
+                    <span
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm"
+                      :class="index === selectedImageIndex ? 'border-platform-accent bg-platform-accent/15 text-platform-accent' : 'border-platform-line/30 text-platform-text-muted'"
+                    >
+                      {{ index + 1 }}
+                    </span>
+                  </div>
+                </button>
               </div>
-            </button>
-          </div>
+            </div>
 
-          <div class="mt-8 rounded-[2rem] border border-platform-accent/20 bg-platform-bg-secondary/60 p-5">
-            <div class="flex flex-col gap-5 md:flex-row md:items-center">
-              <div v-if="selectedImage" class="w-full max-w-[200px] overflow-hidden rounded-[1.5rem] border border-platform-line/30">
+            <div class="rounded-[2rem] border border-platform-accent/20 bg-platform-bg-secondary/60 p-5">
+              <div v-if="selectedImage" class="relative overflow-hidden rounded-[1.5rem] border border-platform-line/30 bg-platform-bg-primary">
                 <img
                   :src="selectedImage.url"
                   alt="Выбранная фотокарточка"
-                  class="aspect-[3/4] h-full w-full object-cover"
+                  class="h-auto w-full object-cover"
                 />
+                <span class="absolute left-3 top-3 rounded-full border border-platform-accent/35 bg-platform-accent/15 px-3 py-1 text-xs font-semibold tracking-[0.14em] text-platform-accent">
+                  {{ getStyleLabel(selectedImage.style) }}
+                </span>
               </div>
 
-              <div class="flex-1 space-y-4">
+              <div class="mt-5 space-y-4">
                 <div>
                   <p class="text-xs uppercase tracking-[0.18em] text-platform-text-muted">
-                    Подтверждение
+                    Карточка получателя
                   </p>
                   <h3 class="mt-1 text-2xl font-semibold text-platform-text-primary">
-                    {{ fullName }}
+                    {{ resolvedFullName }}
                   </h3>
-                  <p class="mt-2 text-platform-text-secondary">
+                  <p class="mt-2 whitespace-pre-wrap text-platform-text-secondary">
                     {{ alterEgo }}
                   </p>
                 </div>
@@ -387,7 +388,7 @@ async function handleSend(): Promise<void> {
 .photocard-option {
   border: 1px solid rgba(186, 200, 215, 0.18);
   background: rgba(10, 22, 35, 0.58);
-  border-radius: 1.75rem;
+  border-radius: 1.35rem;
   padding: 0.9rem;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
