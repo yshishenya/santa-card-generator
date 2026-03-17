@@ -23,6 +23,7 @@ const confirmSend = ref(false)
 const isGenerating = ref(false)
 const isSending = ref(false)
 const error = ref<string | null>(null)
+const isImageZoomed = ref(false)
 
 const hasEmployees = computed(() => employees.value.length > 0)
 const hasGenerated = computed(() => imageVariants.value.length === 3 && sessionId.value !== null)
@@ -67,9 +68,14 @@ function resetAll(): void {
   resetGeneratedState()
 }
 
-function selectImage(index: number): void {
+function openImageZoom(index: number): void {
   selectedImageIndex.value = index
   confirmSend.value = false
+  isImageZoomed.value = true
+}
+
+function closeImageZoom(): void {
+  isImageZoomed.value = false
 }
 
 async function loadEmployees(): Promise<void> {
@@ -281,33 +287,33 @@ async function handleSend(): Promise<void> {
               <h3 class="text-sm font-semibold uppercase tracking-[0.16em] text-platform-accent">
                 Варианты
               </h3>
-              <div class="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div class="grid grid-cols-3 gap-2">
                 <button
                   v-for="(variant, index) in imageVariants"
                   :key="variant.url"
                   type="button"
-                  class="photocard-option text-left"
+                  class="photocard-option photocard-option--thumb text-left"
                   :class="{ 'photocard-option--active': index === selectedImageIndex }"
-                  @click="selectImage(index)"
+                  @click="openImageZoom(index)"
                 >
-                  <div class="aspect-[3/4] overflow-hidden rounded-[1.2rem] bg-platform-bg-secondary">
+                  <div class="aspect-[3/4] overflow-hidden rounded-[0.95rem] bg-platform-bg-secondary">
                     <img
                       :src="variant.url"
                       :alt="`Вариант ${index + 1}`"
                       class="h-full w-full object-cover"
                     />
                   </div>
-                  <div class="mt-3 flex items-center justify-between gap-3">
+                  <div class="mt-2 flex items-center justify-between gap-3">
                     <div>
-                      <p class="text-xs uppercase tracking-[0.18em] text-platform-text-muted">
+                      <p class="text-[10px] uppercase tracking-[0.16em] text-platform-text-muted">
                         Вариант {{ index + 1 }}
                       </p>
-                      <p class="mt-1 text-sm font-semibold text-platform-text-primary">
+                      <p class="mt-1 text-xs font-semibold text-platform-text-primary">
                         {{ getStyleLabel(variant.style) }}
                       </p>
                     </div>
                     <span
-                      class="inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm"
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs"
                       :class="index === selectedImageIndex ? 'border-platform-accent bg-platform-accent/15 text-platform-accent' : 'border-platform-line/30 text-platform-text-muted'"
                     >
                       {{ index + 1 }}
@@ -318,15 +324,48 @@ async function handleSend(): Promise<void> {
             </div>
 
             <div class="rounded-[2rem] border border-platform-accent/20 bg-platform-bg-secondary/60 p-5">
-              <div v-if="selectedImage" class="relative overflow-hidden rounded-[1.5rem] border border-platform-line/30 bg-platform-bg-primary">
+              <button
+                v-if="selectedImage"
+                type="button"
+                class="group relative block w-full overflow-hidden rounded-[1.5rem] border border-platform-line/30 bg-platform-bg-primary text-left transition"
+                @click="openImageZoom(selectedImageIndex)"
+              >
                 <img
                   :src="selectedImage.url"
                   alt="Выбранная фотокарточка"
                   class="h-auto w-full object-cover"
                 />
-                <span class="absolute left-3 top-3 rounded-full border border-platform-accent/35 bg-platform-accent/15 px-3 py-1 text-xs font-semibold tracking-[0.14em] text-platform-accent">
+                <span class="pointer-events-none absolute left-3 top-3 rounded-full border border-platform-accent/35 bg-platform-accent/15 px-3 py-1 text-xs font-semibold tracking-[0.14em] text-platform-accent">
                   {{ getStyleLabel(selectedImage.style) }}
                 </span>
+                <span class="absolute bottom-3 right-3 rounded-full border border-platform-line/40 bg-platform-bg-primary/70 px-2 py-1 text-xs text-platform-text-secondary">
+                  Нажмите для увеличения
+                </span>
+              </button>
+              <div
+                v-if="isImageZoomed && selectedImage"
+                class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4"
+                @click="closeImageZoom"
+              >
+                <div
+                  class="relative w-full max-w-2xl rounded-[1.5rem] border border-platform-line/35 bg-platform-bg-secondary p-3"
+                  @click.stop
+                >
+                  <button
+                    type="button"
+                    class="absolute right-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-platform-line/40 bg-platform-bg-primary/80 text-sm text-platform-text-secondary transition hover:bg-platform-accent/20"
+                    @click="closeImageZoom"
+                  >
+                    ×
+                  </button>
+                  <div class="overflow-hidden rounded-[1.2rem] bg-platform-bg-primary">
+                    <img
+                      :src="selectedImage.url"
+                      alt="Увеличенный вид"
+                      class="mx-auto max-h-[75vh] w-auto rounded-[1.2rem] object-contain"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div class="mt-5 space-y-4">
@@ -401,5 +440,10 @@ async function handleSend(): Promise<void> {
 .photocard-option--active {
   border-color: rgba(99, 102, 241, 0.72);
   box-shadow: 0 18px 44px rgba(6, 17, 27, 0.32);
+}
+
+.photocard-option--thumb {
+  padding: 0.6rem;
+  max-width: 190px;
 }
 </style>
