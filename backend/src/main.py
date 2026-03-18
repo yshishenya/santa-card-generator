@@ -10,7 +10,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from src.api import auth, employees, photocards, print_assets
+from src.api import auth, employees, photocards, print_assets, tap_p40
 from src.api.dependencies import get_gemini_client, get_telegram_client, shutdown, startup
 from src.config import settings
 
@@ -87,6 +87,7 @@ app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(photocards.router, prefix="/api/v1", tags=["photocards"])
 app.include_router(employees.router, prefix="/api/v1", tags=["employees"])
 app.include_router(print_assets.router, prefix="/api/v1", tags=["print-assets"])
+app.include_router(tap_p40.router, prefix="/api/v1", tags=["tap-p40"])
 
 
 @app.get("/health")

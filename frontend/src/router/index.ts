@@ -19,6 +19,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/tap-p40',
+      name: 'tap-p40',
+      component: () => import('../views/TapP40View.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/success',
       name: 'success',
       // Lazy loaded for better performance

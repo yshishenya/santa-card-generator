@@ -28,6 +28,7 @@ def configure_settings_for_tests():
         "telegram_topic_id": settings.telegram_topic_id,
         "print_archive_storage_path": settings.print_archive_storage_path,
         "print_archive_password": settings.print_archive_password,
+        "tap_p40_leaderboard_path": settings.tap_p40_leaderboard_path,
     }
 
     object.__setattr__(settings, "rate_limit_per_minute", 10000)
@@ -40,6 +41,7 @@ def configure_settings_for_tests():
     object.__setattr__(settings, "telegram_topic_id", 456)
     object.__setattr__(settings, "print_archive_storage_path", "/tmp/cards-test-print-archive")
     object.__setattr__(settings, "print_archive_password", "Pr0ffes4.0Pr0ffes4.0")
+    object.__setattr__(settings, "tap_p40_leaderboard_path", "/tmp/cards-test-tap-p40.json")
 
     yield
 

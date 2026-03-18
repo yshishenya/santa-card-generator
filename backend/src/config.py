@@ -48,12 +48,16 @@ class Settings(BaseSettings):
         Path(__file__).resolve().parents[1] / "data" / "print_archive"
     )
     print_archive_auth_max_age_seconds: int = 604800
+    tap_p40_leaderboard_path: str = str(
+        Path(__file__).resolve().parents[1] / "data" / "tap_p40_leaderboard.json"
+    )
 
     class Config:
         """Pydantic configuration."""
 
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"
 
     @property
     def active_telegram_chat_id(self) -> int:

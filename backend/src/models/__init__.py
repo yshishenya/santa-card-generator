@@ -23,6 +23,12 @@ from src.models.photocard import (
 )
 from src.models.print_archive import PrintArchiveAsset, PrintArchiveListResponse
 from src.models.response import APIResponse, RegenerateResponse
+from src.models.tap_p40 import (
+    TapP40LeaderboardEntry,
+    TapP40LeaderboardResponse,
+    TapP40ScoreRequest,
+    TapP40ScoreResponse,
+)
 
 __all__ = [
     "TextStyle",
@@ -46,4 +52,8 @@ __all__ = [
     "PhotocardSendResponse",
     "PrintArchiveAsset",
     "PrintArchiveListResponse",
+    "TapP40LeaderboardEntry",
+    "TapP40LeaderboardResponse",
+    "TapP40ScoreRequest",
+    "TapP40ScoreResponse",
 ]

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiClient, APIError } from '@/api/client'
 import {
@@ -7,6 +7,7 @@ import {
   ImageStyle,
   type PhotocardImageVariant,
 } from '@/types'
+import { loadPlayerName, savePlayerName } from '@/utils/playerIdentity'
 
 const router = useRouter()
 
@@ -20,6 +21,7 @@ const isGenerating = ref(false)
 const isSending = ref(false)
 const error = ref<string | null>(null)
 const isImageZoomed = ref(false)
+const isGameRevealOpen = ref(false)
 
 const styleCatalog = [
   {
@@ -50,6 +52,7 @@ const styleCatalog = [
 
 const hasGenerated = computed(() => imageVariants.value.length === 3 && sessionId.value !== null)
 const resolvedFullName = computed(() => fullName.value.trim())
+const canRevealGame = computed(() => Boolean(resolvedFullName.value) && !isGenerating.value && !isSending.value)
 const selectedImage = computed(() => imageVariants.value[selectedImageIndex.value] ?? null)
 const selectedStyleMeta = computed(() => {
   if (!selectedImage.value) {
@@ -98,6 +101,8 @@ const styleCards = computed(() => {
   })
 })
 
+let gameRevealTimer: ReturnType<typeof setTimeout> | null = null
+
 function getErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof APIError) {
     return err.getUserMessage()
@@ -130,7 +135,7 @@ function resetGeneratedState(): void {
 }
 
 function resetAll(): void {
-  fullName.value = ''
+  fullName.value = loadPlayerName()
   alterEgo.value = ''
   error.value = null
   resetGeneratedState()
@@ -155,6 +160,39 @@ function openImageZoom(index: number): void {
 
 function closeImageZoom(): void {
   isImageZoomed.value = false
+}
+
+function clearGameRevealTimer(): void {
+  if (gameRevealTimer) {
+    clearTimeout(gameRevealTimer)
+    gameRevealTimer = null
+  }
+}
+
+function beginGameRevealPress(): void {
+  if (!canRevealGame.value) {
+    return
+  }
+
+  clearGameRevealTimer()
+  gameRevealTimer = setTimeout(() => {
+    isGameRevealOpen.value = true
+    clearGameRevealTimer()
+  }, 800)
+}
+
+function cancelGameRevealPress(): void {
+  clearGameRevealTimer()
+}
+
+function closeGameReveal(): void {
+  isGameRevealOpen.value = false
+  cancelGameRevealPress()
+}
+
+async function openTapP40Game(): Promise<void> {
+  closeGameReveal()
+  await router.push({ name: 'tap-p40' })
 }
 
 function selectPreviousImage(): void {
@@ -186,6 +224,7 @@ async function handleGenerate(): Promise<void> {
 
   fullName.value = name
   alterEgo.value = alterEgoPrompt
+  savePlayerName(name)
 
   try {
     isGenerating.value = true
@@ -253,11 +292,19 @@ function handleKeydown(event: KeyboardEvent): void {
 }
 
 onMounted(() => {
+  if (!fullName.value.trim()) {
+    fullName.value = loadPlayerName()
+  }
   window.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  clearGameRevealTimer()
+})
+
+watch(fullName, (value) => {
+  savePlayerName(value)
 })
 </script>
 
@@ -265,15 +312,31 @@ onUnmounted(() => {
   <section class="studio-page">
     <header class="studio-header">
       <div class="studio-header__brand">
-        <div>
-          <h1 class="studio-header__title">P4.0 Alter Ego</h1>
-          <p class="studio-header__subtitle">Генератор мозаичных портретов</p>
+        <div class="studio-header__title-wrap">
+          <button
+            type="button"
+            class="studio-header__mark"
+            :class="{ 'studio-header__mark--armed': canRevealGame }"
+            aria-label="Дополнительный режим P4.0"
+            @pointerdown="beginGameRevealPress"
+            @pointerup="cancelGameRevealPress"
+            @pointerleave="cancelGameRevealPress"
+            @pointercancel="cancelGameRevealPress"
+            @contextmenu.prevent
+          >
+            <img src="/favicon.svg" alt="" class="studio-header__mark-image">
+          </button>
+
+          <div>
+            <h1 class="studio-header__title">P4.0 Alter Ego</h1>
+            <p class="studio-header__subtitle">Генератор мозаичных портретов</p>
+          </div>
         </div>
 
         <div class="studio-header__divider"></div>
 
         <p class="studio-header__summary">
-          Система генерации аватаров для единой коллективной мозаики вне работы.
+          Соберите свой образ вне работы, выберите лучший кадр и отправьте его в общую мозаику команды.
         </p>
       </div>
 
@@ -282,20 +345,6 @@ onUnmounted(() => {
           <span class="material-symbols-outlined" aria-hidden="true">archive</span>
           Архив для печати
         </RouterLink>
-
-        <div class="studio-header__admin">
-          <div>
-            <p class="studio-header__admin-title">Admin Mode</p>
-            <div class="studio-header__admin-status">
-              <span class="studio-header__admin-dot"></span>
-              <span>System Active</span>
-            </div>
-          </div>
-
-          <div class="app-icon-box studio-header__admin-icon">
-            <span class="material-symbols-outlined" aria-hidden="true">person</span>
-          </div>
-        </div>
       </div>
     </header>
 
@@ -567,6 +616,31 @@ onUnmounted(() => {
         </footer>
       </div>
     </div>
+
+    <div
+      v-if="isGameRevealOpen"
+      class="secret-layer"
+      @click="closeGameReveal"
+    >
+      <div class="app-panel app-panel--strong secret-dialog" @click.stop>
+        <p class="app-kicker">P4.0 Easter Egg</p>
+        <h2 class="app-heading">Tap the P4.0</h2>
+        <p class="app-subtle">
+          25 секунд, один знак P4.0 и много ложных плиток. Если пальцы быстрые, можно залететь в рейтинг.
+        </p>
+
+        <div class="secret-dialog__actions">
+          <button type="button" class="app-button" @click="openTapP40Game">
+            <span class="material-symbols-outlined" aria-hidden="true">joystick</span>
+            Играть
+          </button>
+
+          <button type="button" class="app-button-ghost" @click="closeGameReveal">
+            Не сейчас
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -592,11 +666,43 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
+.studio-header__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.studio-header__mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  padding: 0;
+  border: 2px solid var(--black);
+  border-radius: 1rem;
+  background: var(--white);
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.studio-header__mark:active {
+  transform: scale(0.97);
+}
+
+.studio-header__mark--armed {
+  background: linear-gradient(180deg, var(--white) 0%, rgba(175, 195, 255, 0.88) 100%);
+  box-shadow: 4px 4px 0 var(--black);
+  animation: studio-mark-pulse 2.8s ease-in-out infinite;
+}
+
+.studio-header__mark-image {
+  width: 72%;
+  aspect-ratio: 1;
+}
+
 .studio-header__title,
 .studio-header__summary,
-.studio-header__subtitle,
-.studio-header__admin-title,
-.studio-header__admin-status {
+.studio-header__subtitle {
   margin: 0;
 }
 
@@ -643,44 +749,6 @@ onUnmounted(() => {
 
 .studio-header__archive-link:hover {
   color: var(--digital-blue);
-}
-
-.studio-header__admin {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.studio-header__admin-title {
-  font-size: 0.56rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.studio-header__admin-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-top: 0.22rem;
-  font-size: 0.54rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-soft);
-}
-
-.studio-header__admin-dot {
-  width: 0.55rem;
-  height: 0.55rem;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  border-radius: 999px;
-  background: var(--digital-mint);
-}
-
-.studio-header__admin-icon {
-  width: 3rem;
-  height: 3rem;
 }
 
 .studio-grid {
@@ -1151,6 +1219,29 @@ onUnmounted(() => {
   background: rgba(248, 251, 255, 0.94);
 }
 
+.secret-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  align-items: end;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.secret-dialog {
+  display: grid;
+  gap: 0.9rem;
+  width: min(100%, 28rem);
+  margin: 0 auto;
+  padding: 1.1rem;
+}
+
+.secret-dialog__actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
 .zoom-dialog {
   display: grid;
   gap: 1rem;
@@ -1196,6 +1287,18 @@ onUnmounted(() => {
   }
 }
 
+@keyframes studio-mark-pulse {
+  0%, 100% {
+    transform: translateY(0);
+    box-shadow: 4px 4px 0 var(--black);
+  }
+
+  50% {
+    transform: translateY(-1px);
+    box-shadow: 6px 6px 0 var(--black);
+  }
+}
+
 @media (min-width: 1080px) {
   .studio-grid {
     grid-template-columns: minmax(18rem, 20rem) minmax(0, 1fr);
@@ -1233,6 +1336,15 @@ onUnmounted(() => {
 @media (max-width: 767px) {
   .studio-page {
     gap: 1rem;
+  }
+
+  .studio-header__title-wrap {
+    align-items: flex-start;
+  }
+
+  .studio-header__mark {
+    width: 2.9rem;
+    height: 2.9rem;
   }
 
   .studio-header__title {

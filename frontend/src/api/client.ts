@@ -6,6 +6,9 @@ import type {
   PhotocardSendResponse,
   Employee,
   PrintArchiveAsset,
+  TapP40LeaderboardResponse,
+  TapP40ScoreRequest,
+  TapP40ScoreResponse,
 } from '@/types'
 
 const GENERATION_TIMEOUT_MS = 300000
@@ -83,6 +86,18 @@ interface BackendEmployeesResponse {
   name: string
   department?: string | null
   telegram?: string | null
+}
+
+interface BackendTapP40LeaderboardResponse {
+  period: 'all' | 'day'
+  limit: number
+  entries: TapP40LeaderboardResponse['entries']
+}
+
+interface BackendTapP40ScoreResponse {
+  rank: number
+  personal_best: boolean
+  saved_run: TapP40ScoreResponse['saved_run']
 }
 
 class APIClient {
@@ -224,6 +239,24 @@ class APIClient {
 
   getPrintArchiveDownloadAllUrl(): string {
     return `${this.baseURL}/api/v1/print-assets/assets/download-all`
+  }
+
+  async fetchTapP40Leaderboard(period: 'all' | 'day', limit = 20): Promise<TapP40LeaderboardResponse> {
+    const response = await this.client.get<APIResponse<BackendTapP40LeaderboardResponse>>(
+      '/tap-p40/leaderboard',
+      {
+        params: { period, limit },
+      }
+    )
+    return response.data.data
+  }
+
+  async saveTapP40Score(request: TapP40ScoreRequest): Promise<TapP40ScoreResponse> {
+    const response = await this.client.post<APIResponse<BackendTapP40ScoreResponse>>(
+      '/tap-p40/scores',
+      request
+    )
+    return response.data.data
   }
 }
 

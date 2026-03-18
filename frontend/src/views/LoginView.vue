@@ -13,20 +13,20 @@ const processSteps = [
   {
     index: '1',
     accentClass: 'login-guide__step-index--lavender',
-    title: 'Генерируйте 3 варианта',
-    body: 'Нейросеть создаст три иллюстративных направления в общем графическом ключе P4.0.',
+    title: 'Пара слов о себе',
+    body: 'Хобби, роль или вайб вне работы.',
   },
   {
     index: '2',
     accentClass: 'login-guide__step-index--mint',
-    title: 'Выберите изображение',
-    body: 'Сравните стили, откройте крупный просмотр и утвердите один финальный квадратный кадр.',
+    title: 'Выберите лучшую',
+    body: 'Из 3 картинок берёте ту самую.',
   },
   {
     index: '3',
     accentClass: 'login-guide__step-index--yellow',
-    title: 'Telegram + сохранение',
-    body: 'В тему улетает картинка + имя, а original PNG отдельно уходит в print archive.',
+    title: 'Отправьте в чат',
+    body: 'Улетят картинка и имя. Без лишней драмы.',
   },
 ] as const
 
@@ -48,7 +48,7 @@ async function handleSubmit() {
       <div class="login-bar__brand">
         <span class="login-bar__title">P4.0 Alter Ego</span>
         <div class="login-bar__divider"></div>
-        <span class="login-bar__subtitle">Генератор мозаичных портретов</span>
+        <span class="login-bar__subtitle">Генератор портретов</span>
       </div>
 
       <div class="login-bar__colors" aria-hidden="true">
@@ -173,13 +173,6 @@ async function handleSubmit() {
       </section>
     </article>
 
-    <footer class="login-footer">
-      <span>© 2026 Alter Ego Mosaic Project. All rights reserved.</span>
-      <div class="login-footer__links">
-        <span>Политика конфиденциальности</span>
-        <span>Техподдержка</span>
-      </div>
-    </footer>
   </section>
 </template>
 
@@ -490,24 +483,6 @@ async function handleSubmit() {
   letter-spacing: -0.08em;
 }
 
-.login-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  font-size: 0.56rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-soft);
-}
-
-.login-footer__links {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
 @media (min-width: 980px) {
   .login-bento {
     grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
@@ -532,8 +507,7 @@ async function handleSubmit() {
 }
 
 @media (max-width: 979px) {
-  .login-bar,
-  .login-footer {
+  .login-bar {
     flex-direction: column;
     align-items: flex-start;
   }

@@ -88,3 +88,34 @@ export interface Employee {
 export interface APIError {
   detail: string
 }
+
+export interface TapP40LeaderboardEntry {
+  rank: number
+  player_name: string
+  score: number
+  correct_taps: number
+  wrong_taps: number
+  duration_ms: number
+  created_at: string
+}
+
+export interface TapP40LeaderboardResponse {
+  period: 'all' | 'day'
+  limit: number
+  entries: TapP40LeaderboardEntry[]
+}
+
+export interface TapP40ScoreRequest {
+  player_name: string
+  score: number
+  correct_taps: number
+  wrong_taps: number
+  duration_ms: number
+  game_version?: string
+}
+
+export interface TapP40ScoreResponse {
+  rank: number
+  personal_best: boolean
+  saved_run: TapP40LeaderboardEntry
+}
