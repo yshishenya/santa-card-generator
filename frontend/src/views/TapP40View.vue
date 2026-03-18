@@ -348,7 +348,11 @@ watch(playerName, (value) => {
           </div>
         </div>
 
-        <div class="tap-board" :class="feedback ? `tap-board--${feedback}` : ''">
+        <div
+          class="tap-board"
+          :class="feedback ? `tap-board--${feedback}` : ''"
+          @contextmenu.prevent
+        >
           <button
             v-for="tile in board"
             :key="tile.id"
@@ -361,9 +365,10 @@ watch(playerName, (value) => {
             :disabled="phase !== 'playing' || tile.kind === 'empty'"
             :aria-label="tile.kind === 'target' ? 'Цель P4.0' : 'Ложная плитка'"
             @click="handleTilePress(tile)"
+            @contextmenu.prevent
           >
             <template v-if="tile.kind === 'target'">
-              <img src="/favicon.svg" alt="" class="tap-tile__target-mark">
+              <img src="/favicon.svg" alt="" class="tap-tile__target-mark" draggable="false">
               <span class="tap-tile__target-pulse"></span>
             </template>
 
@@ -585,6 +590,9 @@ watch(playerName, (value) => {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(185, 205, 255, 0.78));
   transition: transform 120ms ease, background 120ms ease;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .tap-board--good {
@@ -604,6 +612,10 @@ watch(playerName, (value) => {
   border-radius: 1.1rem;
   background: rgba(255, 255, 255, 0.82);
   transition: transform 100ms ease, background 100ms ease, box-shadow 100ms ease;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
 
 .tap-tile:disabled {
@@ -645,6 +657,10 @@ watch(playerName, (value) => {
   width: 64%;
   max-width: 3rem;
   aspect-ratio: 1;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 .tap-tile__target-pulse {
@@ -660,6 +676,9 @@ watch(playerName, (value) => {
 .tap-tile__flash {
   display: block;
   position: relative;
+  pointer-events: none;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 .tap-tile__spark {

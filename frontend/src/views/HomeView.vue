@@ -185,6 +185,24 @@ function cancelGameRevealPress(): void {
   clearGameRevealTimer()
 }
 
+function handleGameRevealKeydown(event: KeyboardEvent): void {
+  if (event.repeat) {
+    return
+  }
+
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    beginGameRevealPress()
+  }
+}
+
+function handleGameRevealKeyup(event: KeyboardEvent): void {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    cancelGameRevealPress()
+  }
+}
+
 function closeGameReveal(): void {
   isGameRevealOpen.value = false
   cancelGameRevealPress()
@@ -313,21 +331,24 @@ watch(fullName, (value) => {
     <header class="studio-header">
       <div class="studio-header__brand">
         <div class="studio-header__title-wrap">
-          <button
-            type="button"
-            class="studio-header__mark"
-            :class="{ 'studio-header__mark--armed': canRevealGame }"
+          <div class="studio-header__mark" :class="{ 'studio-header__mark--armed': canRevealGame }" aria-hidden="true">
+            <img src="/favicon.svg" alt="" class="studio-header__mark-image" draggable="false">
+          </div>
+
+          <div
+            class="studio-header__title-trigger"
+            :class="{ 'studio-header__title-trigger--armed': canRevealGame }"
+            role="button"
+            tabindex="0"
             aria-label="Дополнительный режим P4.0"
+            @keydown="handleGameRevealKeydown"
+            @keyup="handleGameRevealKeyup"
             @pointerdown="beginGameRevealPress"
             @pointerup="cancelGameRevealPress"
             @pointerleave="cancelGameRevealPress"
             @pointercancel="cancelGameRevealPress"
             @contextmenu.prevent
           >
-            <img src="/favicon.svg" alt="" class="studio-header__mark-image">
-          </button>
-
-          <div>
             <h1 class="studio-header__title">P4.0 Alter Ego</h1>
             <p class="studio-header__subtitle">Генератор мозаичных портретов</p>
           </div>
@@ -672,21 +693,44 @@ watch(fullName, (value) => {
   gap: 0.85rem;
 }
 
+.studio-header__title-trigger {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.1rem 0.2rem;
+  border-radius: 0.5rem;
+  transition: transform 120ms ease, color 120ms ease, background 120ms ease;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+.studio-header__title-trigger:active {
+  transform: scale(0.985);
+}
+
+.studio-header__title-trigger:focus-visible {
+  outline: 2px solid var(--digital-blue);
+  outline-offset: 3px;
+}
+
+.studio-header__title-trigger--armed {
+  background: rgba(175, 195, 255, 0.18);
+}
+
 .studio-header__mark {
   position: relative;
   display: grid;
   place-items: center;
   width: 3.25rem;
   height: 3.25rem;
-  padding: 0;
   border: 2px solid var(--black);
   border-radius: 1rem;
   background: var(--white);
   transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
-}
-
-.studio-header__mark:active {
-  transform: scale(0.97);
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .studio-header__mark--armed {
@@ -698,6 +742,9 @@ watch(fullName, (value) => {
 .studio-header__mark-image {
   width: 72%;
   aspect-ratio: 1;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
 }
 
 .studio-header__title,
