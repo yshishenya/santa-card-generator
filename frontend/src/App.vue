@@ -4,145 +4,145 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 
-const isLoginPage = computed(() => route.name === 'login')
+const centeredRoutes = new Set(['login', 'success'])
+
+const shellClass = computed(() => {
+  if (route.name === 'print-assets') {
+    return 'app-shell--archive'
+  }
+  if (route.name === 'success') {
+    return 'app-shell--success'
+  }
+  if (route.name === 'login') {
+    return 'app-shell--login'
+  }
+  return 'app-shell--studio'
+})
+
+const isCentered = computed(() => centeredRoutes.has(String(route.name ?? '')))
 </script>
 
 <template>
-  <div class="min-h-screen overflow-x-hidden bg-platform relative overflow-hidden">
-    <div class="ambient-orbs">
-      <div class="ambient-orb orb-bottom-left"></div>
-      <div class="ambient-orb orb-bottom-right"></div>
-      <div class="ambient-orb orb-mid-left"></div>
-      <div class="ambient-orb orb-top-right"></div>
-    </div>
+  <div class="app-shell" :class="shellClass">
+    <div class="app-shell__wash"></div>
+    <div class="app-shell__grid"></div>
+    <div class="app-shell__beam app-shell__beam--left"></div>
+    <div class="app-shell__beam app-shell__beam--right"></div>
+    <div class="app-shell__corner app-shell__corner--top"></div>
+    <div class="app-shell__corner app-shell__corner--bottom"></div>
 
-    <div
-      class="relative z-10"
-      :class="isLoginPage ? 'flex min-h-screen items-center justify-center px-4 py-6 sm:px-6' : 'container mx-auto px-3 py-4 sm:px-4 sm:py-8'"
-    >
-      <div :class="isLoginPage ? 'w-full max-w-md' : 'mx-auto w-full max-w-5xl'">
-        <RouterView v-if="isLoginPage" />
-
-        <div v-else class="main-card mb-4 p-4 sm:mb-8 sm:p-8">
-          <RouterView />
-        </div>
+    <main class="app-shell__viewport" :class="{ 'app-shell__viewport--centered': isCentered }">
+      <div class="app-shell__container">
+        <RouterView />
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
 <style scoped>
-.bg-platform {
-  background:
-    radial-gradient(ellipse at 50% 100%, rgba(30, 64, 175, 0.18) 0%, transparent 50%),
-    linear-gradient(180deg, #060c1a 0%, #0b1222 30%, #101a34 60%, #16213a 100%);
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
 }
 
-.ambient-orbs {
+.app-shell__viewport {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.app-shell__viewport--centered {
+  display: grid;
+  align-items: center;
+}
+
+.app-shell__container {
+  width: min(100%, 84rem);
+  margin: 0 auto;
+}
+
+.app-shell--login .app-shell__container,
+.app-shell--success .app-shell__container {
+  width: min(100%, 78rem);
+}
+
+.app-shell__wash,
+.app-shell__grid,
+.app-shell__beam,
+.app-shell__corner {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  overflow: hidden;
 }
 
-.ambient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  animation: ambientPulse 8s ease-in-out infinite;
+.app-shell__wash {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.98)),
+    #f8fbff;
 }
 
-.orb-bottom-left {
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.16) 0%, transparent 72%);
-  bottom: -120px;
-  left: -120px;
+.app-shell__grid {
+  background-image:
+    linear-gradient(rgba(185, 205, 255, 0.26) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(185, 205, 255, 0.26) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.22), transparent 94%);
 }
 
-.orb-bottom-right {
-  width: 360px;
-  height: 360px;
-  background: radial-gradient(circle, rgba(14, 165, 233, 0.14) 0%, transparent 70%);
-  right: -100px;
-  bottom: 14%;
-  animation-delay: -3s;
+.app-shell__beam {
+  filter: blur(88px);
+  opacity: 0.34;
 }
 
-.orb-mid-left {
-  width: 280px;
-  height: 280px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 72%);
-  left: 14%;
-  top: 32%;
-  animation-delay: -5s;
+.app-shell__beam--left {
+  background: radial-gradient(circle, rgba(175, 195, 255, 0.34) 0%, transparent 65%);
+  transform: translate(-38%, 2%);
 }
 
-.orb-top-right {
-  width: 260px;
-  height: 260px;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.14) 0%, transparent 70%);
-  top: 12%;
-  right: 20%;
-  animation-delay: -7s;
+.app-shell__beam--right {
+  background: radial-gradient(circle, rgba(130, 255, 240, 0.26) 0%, transparent 64%);
+  transform: translate(38%, -12%);
 }
 
-@keyframes ambientPulse {
-  0%, 100% {
-    opacity: 0.65;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
-}
-
-.main-card {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  border-radius: 28px;
-  background: linear-gradient(
-    135deg,
-    rgba(20, 32, 58, 0.95) 0%,
-    rgba(16, 26, 48, 0.9) 100%
-  );
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow:
-    0 4px 40px rgba(0, 0, 0, 0.4),
-    0 0 70px rgba(99, 102, 241, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.main-card::before {
+.app-shell__corner::before,
+.app-shell__corner::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: 28px;
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    rgba(56, 189, 248, 0.28) 0%,
-    rgba(99, 102, 241, 0.35) 50%,
-    rgba(56, 189, 248, 0.28) 100%
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1px solid rgba(0, 0, 0, 0.26);
+  background: #ffffff;
 }
 
-@media (max-width: 640px) {
-  .ambient-orb {
-    filter: blur(60px);
-  }
+.app-shell__corner--top::before {
+  top: 1.35rem;
+  left: 1.35rem;
+  background: #3382ff;
+}
 
-  .main-card,
-  .main-card::before {
-    border-radius: 24px;
+.app-shell__corner--top::after {
+  top: 1.35rem;
+  left: 2.25rem;
+  background: #afc3ff;
+}
+
+.app-shell__corner--bottom::before {
+  right: 1.35rem;
+  bottom: 1.35rem;
+  background: #82fff0;
+}
+
+.app-shell__corner--bottom::after {
+  right: 2.25rem;
+  bottom: 1.35rem;
+  background: #ffeb14;
+}
+
+@media (min-width: 768px) {
+  .app-shell__viewport {
+    padding: 1.5rem 1.75rem 2rem;
   }
 }
 </style>

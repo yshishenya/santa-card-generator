@@ -1,4 +1,7 @@
 export enum ImageStyle {
+  BENTO_GRID = 'bento_grid',
+  MINIMALIST_CORPORATE_LINE_ART = 'minimalist_corporate_line_art',
+  QUIRKY_HAND_DRAWN_FLAT = 'quirky_hand_drawn_flat',
   KNITTED = 'knitted',
   MAGIC_REALISM = 'magic_realism',
   PIXEL_ART = 'pixel_art',
@@ -17,6 +20,9 @@ export enum ImageStyle {
 }
 
 export const IMAGE_STYLE_LABELS: Record<ImageStyle, string> = {
+  [ImageStyle.BENTO_GRID]: 'Геометрический модульный минимализм',
+  [ImageStyle.MINIMALIST_CORPORATE_LINE_ART]: 'Деловой минималистичный line-art',
+  [ImageStyle.QUIRKY_HAND_DRAWN_FLAT]: 'Современный наивный минимализм',
   [ImageStyle.KNITTED]: 'Уютный трикотаж',
   [ImageStyle.MAGIC_REALISM]: 'Магический реализм',
   [ImageStyle.PIXEL_ART]: 'Пиксель-арт',

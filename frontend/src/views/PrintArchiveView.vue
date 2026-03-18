@@ -12,6 +12,12 @@ const showPassword = ref(false)
 const error = ref<string | null>(null)
 const assets = ref<PrintArchiveAsset[]>([])
 
+const archiveFacts = [
+  'Исходные PNG для печати',
+  'Скачивание по одному и ZIP целиком',
+  'Отдельный пароль от основного входа',
+] as const
+
 const downloadAllUrl = computed(() => apiClient.getPrintArchiveDownloadAllUrl())
 const assetCountLabel = computed(() => {
   const count = assets.value.length
@@ -112,135 +118,174 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="print-archive">
-    <section class="archive-hero">
-      <div class="space-y-3">
-        <p class="section-kicker">
-          Print Archive
-        </p>
-        <h1 class="text-3xl font-bold leading-tight text-platform-light sm:text-[2.35rem]">
-          Архив оригиналов для печати
-        </h1>
-        <p class="max-w-3xl text-sm leading-6 text-platform-text-secondary sm:text-[15px]">
-          Здесь сохраняются исходные PNG-файлы финально подтвержденных карточек. Можно скачать каждый отдельно или забрать весь архив одним ZIP.
+  <section class="archive-page">
+    <header class="archive-headline">
+      <div class="archive-headline__route">
+        <span>Архив для печати</span>
+        <span>/</span>
+        <span>Local Cache</span>
+      </div>
+
+      <div class="archive-headline__facts">
+        <span
+          v-for="fact in archiveFacts"
+          :key="fact"
+          class="app-chip"
+        >
+          {{ fact }}
+        </span>
+      </div>
+    </header>
+
+    <section class="app-panel app-panel--strong archive-hero">
+      <div class="archive-hero__copy">
+        <p class="app-kicker">P4.0 Alter Ego Production Assets</p>
+        <h1 class="app-display archive-hero__title">Архив оригиналов</h1>
+        <p class="app-subtle">
+          Отдельный защищённый раздел для исходных PNG после подтверждённой отправки в Telegram.
+          Каждый ассет можно скачать отдельно или забрать весь пакет одним ZIP вместе с `manifest.csv`.
         </p>
       </div>
 
-      <div v-if="isAuthenticated" class="archive-hero__actions">
-        <a
-          :href="downloadAllUrl"
-          class="btn-magic rounded-xl px-5 py-3 font-semibold"
-        >
-          Скачать всё ZIP
-        </a>
-        <button
-          type="button"
-          class="archive-logout rounded-xl border border-platform-line/30 bg-platform-bg-secondary/85 px-5 py-3 font-semibold text-platform-text-primary transition hover:border-platform-accent/30 hover:bg-platform-line/20"
-          @click="handleLogout"
-        >
-          Выйти
-        </button>
-      </div>
-    </section>
-
-    <section v-if="isLoading && !authChecked" class="archive-state">
-      <div class="archive-state__icon" aria-hidden="true">⏳</div>
-      <p class="text-platform-text-secondary">
-        Проверяем доступ к архиву...
-      </p>
-    </section>
-
-    <section v-else-if="!isAuthenticated" class="archive-login">
-      <div class="archive-login__card">
-        <div class="space-y-3 text-center">
-          <div class="archive-login__icon" aria-hidden="true">🗂️</div>
-          <div class="space-y-2">
-            <p class="section-kicker">
-              Separate Access
-            </p>
-            <h2 class="text-2xl font-semibold text-platform-light">
-              Доступ к архиву печати
-            </h2>
-            <p class="text-sm leading-6 text-platform-text-secondary">
-              Этот раздел защищён отдельным паролем и не зависит от основного входа в генератор.
-            </p>
+      <div class="archive-hero__aside">
+        <div class="archive-hero__status">
+          <span class="archive-hero__status-dot" :class="{ 'archive-hero__status-dot--active': isAuthenticated }"></span>
+          <div>
+            <p>Состояние</p>
+            <strong>{{ isAuthenticated ? assetCountLabel : 'Нужен вход' }}</strong>
           </div>
         </div>
 
-        <form class="mt-8 space-y-5" @submit.prevent="handleLogin">
-          <label class="block space-y-2">
-            <span class="text-sm font-semibold text-platform-text-secondary">Пароль</span>
+        <div class="archive-hero__actions">
+          <a
+            v-if="isAuthenticated"
+            :href="downloadAllUrl"
+            class="app-button"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">download</span>
+            Скачать всё ZIP
+          </a>
 
-            <div class="relative">
+          <button
+            v-if="isAuthenticated"
+            type="button"
+            class="app-button-secondary"
+            @click="handleLogout"
+          >
+            Выйти
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="isLoading && !authChecked" class="app-panel archive-state">
+      <div class="archive-state__spinner app-spinner" aria-hidden="true"></div>
+      <p>Проверяем доступ к архиву...</p>
+    </section>
+
+    <section v-else-if="!isAuthenticated" class="archive-login-layout">
+      <article class="app-panel archive-explainer">
+        <p class="app-kicker">Separate Access</p>
+        <h2 class="app-heading">Организаторский режим</h2>
+        <p class="app-subtle">
+          Этот пароль открывает только print archive и не связан с основным входом в генератор.
+        </p>
+
+        <div class="archive-explainer__items">
+          <article class="archive-explainer__item">
+            <span>01</span>
+            <p>Открывает список исходных PNG, сохранённых после подтверждённой отправки в Telegram.</p>
+          </article>
+          <article class="archive-explainer__item">
+            <span>02</span>
+            <p>Позволяет скачать любой оригинал отдельно или весь архив одним ZIP.</p>
+          </article>
+          <article class="archive-explainer__item">
+            <span>03</span>
+            <p>Хранит имя, alter ego, дату сохранения и `telegram_message_id` для каждой карточки.</p>
+          </article>
+        </div>
+      </article>
+
+      <article class="app-panel app-panel--strong archive-login">
+        <p class="app-kicker">Archive Access</p>
+        <h2 class="app-heading">Введите пароль архива</h2>
+        <p class="app-subtle">
+          После входа можно просматривать ассеты и скачивать production-ready PNG для печати.
+        </p>
+
+        <form class="archive-login__form" @submit.prevent="handleLogin">
+          <label class="app-field">
+            <span class="app-label">Пароль</span>
+
+            <div class="archive-login__password-wrap">
               <input
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
                 placeholder="Введите пароль для архива"
-                class="archive-input"
+                class="app-input"
                 :disabled="isSubmitting"
                 autofocus
                 @input="error = null"
-              />
+              >
 
               <button
                 type="button"
-                class="archive-toggle"
+                class="archive-login__toggle"
                 :aria-label="showPassword ? 'Скрыть пароль' : 'Показать пароль'"
                 @click="showPassword = !showPassword"
               >
-                <span v-if="showPassword">🙈</span>
-                <span v-else>👁️</span>
+                <span class="material-symbols-outlined" aria-hidden="true">
+                  {{ showPassword ? 'visibility' : 'visibility_off' }}
+                </span>
               </button>
             </div>
           </label>
 
-          <div v-if="error" class="archive-error">
+          <div v-if="error" class="app-error">
             {{ error }}
           </div>
 
           <button
             type="submit"
-            class="btn-magic w-full rounded-xl px-6 py-4 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+            class="app-button archive-login__submit"
             :disabled="isSubmitting || !password.trim()"
           >
-            <span class="flex items-center justify-center gap-2">
-              <span v-if="isSubmitting" class="loading loading-spinner loading-sm"></span>
-              <span>{{ isSubmitting ? 'Проверяем пароль...' : 'Открыть архив' }}</span>
-            </span>
+            <span v-if="isSubmitting" class="app-spinner" aria-hidden="true"></span>
+            <span>{{ isSubmitting ? 'Проверяем пароль...' : 'Открыть архив' }}</span>
           </button>
         </form>
-      </div>
+      </article>
     </section>
 
     <template v-else>
-      <div class="archive-summary">
-        <div>
-          <p class="text-xs uppercase tracking-[0.18em] text-platform-text-muted">
-            Сохранено
-          </p>
-          <p class="mt-2 text-2xl font-semibold text-platform-light">
-            {{ assetCountLabel }}
-          </p>
+      <section class="archive-toolbar">
+        <div class="archive-toolbar__left">
+          <span class="app-chip app-chip--blue">{{ assetCountLabel }}</span>
+          <span class="app-chip app-chip--accent">manifest.csv внутри ZIP</span>
         </div>
 
-        <div class="archive-summary__note">
-          В ZIP архив дополнительно вкладывается `manifest.csv` с подписями.
+        <div class="archive-toolbar__right">
+          <span class="app-chip app-chip--mint">Original PNG</span>
         </div>
-      </div>
+      </section>
 
-      <section v-if="error" class="archive-error archive-error--full">
+      <section v-if="error" class="app-error">
         {{ error }}
       </section>
 
-      <section v-if="assets.length === 0" class="archive-state">
-        <div class="archive-state__icon" aria-hidden="true">🖨️</div>
-        <div class="space-y-2 text-center">
-          <p class="text-lg font-semibold text-platform-text-primary">
-            Архив пока пуст
-          </p>
-          <p class="max-w-md text-sm leading-6 text-platform-text-secondary">
-            Здесь появятся исходные PNG после того, как карточка будет финально подтверждена и отправлена в Telegram.
-          </p>
+      <section v-if="assets.length === 0" class="app-panel archive-state">
+        <div class="archive-empty">
+          <div class="archive-empty__grid">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div>
+            <h2>Архив пока пуст</h2>
+            <p>После отправки подтверждённых карточек сюда начнут складываться исходные PNG.</p>
+          </div>
         </div>
       </section>
 
@@ -248,91 +293,168 @@ onMounted(() => {
         <article
           v-for="asset in assets"
           :key="asset.asset_id"
-          class="archive-card"
+          class="app-panel archive-card"
         >
-          <div class="archive-card__media">
+          <div class="archive-card__preview">
+            <span class="archive-card__tag">Asset PNG</span>
             <img
               :src="apiClient.getPrintArchiveAssetImageUrl(asset.asset_id)"
               :alt="`Оригинал ${asset.full_name}`"
-              class="h-full w-full object-cover"
-            />
+            >
           </div>
 
           <div class="archive-card__body">
-            <div class="space-y-2">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="text-xs uppercase tracking-[0.18em] text-platform-text-muted">
-                    Имя
-                  </p>
-                  <h2 class="mt-1 text-xl font-semibold text-platform-light">
-                    {{ asset.full_name }}
-                  </h2>
-                </div>
-
-                <span class="archive-badge">
-                  {{ asset.delivery_env ?? 'pending' }}
-                </span>
+            <div class="archive-card__header">
+              <div>
+                <p class="app-kicker">Saved Asset</p>
+                <h2>{{ asset.full_name }}</h2>
               </div>
 
-              <div>
-                <p class="text-xs uppercase tracking-[0.18em] text-platform-text-muted">
-                  Альтер-эго
-                </p>
-                <p class="mt-1 whitespace-pre-wrap text-platform-text-secondary">
-                  {{ asset.alter_ego }}
-                </p>
-              </div>
-            </div>
-
-            <dl class="archive-meta">
-              <div>
-                <dt>Сохранено</dt>
-                <dd>{{ formatDate(asset.created_at) }}</dd>
-              </div>
-              <div>
-                <dt>Файл</dt>
-                <dd>{{ asset.filename }}</dd>
-              </div>
-              <div>
-                <dt>Telegram</dt>
-                <dd>{{ asset.telegram_message_id ? `message_id ${asset.telegram_message_id}` : 'ещё не отправлено' }}</dd>
-              </div>
-            </dl>
-
-            <div class="archive-card__actions">
-              <a
-                :href="apiClient.getPrintArchiveAssetDownloadUrl(asset.asset_id)"
-                class="btn-magic rounded-xl px-5 py-3 text-center font-semibold"
+              <span
+                class="app-chip"
+                :class="asset.delivery_env === 'prod' ? 'app-chip--blue' : 'app-chip--accent'"
               >
-                Скачать PNG
-              </a>
+                {{ asset.delivery_env ?? 'pending' }}
+              </span>
             </div>
+
+            <div class="app-note archive-card__alter-ego">
+              {{ asset.alter_ego }}
+            </div>
+
+            <div class="app-meta-grid">
+              <div class="app-meta-item">
+                <p class="app-meta-term">Файл</p>
+                <p class="app-meta-value">{{ asset.filename }}</p>
+              </div>
+              <div class="app-meta-item">
+                <p class="app-meta-term">Сохранено</p>
+                <p class="app-meta-value">{{ formatDate(asset.created_at) }}</p>
+              </div>
+              <div class="app-meta-item">
+                <p class="app-meta-term">Telegram</p>
+                <p class="app-meta-value">
+                  {{ asset.telegram_message_id ? `message_id ${asset.telegram_message_id}` : 'ещё не отправлено' }}
+                </p>
+              </div>
+            </div>
+
+            <a
+              :href="apiClient.getPrintArchiveAssetDownloadUrl(asset.asset_id)"
+              class="app-button-secondary archive-card__download"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">download</span>
+              Скачать PNG
+            </a>
           </div>
         </article>
       </section>
     </template>
-  </div>
+  </section>
 </template>
 
 <style scoped>
-.print-archive {
+.archive-page {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.25rem;
+}
+
+.archive-headline,
+.archive-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.archive-headline__route {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.archive-headline__facts,
+.archive-toolbar__left,
+.archive-toolbar__right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.archive-hero,
+.archive-explainer,
+.archive-login,
+.archive-state,
+.archive-card {
+  padding: 1.25rem;
 }
 
 .archive-hero {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
+  display: grid;
   gap: 1rem;
-  padding: 1.5rem;
-  border: 1px solid rgba(77, 154, 255, 0.18);
-  border-radius: 1.75rem;
-  background:
-    radial-gradient(circle at top right, rgba(77, 154, 255, 0.16), transparent 34%),
-    linear-gradient(135deg, rgba(19, 35, 61, 0.95) 0%, rgba(12, 25, 46, 0.92) 100%);
+}
+
+.archive-hero__copy {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.archive-hero__title {
+  max-width: 9ch;
+}
+
+.archive-hero__aside {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.archive-hero__status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1.5px solid var(--black);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.archive-hero__status p,
+.archive-hero__status strong {
+  margin: 0;
+}
+
+.archive-hero__status p {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.archive-hero__status strong {
+  margin-top: 0.2rem;
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.archive-hero__status-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.archive-hero__status-dot--active {
+  background: var(--digital-mint);
 }
 
 .archive-hero__actions {
@@ -341,203 +463,231 @@ onMounted(() => {
   gap: 0.75rem;
 }
 
-.archive-logout {
-  min-width: 9rem;
+.archive-state {
+  display: grid;
+  place-items: center;
+  min-height: 18rem;
+  text-align: center;
 }
 
+.archive-state p {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.archive-state__spinner {
+  color: var(--digital-blue);
+}
+
+.archive-login-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.archive-explainer,
 .archive-login {
   display: grid;
-  place-items: center;
+  gap: 1rem;
 }
 
-.archive-login__card {
-  width: min(100%, 32rem);
-  padding: clamp(1.5rem, 4vw, 2.5rem);
-  border: 1px solid rgba(77, 154, 255, 0.2);
-  border-radius: 1.75rem;
-  background:
-    radial-gradient(circle at top center, rgba(77, 154, 255, 0.16), transparent 32%),
-    linear-gradient(135deg, rgba(17, 31, 56, 0.96) 0%, rgba(10, 22, 40, 0.94) 100%);
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-.archive-login__icon,
-.archive-state__icon {
+.archive-explainer__items {
   display: grid;
-  place-items: center;
-  width: 4rem;
-  height: 4rem;
-  margin: 0 auto;
-  border-radius: 999px;
-  background: rgba(77, 154, 255, 0.16);
-  font-size: 1.8rem;
+  gap: 0.85rem;
 }
 
-.archive-input {
-  width: 100%;
-  min-height: 3.5rem;
-  padding: 0 3.5rem 0 1rem;
-  border: 1px solid rgba(77, 154, 255, 0.24);
-  border-radius: 1rem;
-  background: rgba(15, 31, 56, 0.88);
-  color: #f0f8ff;
+.archive-explainer__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.8rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
 }
 
-.archive-input:focus {
-  outline: none;
-  border-color: rgba(77, 154, 255, 0.5);
-  box-shadow: 0 0 0 4px rgba(77, 154, 255, 0.08);
+.archive-explainer__item:first-child {
+  padding-top: 0;
+  border-top: 0;
 }
 
-.archive-toggle {
+.archive-explainer__item span {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--digital-blue);
+}
+
+.archive-explainer__item p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.65;
+  color: var(--text-soft);
+}
+
+.archive-login__form {
+  display: grid;
+  gap: 1rem;
+}
+
+.archive-login__password-wrap {
+  position: relative;
+}
+
+.archive-login__password-wrap .app-input {
+  padding-right: 3.6rem;
+}
+
+.archive-login__toggle {
   position: absolute;
   top: 50%;
-  right: 0.875rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
+  right: 0.65rem;
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
   border: 0;
-  border-radius: 999px;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--text-soft);
   transform: translateY(-50%);
 }
 
-.archive-error {
-  padding: 0.875rem 1rem;
-  border: 1px solid rgba(241, 90, 90, 0.28);
-  border-radius: 1rem;
-  background: rgba(241, 90, 90, 0.1);
-  color: #ffd1d1;
+.archive-login__submit {
+  width: 100%;
 }
 
-.archive-error--full {
-  margin-top: -0.5rem;
-}
-
-.archive-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 1.5rem;
-  background: rgba(15, 24, 42, 0.72);
-}
-
-.archive-summary__note {
-  max-width: 28rem;
-  color: var(--color-text-secondary);
-  font-size: 0.95rem;
-  line-height: 1.55;
-}
-
-.archive-state {
+.archive-empty {
   display: grid;
   gap: 1rem;
-  place-items: center;
-  min-height: 18rem;
-  padding: 1.5rem;
-  border: 1px dashed rgba(255, 255, 255, 0.14);
-  border-radius: 1.5rem;
-  background: rgba(13, 23, 42, 0.5);
+  justify-items: center;
+}
+
+.archive-empty h2,
+.archive-empty p {
+  margin: 0;
+}
+
+.archive-empty h2 {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+}
+
+.archive-empty p {
+  max-width: 28rem;
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--text-soft);
+}
+
+.archive-empty__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 3.2rem);
+  gap: 0.35rem;
+}
+
+.archive-empty__grid span {
+  width: 3.2rem;
+  height: 3.2rem;
+  border: 1.5px solid var(--black);
+  background: rgba(185, 205, 255, 0.16);
+}
+
+.archive-empty__grid span:nth-child(2) {
+  background: rgba(130, 255, 240, 0.2);
+}
+
+.archive-empty__grid span:nth-child(3) {
+  background: rgba(255, 235, 20, 0.2);
+}
+
+.archive-empty__grid span:nth-child(4) {
+  background: rgba(255, 137, 49, 0.16);
 }
 
 .archive-grid {
   display: grid;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .archive-card {
   display: grid;
   gap: 1rem;
-  padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1.5rem;
-  background:
-    linear-gradient(135deg, rgba(20, 33, 58, 0.94) 0%, rgba(12, 22, 40, 0.9) 100%);
 }
 
-.archive-card__media {
+.archive-card__preview {
+  position: relative;
+  border: 1.5px solid var(--black);
+  background: var(--surface-subtle);
   overflow: hidden;
-  border-radius: 1.2rem;
-  aspect-ratio: 1 / 1;
-  background: rgba(255, 255, 255, 0.04);
+}
+
+.archive-card__preview img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.archive-card__tag {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 1;
+  padding: 0.18rem 0.45rem;
+  background: var(--accent-yellow);
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .archive-card__body {
   display: grid;
-  gap: 1rem;
+  gap: 0.9rem;
 }
 
-.archive-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 5.5rem;
-  padding: 0.35rem 0.7rem;
-  border: 1px solid rgba(77, 154, 255, 0.22);
-  border-radius: 999px;
-  color: #c7ddff;
-  background: rgba(77, 154, 255, 0.12);
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.archive-meta {
-  display: grid;
-  gap: 0.75rem;
-  padding: 1rem;
-  border-radius: 1rem;
-  background: rgba(9, 17, 31, 0.5);
-}
-
-.archive-meta div {
-  display: grid;
-  gap: 0.2rem;
-}
-
-.archive-meta dt {
-  color: var(--color-text-muted);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-}
-
-.archive-meta dd {
-  margin: 0;
-  color: var(--color-text-secondary);
-  word-break: break-word;
-}
-
-.archive-card__actions {
+.archive-card__header {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
-.archive-card__actions > a {
-  width: 100%;
+.archive-card__header h2 {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
 }
 
-@media (min-width: 900px) {
+.archive-card__alter-ego {
+  min-height: 4.25rem;
+}
+
+.archive-card__download {
+  justify-content: center;
+}
+
+@media (min-width: 980px) {
+  .archive-hero {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+  }
+
+  .archive-login-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+  }
+
   .archive-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
 
+@media (max-width: 767px) {
+  .archive-hero,
+  .archive-explainer,
+  .archive-login,
+  .archive-state,
   .archive-card {
-    grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
-    align-items: start;
-  }
-
-  .archive-card__media {
-    aspect-ratio: 4 / 5;
+    padding: 1rem;
   }
 }
 </style>

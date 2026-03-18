@@ -9,13 +9,33 @@ const authStore = useAuthStore()
 const password = ref('')
 const showPassword = ref(false)
 
+const processSteps = [
+  {
+    index: '1',
+    accentClass: 'login-guide__step-index--lavender',
+    title: 'Генерируйте 3 варианта',
+    body: 'Нейросеть создаст три иллюстративных направления в общем графическом ключе P4.0.',
+  },
+  {
+    index: '2',
+    accentClass: 'login-guide__step-index--mint',
+    title: 'Выберите изображение',
+    body: 'Сравните стили, откройте крупный просмотр и утвердите один финальный квадратный кадр.',
+  },
+  {
+    index: '3',
+    accentClass: 'login-guide__step-index--yellow',
+    title: 'Telegram + сохранение',
+    body: 'В тему улетает картинка + имя, а original PNG отдельно уходит в print archive.',
+  },
+] as const
+
 async function handleSubmit() {
   if (!password.value.trim()) {
     return
   }
 
   const success = await authStore.login(password.value)
-
   if (success) {
     router.push('/')
   }
@@ -23,274 +43,511 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <article class="login-card">
-    <header class="space-y-6 text-center">
-      <div class="login-icon" aria-hidden="true">🔐</div>
+  <section class="login-page">
+    <header class="login-bar">
+      <div class="login-bar__brand">
+        <span class="login-bar__title">P4.0 Alter Ego</span>
+        <div class="login-bar__divider"></div>
+        <span class="login-bar__subtitle">Генератор мозаичных портретов</span>
+      </div>
 
-      <div class="space-y-3">
-        <p class="login-eyebrow">Protected access</p>
-        <h1 class="login-title text-gradient">
-          Платформа фотокарточек Pro 4.0
-        </h1>
-        <p class="login-subtitle">
-          Введите пароль для доступа к генерации и отправке фотокарточек.
-        </p>
+      <div class="login-bar__colors" aria-hidden="true">
+        <span class="login-bar__swatch login-bar__swatch--blue"></span>
+        <span class="login-bar__swatch login-bar__swatch--lavender"></span>
+        <span class="login-bar__swatch login-bar__swatch--mint"></span>
+        <span class="login-bar__swatch login-bar__swatch--yellow"></span>
       </div>
     </header>
 
-    <form class="mt-8 space-y-5" @submit.prevent="handleSubmit">
-      <label class="block space-y-2">
-        <span class="text-sm font-semibold text-platform-text-secondary">Пароль</span>
+    <article class="app-panel app-panel--strong login-bento">
+      <section class="login-bento__auth">
+        <div class="login-bento__badge">Доступ ограничен</div>
 
-        <div class="relative">
-          <input
-            v-model="password"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="Введите пароль"
-            class="input-field"
-            :disabled="authStore.isLoading"
-            autofocus
-            @input="authStore.clearError()"
-          />
+        <div class="login-bento__heading">
+          <h1 class="login-bento__title">Вход в систему</h1>
+          <p class="app-subtle">
+            Защищённый доступ в студию alter ego для команды и приглашённых гостей.
+          </p>
+        </div>
+
+        <form class="login-bento__form" @submit.prevent="handleSubmit">
+          <label class="app-field">
+            <span class="app-label">Пароль</span>
+
+            <div class="login-bento__password-wrap">
+              <input
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="••••••••"
+                class="app-input"
+                :disabled="authStore.isLoading"
+                autofocus
+                @input="authStore.clearError()"
+              >
+
+              <button
+                type="button"
+                class="login-bento__toggle"
+                :aria-label="showPassword ? 'Скрыть пароль' : 'Показать пароль'"
+                @click="showPassword = !showPassword"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">
+                  {{ showPassword ? 'visibility' : 'visibility_off' }}
+                </span>
+              </button>
+            </div>
+          </label>
+
+          <div v-if="authStore.error" class="app-error">
+            {{ authStore.error }}
+          </div>
 
           <button
-            type="button"
-            class="toggle-btn"
-            :aria-label="showPassword ? 'Скрыть пароль' : 'Показать пароль'"
-            @click="showPassword = !showPassword"
+            type="submit"
+            class="app-button login-bento__submit"
+            :disabled="authStore.isLoading || !password.trim()"
           >
-            <span v-if="showPassword">🙈</span>
-            <span v-else>👁️</span>
+            <span v-if="authStore.isLoading" class="app-spinner" aria-hidden="true"></span>
+            <span v-else class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+            <span>{{ authStore.isLoading ? 'Проверяем пароль...' : 'Войти' }}</span>
           </button>
+        </form>
+
+        <div class="login-bento__micro">
+          <span class="login-bento__micro-box"></span>
+          <span class="login-bento__micro-box login-bento__micro-box--muted"></span>
         </div>
-      </label>
+      </section>
 
-      <div v-if="authStore.error" class="error-message">
-        <span aria-hidden="true">⚠️</span>
-        <span>{{ authStore.error }}</span>
+      <section class="login-guide">
+        <div class="login-guide__top">
+          <h2 class="app-heading">Как это работает</h2>
+
+          <div class="login-guide__steps">
+            <article
+              v-for="step in processSteps"
+              :key="step.title"
+              class="login-guide__step"
+            >
+              <div class="login-guide__step-index" :class="step.accentClass">
+                {{ step.index }}
+              </div>
+              <h3>{{ step.title }}</h3>
+              <p>{{ step.body }}</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="login-guide__bottom">
+          <div class="login-guide__mosaic">
+            <div class="login-guide__mosaic-grid">
+              <span></span>
+              <span class="login-guide__mosaic-grid-cell--blue"></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span class="login-guide__mosaic-grid-cell--lavender"></span>
+              <span></span>
+              <span class="login-guide__mosaic-grid-cell--mint"></span>
+              <span></span>
+              <span></span>
+              <span class="login-guide__mosaic-grid-cell--yellow"></span>
+              <span></span>
+              <span class="login-guide__mosaic-grid-cell--black"></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+
+          <div class="login-guide__status">
+            <div>
+              <p>SYSTEM_STATUS: ACTIVE</p>
+              <p>CORE_LOAD: 12%</p>
+              <p>GEN_READY: TRUE</p>
+            </div>
+
+            <strong>4.0</strong>
+          </div>
+        </div>
+      </section>
+    </article>
+
+    <footer class="login-footer">
+      <span>© 2026 Alter Ego Mosaic Project. All rights reserved.</span>
+      <div class="login-footer__links">
+        <span>Политика конфиденциальности</span>
+        <span>Техподдержка</span>
       </div>
-
-      <button
-        type="submit"
-        class="submit-btn"
-        :disabled="authStore.isLoading || !password.trim()"
-      >
-        <span v-if="!authStore.isLoading" class="btn-content">
-          <span>Войти</span>
-          <span class="btn-icon" aria-hidden="true">→</span>
-        </span>
-
-        <span v-else class="btn-content">
-          <span class="loading-spinner" aria-hidden="true"></span>
-          <span>Проверяем пароль...</span>
-        </span>
-      </button>
-    </form>
-  </article>
+    </footer>
+  </section>
 </template>
 
 <style scoped>
-.login-card {
-  position: relative;
-  width: 100%;
-  padding: clamp(1.5rem, 5vw, 3rem);
-  border: 1px solid rgba(51, 130, 254, 0.22);
-  border-radius: 28px;
-  background: linear-gradient(
-    135deg,
-    rgba(26, 51, 85, 0.92) 0%,
-    rgba(18, 38, 64, 0.88) 100%
-  );
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.45),
-    0 0 80px rgba(51, 130, 254, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.login-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 28px;
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    rgba(77, 154, 255, 0.3) 0%,
-    rgba(51, 130, 254, 0.4) 50%,
-    rgba(77, 154, 255, 0.3) 100%
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-.login-icon {
+.login-page {
   display: grid;
-  place-items: center;
-  width: 4.5rem;
-  height: 4.5rem;
-  margin: 0 auto;
-  border-radius: 999px;
-  background: linear-gradient(135deg, rgba(77, 154, 255, 0.2), rgba(99, 102, 241, 0.3));
-  box-shadow: 0 12px 30px rgba(51, 130, 254, 0.18);
-  font-size: 2rem;
+  gap: 1.5rem;
 }
 
-.login-eyebrow {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.24em;
+.login-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1.5px solid var(--black);
+}
+
+.login-bar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.login-bar__title,
+.login-bar__subtitle {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
 }
 
-.login-title {
+.login-bar__divider {
+  width: 1px;
+  height: 1rem;
+  background: var(--black);
+}
+
+.login-bar__subtitle {
+  color: var(--text-soft);
+}
+
+.login-bar__colors {
+  display: inline-flex;
+  gap: 0.28rem;
+}
+
+.login-bar__swatch {
+  width: 0.48rem;
+  height: 0.48rem;
+}
+
+.login-bar__swatch--blue {
+  background: var(--digital-blue);
+}
+
+.login-bar__swatch--lavender {
+  background: var(--soft-lavender);
+}
+
+.login-bar__swatch--mint {
+  background: var(--digital-mint);
+}
+
+.login-bar__swatch--yellow {
+  background: var(--accent-yellow);
+}
+
+.login-bento {
+  display: grid;
+  background: var(--white);
+}
+
+.login-bento__auth,
+.login-guide__top,
+.login-guide__bottom {
+  padding: 1.5rem;
+}
+
+.login-bento__auth {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.login-bento__badge {
+  display: inline-flex;
+  justify-self: start;
+  padding: 0.25rem 0.45rem;
+  background: var(--accent-yellow);
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.login-bento__heading {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.login-bento__title {
   margin: 0;
-  font-size: clamp(2rem, 7vw, 3rem);
-  line-height: 1.05;
-  text-wrap: balance;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+  text-transform: uppercase;
 }
 
-.login-subtitle {
-  margin: 0 auto;
-  max-width: 26rem;
-  font-size: clamp(1rem, 3.5vw, 1.125rem);
-  line-height: 1.55;
-  color: var(--color-text-secondary);
+.login-bento__form {
+  display: grid;
+  gap: 1rem;
 }
 
-.input-field {
-  width: 100%;
-  min-height: 3.5rem;
-  padding: 0 3.5rem 0 1rem;
-  border: 1px solid rgba(51, 130, 254, 0.24);
-  border-radius: 16px;
-  background: rgba(26, 51, 85, 0.8);
-  color: #f0f8ff;
-  font-size: 1rem;
-  transition: all 0.3s ease;
+.login-bento__password-wrap {
+  position: relative;
 }
 
-.input-field:focus {
-  border-color: rgba(51, 130, 254, 0.5);
-  outline: none;
-  background: rgba(30, 58, 95, 0.9);
-  box-shadow: 0 0 20px rgba(51, 130, 254, 0.2);
+.login-bento__password-wrap .app-input {
+  padding-right: 3.6rem;
 }
 
-.input-field::placeholder {
-  color: #94a3b8;
-}
-
-.input-field:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.toggle-btn {
+.login-bento__toggle {
   position: absolute;
   top: 50%;
-  right: 0.875rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  right: 0.65rem;
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  transform: translateY(-50%);
+}
+
+.login-bento__submit {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.login-bento__micro {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: auto;
+  opacity: 0.45;
+}
+
+.login-bento__micro-box {
+  width: 0.9rem;
+  height: 0.9rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.login-bento__micro-box--muted {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.login-guide {
+  display: grid;
+  border-top: 1.5px solid var(--black);
+}
+
+.login-guide__top {
+  display: grid;
+  gap: 1rem;
+}
+
+.login-guide__steps {
+  display: grid;
+  gap: 1rem;
+}
+
+.login-guide__step {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.login-guide__step-index {
+  display: grid;
+  place-items: center;
   width: 2rem;
   height: 2rem;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-text-muted);
-  transform: translateY(-50%);
-  cursor: pointer;
-  transition: color 0.2s ease, background-color 0.2s ease;
+  border: 1.5px solid var(--black);
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
-.toggle-btn:hover {
-  color: var(--color-platform-light);
-  background: rgba(148, 163, 184, 0.12);
+.login-guide__step-index--lavender {
+  background: var(--soft-lavender);
 }
 
-.error-message {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid rgba(226, 85, 85, 0.3);
-  border-radius: 14px;
-  background: rgba(226, 85, 85, 0.15);
-  color: #ff9999;
-  font-size: 0.95rem;
+.login-guide__step-index--mint {
+  background: var(--digital-mint);
 }
 
-.submit-btn {
+.login-guide__step-index--yellow {
+  background: var(--accent-yellow);
+}
+
+.login-guide__step h3,
+.login-guide__step p {
+  margin: 0;
+}
+
+.login-guide__step h3 {
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-guide__step p {
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+
+.login-guide__bottom {
+  display: grid;
+  gap: 0;
+  border-top: 1.5px solid var(--black);
+}
+
+.login-guide__mosaic {
   position: relative;
-  width: 100%;
-  min-height: 3.5rem;
-  border: 0;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #4d9aff 0%, #3382fe 100%);
-  color: #ffffff;
-  font-size: 1rem;
+  display: grid;
+  place-items: center;
+  min-height: 15rem;
+  border-bottom: 1.5px solid var(--black);
+  background:
+    radial-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    var(--surface-page);
+  background-size: 1rem 1rem;
+}
+
+.login-guide__mosaic::before {
+  content: '';
+  position: absolute;
+  inset: 1rem;
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+}
+
+.login-guide__mosaic-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 2.35rem);
+  gap: 0.3rem;
+}
+
+.login-guide__mosaic-grid span {
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.login-guide__mosaic-grid-cell--blue {
+  background: var(--digital-blue);
+}
+
+.login-guide__mosaic-grid-cell--lavender {
+  background: var(--soft-lavender);
+}
+
+.login-guide__mosaic-grid-cell--mint {
+  background: var(--digital-mint);
+}
+
+.login-guide__mosaic-grid-cell--yellow {
+  background: var(--accent-yellow);
+}
+
+.login-guide__mosaic-grid-cell--black {
+  background: var(--black);
+}
+
+.login-guide__status {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--black);
+  color: var(--white);
+}
+
+.login-guide__status p,
+.login-guide__status strong {
+  margin: 0;
+}
+
+.login-guide__status p {
+  font-size: 0.56rem;
   font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.64);
 }
 
-.submit-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow:
-    0 15px 40px rgba(51, 130, 254, 0.35),
-    0 0 20px rgba(51, 130, 254, 0.25);
+.login-guide__status strong {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -0.08em;
 }
 
-.submit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-content {
+.login-footer {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
 }
 
-.btn-icon {
-  transition: transform 0.3s ease;
+.login-footer__links {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.submit-btn:hover:not(:disabled) .btn-icon {
-  transform: translateX(4px);
-}
+@media (min-width: 980px) {
+  .login-bento {
+    grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+  }
 
-.loading-spinner {
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid rgba(11, 25, 41, 0.3);
-  border-top-color: #0b1929;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
+  .login-bento__auth {
+    border-right: 1.5px solid var(--black);
+  }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+  .login-guide__steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .login-guide__bottom {
+    grid-template-columns: minmax(0, 1fr) 13rem;
+  }
+
+  .login-guide__mosaic {
+    border-right: 1.5px solid var(--black);
+    border-bottom: 0;
   }
 }
 
-@media (max-width: 640px) {
-  .login-card,
-  .login-card::before {
-    border-radius: 24px;
+@media (max-width: 979px) {
+  .login-bar,
+  .login-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .login-page {
+    gap: 1rem;
   }
 
-  .login-eyebrow {
-    letter-spacing: 0.18em;
+  .login-bento__auth,
+  .login-guide__top,
+  .login-guide__bottom {
+    padding: 1rem;
   }
 }
 </style>
