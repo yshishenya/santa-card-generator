@@ -395,7 +395,7 @@ watch(fullName, (value) => {
               v-model="alterEgo"
               rows="6"
               maxlength="200"
-              placeholder="Например: капитан летающего книжного магазина над ночным городом"
+              placeholder="Например: девушка блондинка с длинными вьющимися волосами в очках в окружении играющих на скрипке котят"
               class="app-textarea"
               :disabled="isGenerating || isSending"
             ></textarea>

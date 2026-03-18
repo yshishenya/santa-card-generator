@@ -306,5 +306,38 @@
     "duration_ms": 25000,
     "game_version": "v1",
     "created_at": "2026-03-18T19:35:28.593677Z"
+  },
+  {
+    "run_id": "dd96b3b4-30a4-4299-9667-15774f9df8c7",
+    "player_name": "Ян",
+    "player_key": "ян",
+    "score": 15,
+    "correct_taps": 19,
+    "wrong_taps": 4,
+    "duration_ms": 25000,
+    "game_version": "v1",
+    "created_at": "2026-03-18T19:42:25.021602Z"
+  },
+  {
+    "run_id": "e41f65d5-2600-45d2-9c06-70529c983412",
+    "player_name": "Катя Н",
+    "player_key": "катя н",
+    "score": 26,
+    "correct_taps": 29,
+    "wrong_taps": 3,
+    "duration_ms": 25000,
+    "game_version": "v1",
+    "created_at": "2026-03-18T21:10:23.035840Z"
+  },
+  {
+    "run_id": "72c8df46-c895-4f7b-a90d-4c73ff2f4add",
+    "player_name": "Ян",
+    "player_key": "ян",
+    "score": 21,
+    "correct_taps": 26,
+    "wrong_taps": 5,
+    "duration_ms": 25000,
+    "game_version": "v1",
+    "created_at": "2026-03-18T21:11:46.405937Z"
   }
 ]
