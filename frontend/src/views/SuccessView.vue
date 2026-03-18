@@ -37,7 +37,7 @@ onUnmounted(() => {
   <div class="space-y-8 py-12 text-center">
     <div class="flex justify-center">
       <div class="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-platform-accent to-platform-primary shadow-lg shadow-platform-accent/30">
-        <i class="pi pi-check text-5xl text-white"></i>
+        <span class="text-5xl font-black leading-none text-white" aria-hidden="true">✓</span>
       </div>
     </div>
 

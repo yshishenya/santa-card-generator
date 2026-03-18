@@ -8,6 +8,7 @@ from collections import defaultdict
 from typing import Dict, List, Literal, Optional, Protocol, Sequence
 
 from src.core.exceptions import CardServiceError, SessionNotFoundError, VariantNotFoundError
+from src.core.print_archive import PrintArchiveStore
 from src.core.session_manager import GenerationSession, SessionManager
 from src.models.card import ImageStyle
 from src.models.photocard import (
@@ -270,10 +271,12 @@ class CardService:
         self,
         gemini_client: GeminiClient,
         telegram_client: TelegramClient,
+        print_archive_store: PrintArchiveStore,
         session_ttl_minutes: int = 30,
     ) -> None:
         self._gemini_client = gemini_client
         self._telegram_client = telegram_client
+        self._print_archive_store = print_archive_store
         self._session_manager = SessionManager(session_ttl_minutes=session_ttl_minutes)
 
     def get_session(self, session_id: str) -> Optional[GenerationSession]:
@@ -326,12 +329,29 @@ class CardService:
         if image_data is None:
             raise VariantNotFoundError("image", request.selected_image_index)
 
+        self._print_archive_store.save_asset(
+            image_bytes=image_data,
+            full_name=session.full_name,
+            alter_ego=session.alter_ego,
+            session_id=request.session_id,
+            source_image_url=selected_image.url,
+        )
+
         try:
             message_id = await self._telegram_client.send_photocard(
                 image_bytes=image_data,
                 full_name=session.full_name,
                 alter_ego=session.alter_ego,
                 correlation_id=correlation_id,
+            )
+            self._print_archive_store.save_asset(
+                image_bytes=image_data,
+                full_name=session.full_name,
+                alter_ego=session.alter_ego,
+                session_id=request.session_id,
+                source_image_url=selected_image.url,
+                telegram_message_id=message_id,
+                delivery_env=self._telegram_client.delivery_env,
             )
         except Exception as exc:
             raise CardServiceError(f"Failed to send photocard: {exc}") from exc

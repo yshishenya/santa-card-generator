@@ -5,6 +5,7 @@ import type {
   PhotocardSendRequest,
   PhotocardSendResponse,
   Employee,
+  PrintArchiveAsset,
 } from '@/types'
 
 const GENERATION_TIMEOUT_MS = 300000
@@ -69,6 +70,14 @@ interface BackendAuthResponse {
   message: string
 }
 
+interface BackendPrintArchiveAuthStatusResponse {
+  authenticated: boolean
+}
+
+interface BackendPrintArchiveListResponse {
+  assets: PrintArchiveAsset[]
+}
+
 interface BackendEmployeesResponse {
   id: string
   name: string
@@ -86,6 +95,7 @@ class APIClient {
 
     this.client = axios.create({
       baseURL: `${this.baseURL}/api/v1`,
+      withCredentials: true,
       headers: {
         'Content-Type': 'application/json'
       },
@@ -176,6 +186,44 @@ class APIClient {
   async verifyPassword(password: string): Promise<boolean> {
     const response = await this.client.post<BackendAuthResponse>('/auth/verify', { password })
     return response.data.success
+  }
+
+  async verifyPrintArchivePassword(password: string): Promise<boolean> {
+    const response = await this.client.post<APIResponse<BackendPrintArchiveAuthStatusResponse>>(
+      '/print-assets/auth/verify',
+      { password }
+    )
+    return response.data.data.authenticated
+  }
+
+  async getPrintArchiveAuthStatus(): Promise<boolean> {
+    const response = await this.client.get<APIResponse<BackendPrintArchiveAuthStatusResponse>>(
+      '/print-assets/auth/status'
+    )
+    return response.data.data.authenticated
+  }
+
+  async logoutPrintArchive(): Promise<void> {
+    await this.client.post('/print-assets/auth/logout')
+  }
+
+  async fetchPrintArchiveAssets(): Promise<PrintArchiveAsset[]> {
+    const response = await this.client.get<APIResponse<BackendPrintArchiveListResponse>>(
+      '/print-assets/assets'
+    )
+    return response.data.data.assets
+  }
+
+  getPrintArchiveAssetImageUrl(assetId: string): string {
+    return `${this.baseURL}/api/v1/print-assets/assets/${assetId}/image`
+  }
+
+  getPrintArchiveAssetDownloadUrl(assetId: string): string {
+    return `${this.baseURL}/api/v1/print-assets/assets/${assetId}/download`
+  }
+
+  getPrintArchiveDownloadAllUrl(): string {
+    return `${this.baseURL}/api/v1/print-assets/assets/download-all`
   }
 }
 

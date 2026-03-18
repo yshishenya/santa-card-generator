@@ -70,6 +70,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
+  line-height: 1.5;
 }
 
 /* Glass card utility classes - Night Theme */
@@ -77,16 +78,16 @@ body {
   .glass-card {
     background: linear-gradient(
       135deg,
-      rgba(26, 51, 85, 0.9) 0%,
-      rgba(18, 38, 64, 0.85) 100%
+      rgba(19, 33, 58, 0.94) 0%,
+      rgba(14, 24, 44, 0.9) 100%
     );
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(129, 140, 248, 0.16);
     border-radius: 24px;
     box-shadow:
-      0 4px 24px rgba(0, 0, 0, 0.3),
-      0 0 40px rgba(99, 102, 241, 0.08),
+      0 18px 45px rgba(3, 7, 18, 0.35),
+      0 0 40px rgba(99, 102, 241, 0.06),
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
@@ -135,9 +136,81 @@ body {
     opacity: 1;
   }
 
+  .studio-panel {
+    position: relative;
+  }
+
+  .studio-panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 22%),
+      radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 32%);
+    pointer-events: none;
+  }
+
+  .hero-panel {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid rgba(129, 140, 248, 0.18);
+    border-radius: 28px;
+    background:
+      radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 24%),
+      linear-gradient(135deg, rgba(18, 32, 57, 0.94) 0%, rgba(13, 23, 43, 0.92) 100%);
+    box-shadow:
+      0 24px 60px rgba(2, 6, 23, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .section-kicker {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-accent-light);
+  }
+
+  .info-pill {
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid rgba(129, 140, 248, 0.14);
+    border-radius: 20px;
+    background: rgba(9, 16, 32, 0.34);
+  }
+
+  .info-pill__value {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--color-platform-light);
+  }
+
+  .info-pill__label {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+  }
+
+  .preview-empty {
+    border: 1px dashed rgba(129, 140, 248, 0.22);
+    border-radius: 28px;
+    background:
+      linear-gradient(180deg, rgba(15, 23, 42, 0.5) 0%, rgba(15, 23, 42, 0.34) 100%);
+    padding: 3.5rem 1.5rem;
+    text-align: center;
+  }
+
   /* Gradient text - Bright Blue */
   .text-gradient {
-    background: linear-gradient(135deg, #6366F1 0%, #818CF8 50%, #A5B4FC 100%);
+    background: linear-gradient(135deg, #c7d2fe 0%, #818cf8 42%, #38bdf8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -168,20 +241,21 @@ body {
   /* Platform button styles */
   .btn-magic {
     position: relative;
-    background: linear-gradient(135deg, #3B82F6 0%, #6366F1 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #6366f1 54%, #8b5cf6 100%);
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
     color: #FFFFFF;
     font-weight: 600;
     overflow: hidden;
     transition: all 0.3s ease;
+    box-shadow: 0 14px 30px rgba(37, 99, 235, 0.22);
   }
 
   .btn-magic::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, #6366F1 0%, #A5B4FC 100%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 100%);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -193,8 +267,8 @@ body {
   .btn-magic:hover {
     transform: translateY(-2px);
     box-shadow:
-      0 10px 40px rgba(99, 102, 241, 0.4),
-      0 0 20px rgba(99, 102, 241, 0.3);
+      0 18px 40px rgba(99, 102, 241, 0.32),
+      0 0 20px rgba(56, 189, 248, 0.16);
   }
 
   .btn-magic span,
@@ -290,17 +364,17 @@ body {
 
   /* Input styles - Night theme */
   .input-magic {
-    background: rgba(26, 51, 85, 0.8);
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    border-radius: 12px;
+    background: rgba(16, 24, 39, 0.52);
+    border: 1px solid rgba(129, 140, 248, 0.16);
+    border-radius: 14px;
     color: var(--color-text-primary);
     transition: all 0.3s ease;
   }
 
   .input-magic:focus {
-    background: rgba(30, 58, 95, 0.9);
-    border-color: rgba(99, 102, 241, 0.5);
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+    background: rgba(15, 23, 42, 0.78);
+    border-color: rgba(99, 102, 241, 0.45);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
     outline: none;
   }
 

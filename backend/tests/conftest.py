@@ -26,6 +26,8 @@ def configure_settings_for_tests():
         "telegram_prod_topic_id": settings.telegram_prod_topic_id,
         "telegram_chat_id": settings.telegram_chat_id,
         "telegram_topic_id": settings.telegram_topic_id,
+        "print_archive_storage_path": settings.print_archive_storage_path,
+        "print_archive_password": settings.print_archive_password,
     }
 
     object.__setattr__(settings, "rate_limit_per_minute", 10000)
@@ -36,6 +38,8 @@ def configure_settings_for_tests():
     object.__setattr__(settings, "telegram_prod_topic_id", 456)
     object.__setattr__(settings, "telegram_chat_id", -1009876543210)
     object.__setattr__(settings, "telegram_topic_id", 456)
+    object.__setattr__(settings, "print_archive_storage_path", "/tmp/cards-test-print-archive")
+    object.__setattr__(settings, "print_archive_password", "Pr0ffes4.0Pr0ffes4.0")
 
     yield
 
@@ -122,6 +126,18 @@ def mock_telegram_client() -> AsyncMock:
     client.send_card = AsyncMock(return_value=12345)
     client.close = AsyncMock()
     return client
+
+
+@pytest.fixture
+def mock_print_archive_store() -> MagicMock:
+    """Create a mock print archive store for service tests."""
+    store = MagicMock()
+    store.save_asset = MagicMock()
+    store.list_assets = MagicMock(return_value=[])
+    store.get_asset = MagicMock(return_value=None)
+    store.get_asset_file_path = MagicMock(return_value=None)
+    store.build_zip_bytes = MagicMock(return_value=b"PK\x03\x04")
+    return store
 
 
 @pytest.fixture

@@ -10,7 +10,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from src.api import auth, employees, photocards
+from src.api import auth, employees, photocards, print_assets
 from src.api.dependencies import get_gemini_client, get_telegram_client, shutdown, startup
 from src.config import settings
 
@@ -86,6 +86,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(photocards.router, prefix="/api/v1", tags=["photocards"])
 app.include_router(employees.router, prefix="/api/v1", tags=["employees"])
+app.include_router(print_assets.router, prefix="/api/v1", tags=["print-assets"])
 
 
 @app.get("/health")
@@ -130,11 +131,15 @@ async def detailed_health_check() -> dict:
     # Check Telegram Bot
     try:
         telegram_client = get_telegram_client()
-        # Verify bot can connect
         bot_info = await telegram_client._bot.get_me()
+        chat_info = await telegram_client._bot.get_chat(telegram_client.chat_id)
         services["telegram"] = {
             "status": "healthy",
             "bot_username": bot_info.username,
+            "delivery_env": telegram_client.delivery_env,
+            "chat_id": str(telegram_client.chat_id),
+            "chat_title": getattr(chat_info, "title", None),
+            "topic_id": telegram_client.topic_id,
         }
     except Exception as e:
         services["telegram"] = {

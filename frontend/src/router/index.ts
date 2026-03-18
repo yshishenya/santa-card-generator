@@ -24,6 +24,12 @@ const router = createRouter({
       // Lazy loaded for better performance
       component: () => import('../views/SuccessView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/print-assets',
+      name: 'print-assets',
+      component: () => import('../views/PrintArchiveView.vue'),
+      meta: { requiresAuth: false }
     }
   ]
 })

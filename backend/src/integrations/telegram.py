@@ -51,7 +51,6 @@ from .exceptions import (
 
 logger = logging.getLogger(__name__)
 
-MAX_CAPTION_LENGTH = 1024
 MAX_RETRY_ATTEMPTS = 3
 RETRY_MIN_WAIT_SECONDS = 2
 RETRY_MAX_WAIT_SECONDS = 10
@@ -63,6 +62,23 @@ def escape_html(text: str) -> str:
         text.replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
+    )
+
+
+def is_target_config_error_message(error: Exception | str) -> bool:
+    """Detect Telegram target misconfiguration errors from exception text."""
+    error_message = str(error).lower()
+    return any(
+        marker in error_message
+        for marker in (
+            "chat not found",
+            "topic not found",
+            "thread not found",
+            "message thread not found",
+            "forbidden",
+            "bot was kicked",
+            "not enough rights",
+        )
     )
 
 
@@ -96,8 +112,8 @@ class TelegramClient:
         alter_ego: str,
         correlation_id: Optional[str] = None,
     ) -> int:
-        """Send a photocard with the MVP caption format."""
-        caption = self._format_caption(full_name=full_name, alter_ego=alter_ego)
+        """Send a photocard with the Alter Ego caption format."""
+        caption = self._format_caption(full_name=full_name)
         log_extra = {
             "full_name": full_name,
             "delivery_env": self.delivery_env,
@@ -127,20 +143,20 @@ class TelegramClient:
         except (NetworkError, TimedOut) as exc:
             raise TelegramNetworkError(original_error=exc) from exc
         except TelegramAPIError as exc:
-            error_message = str(exc).lower()
-            if any(
-                marker in error_message
-                for marker in ("chat not found", "topic not found", "thread not found")
-            ):
+            if is_target_config_error_message(exc):
                 raise TelegramConfigError(original_error=exc) from exc
             raise TelegramSendError(original_error=exc) from exc
         except RetryError as exc:
             last_exception = exc.last_attempt.exception()
+            if last_exception and is_target_config_error_message(last_exception):
+                raise TelegramConfigError(original_error=last_exception) from exc
             if isinstance(last_exception, (NetworkError, TimedOut)):
                 raise TelegramNetworkError(original_error=last_exception) from exc
             raise TelegramSendError(original_error=exc) from exc
         except Exception as exc:
             logger.exception("Unexpected Telegram send error", extra=log_extra)
+            if is_target_config_error_message(exc):
+                raise TelegramConfigError(original_error=exc) from exc
             raise TelegramSendError(original_error=exc) from exc
 
     async def send_photocard(
@@ -183,27 +199,9 @@ class TelegramClient:
 
         return await self._bot.send_photo(**send_kwargs)
 
-    def _format_caption(self, full_name: str, alter_ego: str) -> str:
-        """Build the constrained Telegram caption for the MVP flow."""
-        caption = (
-            f"<b>Имя:</b> {escape_html(full_name)}\n"
-            f"<b>Альтер эго:</b> {escape_html(alter_ego)}"
-        )
-        if len(caption) <= MAX_CAPTION_LENGTH:
-            return caption
-
-        suffix = "..."
-        allowed_alter_ego_length = max(
-            0,
-            MAX_CAPTION_LENGTH
-            - len(f"<b>Имя:</b> {escape_html(full_name)}\n<b>Альтер эго:</b> ")
-            - len(suffix),
-        )
-        truncated_alter_ego = escape_html(alter_ego[:allowed_alter_ego_length]) + suffix
-        return (
-            f"<b>Имя:</b> {escape_html(full_name)}\n"
-            f"<b>Альтер эго:</b> {truncated_alter_ego}"
-        )
+    def _format_caption(self, full_name: str) -> str:
+        """Build the Telegram caption as image plus name only."""
+        return f"<b>Имя:</b> {escape_html(full_name)}"
 
     async def close(self) -> None:
         """Shutdown the Telegram bot client."""

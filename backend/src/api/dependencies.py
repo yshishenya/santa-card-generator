@@ -5,6 +5,7 @@ import logging
 from src.config import settings
 from src.core import CardService
 from src.integrations import GeminiClient, TelegramClient
+from src.core.print_archive import PrintArchiveStore
 from src.integrations.gemini_client_google_tuned import ReferenceAwareGeminiClient
 from src.integrations.exceptions import GeminiConfigError, TelegramConfigError
 
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 _gemini_client: GeminiClient | None = None
 _telegram_client: TelegramClient | None = None
 _card_service: CardService | None = None
+_print_archive_store: PrintArchiveStore | None = None
 
 
 def get_gemini_client() -> GeminiClient:
@@ -49,6 +51,16 @@ def get_telegram_client() -> TelegramClient:
     return _telegram_client
 
 
+def get_print_archive_store() -> PrintArchiveStore:
+    """Return the singleton persistent print archive store."""
+    global _print_archive_store
+    if _print_archive_store is None:
+        _print_archive_store = PrintArchiveStore(
+            storage_path=settings.print_archive_storage_path,
+        )
+    return _print_archive_store
+
+
 def get_card_service() -> CardService:
     """Return the singleton photocard service."""
     global _card_service
@@ -56,6 +68,7 @@ def get_card_service() -> CardService:
         _card_service = CardService(
             gemini_client=get_gemini_client(),
             telegram_client=get_telegram_client(),
+            print_archive_store=get_print_archive_store(),
             session_ttl_minutes=settings.session_ttl_minutes,
         )
     return _card_service
@@ -68,7 +81,7 @@ async def startup() -> None:
 
 async def shutdown() -> None:
     """Cleanup singleton resources."""
-    global _gemini_client, _telegram_client, _card_service
+    global _gemini_client, _telegram_client, _card_service, _print_archive_store
 
     if _gemini_client is not None:
         await _gemini_client.close()
@@ -79,3 +92,4 @@ async def shutdown() -> None:
         _telegram_client = None
 
     _card_service = None
+    _print_archive_store = None

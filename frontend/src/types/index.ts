@@ -61,6 +61,17 @@ export interface PhotocardSendResponse {
   delivery_env: 'staging' | 'prod'
 }
 
+export interface PrintArchiveAsset {
+  asset_id: string
+  full_name: string
+  alter_ego: string
+  caption: string
+  filename: string
+  created_at: string
+  telegram_message_id: number | null
+  delivery_env: 'staging' | 'prod' | null
+}
+
 export interface Employee {
   id: string
   name: string

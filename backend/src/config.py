@@ -1,5 +1,6 @@
 """Application configuration settings."""
 
+from pathlib import Path
 from typing import Literal, Optional
 
 from pydantic_settings import BaseSettings
@@ -42,6 +43,11 @@ class Settings(BaseSettings):
 
     # Authentication
     app_password: str = "Pr0ffes4.0"  # Password to access the application
+    print_archive_password: str = "Pr0ffes4.0Pr0ffes4.0"
+    print_archive_storage_path: str = str(
+        Path(__file__).resolve().parents[1] / "data" / "print_archive"
+    )
+    print_archive_auth_max_age_seconds: int = 604800
 
     class Config:
         """Pydantic configuration."""

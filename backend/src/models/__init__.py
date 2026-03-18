@@ -21,6 +21,7 @@ from src.models.photocard import (
     PhotocardSendRequest,
     PhotocardSendResponse,
 )
+from src.models.print_archive import PrintArchiveAsset, PrintArchiveListResponse
 from src.models.response import APIResponse, RegenerateResponse
 
 __all__ = [
@@ -43,4 +44,6 @@ __all__ = [
     "PhotocardImageVariant",
     "PhotocardSendRequest",
     "PhotocardSendResponse",
+    "PrintArchiveAsset",
+    "PrintArchiveListResponse",
 ]

@@ -18,11 +18,13 @@ class TestCardService:
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
+        mock_print_archive_store,
         sample_photocard_request,
     ) -> None:
         service = CardService(
             gemini_client=mock_gemini_client,
             telegram_client=mock_telegram_client,
+            print_archive_store=mock_print_archive_store,
             session_ttl_minutes=30,
         )
 
@@ -36,10 +38,12 @@ class TestCardService:
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
+        mock_print_archive_store,
     ) -> None:
         service = CardService(
             gemini_client=mock_gemini_client,
             telegram_client=mock_telegram_client,
+            print_archive_store=mock_print_archive_store,
             session_ttl_minutes=30,
         )
 
@@ -55,10 +59,12 @@ class TestCardService:
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
+        mock_print_archive_store,
     ) -> None:
         service = CardService(
             gemini_client=mock_gemini_client,
             telegram_client=mock_telegram_client,
+            print_archive_store=mock_print_archive_store,
             session_ttl_minutes=30,
         )
 
@@ -75,11 +81,13 @@ class TestCardService:
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
+        mock_print_archive_store,
         sample_photocard_request,
     ) -> None:
         service = CardService(
             gemini_client=mock_gemini_client,
             telegram_client=mock_telegram_client,
+            print_archive_store=mock_print_archive_store,
             session_ttl_minutes=30,
         )
 
@@ -97,11 +105,13 @@ class TestCardService:
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
+        mock_print_archive_store,
         sample_photocard_request,
     ) -> None:
         service = CardService(
             gemini_client=mock_gemini_client,
             telegram_client=mock_telegram_client,
+            print_archive_store=mock_print_archive_store,
             session_ttl_minutes=30,
         )
         generate_response = await service.generate_photocard(sample_photocard_request)
@@ -119,16 +129,19 @@ class TestCardService:
         call_kwargs = mock_telegram_client.send_photocard.await_args.kwargs
         assert call_kwargs["full_name"] == sample_photocard_request.full_name
         assert call_kwargs["alter_ego"] == sample_photocard_request.alter_ego
+        assert mock_print_archive_store.save_asset.call_count == 2
 
     @pytest.mark.asyncio
     async def test_send_photocard_raises_for_missing_session(
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
+        mock_print_archive_store,
     ) -> None:
         service = CardService(
             gemini_client=mock_gemini_client,
             telegram_client=mock_telegram_client,
+            print_archive_store=mock_print_archive_store,
             session_ttl_minutes=30,
         )
 
@@ -145,11 +158,13 @@ class TestCardService:
         self,
         mock_gemini_client: AsyncMock,
         mock_telegram_client: AsyncMock,
+        mock_print_archive_store,
         sample_photocard_request,
     ) -> None:
         service = CardService(
             gemini_client=mock_gemini_client,
             telegram_client=mock_telegram_client,
+            print_archive_store=mock_print_archive_store,
             session_ttl_minutes=30,
         )
         generate_response = await service.generate_photocard(sample_photocard_request)

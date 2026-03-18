@@ -1,6 +1,14 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+const isLoginPage = computed(() => route.name === 'login')
+</script>
+
 <template>
-<div class="min-h-screen overflow-x-hidden bg-platform relative overflow-hidden">
-    <!-- Ambient glow orbs -->
+  <div class="min-h-screen overflow-x-hidden bg-platform relative overflow-hidden">
     <div class="ambient-orbs">
       <div class="ambient-orb orb-bottom-left"></div>
       <div class="ambient-orb orb-bottom-right"></div>
@@ -8,10 +16,14 @@
       <div class="ambient-orb orb-top-right"></div>
     </div>
 
-    <!-- Main content -->
-    <div class="relative z-10 container mx-auto px-4 py-8">
-      <div class="max-w-5xl mx-auto">
-        <div class="main-card p-8 mb-8">
+    <div
+      class="relative z-10"
+      :class="isLoginPage ? 'flex min-h-screen items-center justify-center px-4 py-6 sm:px-6' : 'container mx-auto px-3 py-4 sm:px-4 sm:py-8'"
+    >
+      <div :class="isLoginPage ? 'w-full max-w-md' : 'mx-auto w-full max-w-5xl'">
+        <RouterView v-if="isLoginPage" />
+
+        <div v-else class="main-card mb-4 p-4 sm:mb-8 sm:p-8">
           <RouterView />
         </div>
       </div>
@@ -20,7 +32,6 @@
 </template>
 
 <style scoped>
-/* Premium platform studio background */
 .bg-platform {
   background:
     radial-gradient(ellipse at 50% 100%, rgba(30, 64, 175, 0.18) 0%, transparent 50%),
@@ -44,34 +55,33 @@
 .orb-bottom-left {
   width: 420px;
   height: 420px;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.24) 0%, rgba(55, 48, 163, 0.1) 50%, transparent 70%);
-  bottom: 10%;
-  left: 5%;
-  animation-delay: 0s;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.16) 0%, transparent 72%);
+  bottom: -120px;
+  left: -120px;
 }
 
 .orb-bottom-right {
   width: 360px;
   height: 360px;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.22) 0%, rgba(30, 64, 175, 0.1) 50%, transparent 70%);
-  bottom: 20%;
-  right: 8%;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.14) 0%, transparent 70%);
+  right: -100px;
+  bottom: 14%;
   animation-delay: -3s;
 }
 
 .orb-mid-left {
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.17) 0%, transparent 70%);
-  top: 30%;
-  left: 15%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 72%);
+  left: 14%;
+  top: 32%;
   animation-delay: -5s;
 }
 
 .orb-top-right {
   width: 260px;
   height: 260px;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.14) 0%, transparent 70%);
   top: 12%;
   right: 20%;
   animation-delay: -7s;
@@ -90,6 +100,10 @@
 }
 
 .main-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 28px;
   background: linear-gradient(
     135deg,
     rgba(20, 32, 58, 0.95) 0%,
@@ -97,21 +111,17 @@
   );
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  border-radius: 32px;
   box-shadow:
     0 4px 40px rgba(0, 0, 0, 0.4),
     0 0 70px rgba(99, 102, 241, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  position: relative;
-  overflow: hidden;
 }
 
 .main-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 32px;
+  border-radius: 28px;
   padding: 1px;
   background: linear-gradient(
     135deg,
@@ -123,5 +133,16 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .ambient-orb {
+    filter: blur(60px);
+  }
+
+  .main-card,
+  .main-card::before {
+    border-radius: 24px;
+  }
 }
 </style>
