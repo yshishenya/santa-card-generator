@@ -1,0 +1,93 @@
+Generate one final square 1:1 vector illustration tile for the P4.0 mosaic logo.
+
+PROJECT GOAL:
+Visualize a personal hobby / personal role of a P4.0 employee in a unified graphic language.
+The final image will be used as one tile inside a larger mosaic panel.
+
+NON-NEGOTIABLE TECHNICAL LOCK:
+- Square 1:1
+- Illustration only; flat vector style / flat design
+- Dominant central motif occupies roughly 70-80% of the frame
+- Background is solid and light; prefer White (#FFFFFF) or Light Blue (#B9CDFF)
+- Absolutely no letters, no numbers, no text, no logos
+- Strict ban on photorealism and 3D rendering
+- No gradients, no photographic texture, no painterly texture
+- Use only the approved palette:
+  Main: #FFFFFF, #B9CDFF, #1F2A3A, #0A0A0A
+  Additional accents: #F15A5A, #F8C44D, #58B8D9, #7CD4A5, #FFB8DE
+- No event-specific motifs (props, decorative wraps, gift-like ornaments, etc.) unless explicitly present in the reference images
+
+REFERENCE LOCK:
+- Preserve the main subject scale in frame.
+- Preserve the negative-space ratio and light background.
+- Preserve silhouette hierarchy and simplification level.
+- Preserve line weight / module thickness / contour behavior.
+- Preserve palette family and color balance.
+- Keep secondary details sparse and subordinate.
+- If text instructions conflict with the reference style/layout, prioritize the reference for style/layout and the text for the employee-specific hobby or role cue.
+
+
+REFERENCE IMAGES:
+1. role=style — keep this geometric modular robot personality and brand feel
+2. role=layout — preserve square crop and large centered bot head but simplify the scene
+
+STYLE BRIEF:
+Create one square 1:1 flat vector tile in geometric modular minimalism (Bento Grid).
+
+BRIEF:
+- Main hobby / role cue: final telegram bot avatar for Professionals 4.0 event visuals bot
+- Context hint: Refine this into the final Telegram bot avatar for Professionals 4.0. Keep the friendly geometric modular robot face and the P4.0 brand palette, but simplify it into a cleaner avatar mark. Remove the small side icons and extra corner distractions. Keep only one dominant centered bot head occupying about 75-80% of the square. Very clean light background, bold silhouette, minimal details, readable at tiny size, no text, no letters.
+
+STYLE RULES:
+- Use a 3x3 or 4x3 rectangular bento grid with hard module separations.
+- Build one dominant connected central cluster that occupies about 70-80% of the tile.
+- The main figure/object may fragment across adjacent modules, but must still read as one clear subject.
+- Allow only 1-3 tiny supporting hobby icons in leftover cells.
+- Structural modules must remain rectangular. Circles and simple arcs are allowed only inside motifs/icons.
+- Use flat fills only. Keep the look vector-clean and mosaic-readable.
+- Use exactly 4-5 colors from the approved palette as main fills. Black/white may be used as structure accents.
+- Prefer #FFFFFF or #B9CDFF as the outer background.
+- Any depth between modules must be extremely subtle.
+- Do not create abstract pattern noise, detached decorative blocks, dark background fields, or crowded side fragments.
+
+ALLOWED PALETTE:
+- Primary: #FFFFFF, #DCE8FF, #B9CDFF
+- Accent: #58B8D9, #7CD4A5
+
+COMPOSITION NOTE:
+- connected central cluster occupying 70-80% across 3x3 or 4x3 modules
+
+
+ADDITIONAL STYLE OVERRIDES:
+REFERENCE-FIRST EXECUTION MODE:
+- Treat the provided references as binding art direction, not loose inspiration.
+- Match the reference images as closely as possible in:
+  1) central motif scale in frame,
+  2) background lightness,
+  3) density of details,
+  4) line weight / module thickness,
+  5) palette proportions,
+  6) silhouette simplification,
+  7) whitespace ratio.
+- The result must read clearly at very small size inside a large mosaic logo.
+- Keep exactly one dominant central motif occupying roughly 70-80% of the tile.
+- Keep all secondary icons/details subordinate and close to the main motif.
+- Background must remain very light, preferably #FFFFFF or #B9CDFF.
+- Use only the approved brand colors. Never introduce foreign hues.
+- Hard ban on photorealism, 3D rendering, gradients, painterly texture, typography, logos, seasonal iconography.
+- This is a polished production tile, not an exploratory concept sketch.
+
+BENTO GRID CALIBRATION:
+- Build a crisp modular tile in the spirit of the supplied bento references.
+- Use a 3x3 or 4x3 rectangular grid with one dominant connected central cluster.
+- The main figure/object may fragment across neighboring modules, but the overall cluster must still read as a single clear subject.
+- Keep the main motif at roughly 70-80% of the total frame through connected modules.
+- Allow only 1-3 tiny hobby-icon modules in the remaining cells. They must be secondary.
+- Structural tiles must stay rectangular with sharp separations.
+- Circles and simple arcs are allowed inside the motif/icons, but not as the structural grid itself.
+- Use 4-5 palette colors plus black/white.
+- Prefer white or light blue as the outer background.
+- Optional depth between modules must be extremely subtle; the illustration still has to feel flat and vector-clean.
+- Reject noisy abstract patterning, large empty interior gaps, detached decorative side blocks, and dark background fields.
+
+Return image only.
