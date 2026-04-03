@@ -25,7 +25,15 @@ class TapP40LeaderboardStore:
         self._ensure_directory()
 
     def save_score(self, request: TapP40ScoreRequest) -> TapP40ScoreResponse:
-        """Persist a completed run and return its leaderboard standing."""
+        """Persist a completed run and return its leaderboard standing.
+        
+        This function locks access to the runs data, loads the current runs,  and
+        determines the best run for the player before saving a new run  with the
+        provided score details. After updating the runs, it checks  the player's new
+        best run and builds the leaderboard entries. If the  saved score is not found
+        in the leaderboard, it raises an error.  Finally, it returns the player's rank
+        and whether the new score is a  personal best.
+        """
         with self._lock:
             runs = self._load_runs_locked()
             best_before = self._best_run_for_player(runs, request.player_name)
@@ -68,12 +76,13 @@ class TapP40LeaderboardStore:
         period: str = "all",
         limit: int = 20,
     ) -> list[TapP40LeaderboardEntry]:
-        """Return the leaderboard filtered to one best result per player."""
+        """Return the leaderboard with one best result per player."""
         with self._lock:
             runs = self._load_runs_locked()
             return self._build_leaderboard_entries_locked(runs, period=period, limit=limit)
 
     def _ensure_directory(self) -> None:
+        """Ensure the storage directory exists."""
         self._storage_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _load_runs_locked(self) -> list[TapP40StoredRun]:
@@ -97,6 +106,7 @@ class TapP40LeaderboardStore:
         return runs
 
     def _write_runs_locked(self, runs: list[TapP40StoredRun]) -> None:
+        """Writes the given runs to a temporary file and replaces the storage path."""
         payload = [run.model_dump(mode="json") for run in runs]
         temp_path = self._storage_path.with_suffix(".tmp")
         temp_path.write_text(
@@ -112,6 +122,16 @@ class TapP40LeaderboardStore:
         period: str,
         limit: int,
     ) -> list[TapP40LeaderboardEntry]:
+        """Builds leaderboard entries from filtered runs.
+        
+        Args:
+            runs (list[TapP40StoredRun]): The list of stored runs.
+            period (str): The time period for filtering runs.
+            limit (int): The maximum number of entries to return.
+        
+        Returns:
+            list[TapP40LeaderboardEntry]: The leaderboard entries.
+        """
         filtered_runs = self._filter_runs_for_period(runs, period=period)
         best_runs = self._best_runs_per_player(filtered_runs)
         best_runs.sort(key=self._sort_key)
@@ -137,6 +157,7 @@ class TapP40LeaderboardStore:
         *,
         period: str,
     ) -> list[TapP40StoredRun]:
+        """Filter runs based on the specified period."""
         if period == "all":
             return list(runs)
 
@@ -149,6 +170,7 @@ class TapP40LeaderboardStore:
         return [run for run in runs if run.created_at >= start_of_day]
 
     def _best_runs_per_player(self, runs: list[TapP40StoredRun]) -> list[TapP40StoredRun]:
+        """Retrieve the best run for each player from a list of runs."""
         best_by_player: dict[str, TapP40StoredRun] = {}
         for run in runs:
             existing = best_by_player.get(run.player_key)
@@ -161,6 +183,7 @@ class TapP40LeaderboardStore:
         runs: list[TapP40StoredRun],
         player_name: str,
     ) -> TapP40StoredRun | None:
+        """Return the best run for a specified player."""
         player_key = self._build_player_key(player_name)
         player_runs = [run for run in runs if run.player_key == player_key]
         if not player_runs:
@@ -172,4 +195,5 @@ class TapP40LeaderboardStore:
         return " ".join(player_name.strip().lower().split())
 
     def _sort_key(self, run: TapP40StoredRun) -> tuple[int, int, int, datetime]:
+        """Return a tuple used for sorting TapP40StoredRun objects."""
         return (-run.score, run.wrong_taps, run.duration_ms, run.created_at)

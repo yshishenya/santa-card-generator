@@ -22,7 +22,7 @@ async def get_tap_p40_leaderboard(
     period: Literal["all", "day"] = Query(default="all"),
     limit: int = Query(default=20, ge=1, le=100),
 ) -> APIResponse[TapP40LeaderboardResponse]:
-    """Return the Tap the P4.0 leaderboard."""
+    """Fetches the Tap the P4.0 leaderboard data."""
     return APIResponse(
         success=True,
         data=TapP40LeaderboardResponse(
@@ -39,7 +39,7 @@ async def save_tap_p40_score(
     body: TapP40ScoreRequest,
     store: Annotated[TapP40LeaderboardStore, Depends(get_tap_p40_leaderboard_store)],
 ) -> APIResponse[TapP40ScoreResponse]:
-    """Save one completed Tap the P4.0 run."""
+    """Save a completed Tap the P4.0 run score."""
     return APIResponse(
         success=True,
         data=store.save_score(body),
